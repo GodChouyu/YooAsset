@@ -121,7 +121,7 @@ namespace YooAsset
                 byte[] bytes = Encoding.UTF8.GetBytes(value);
                 int count = bytes.Length;
                 if (count > ushort.MaxValue)
-                    throw new FormatException($"Write string length cannot be greater than {ushort.MaxValue} !");
+                    throw new FormatException($"Write string length cannot be greater than {ushort.MaxValue}");
 
                 WriteUInt16(Convert.ToUInt16(count));
                 WriteBytes(bytes);
@@ -137,7 +137,7 @@ namespace YooAsset
             {
                 int count = values.Length;
                 if (count > ushort.MaxValue)
-                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue} !");
+                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue}");
 
                 WriteUInt16(Convert.ToUInt16(count));
                 for (int i = 0; i < count; i++)
@@ -156,7 +156,7 @@ namespace YooAsset
             {
                 int count = values.Length;
                 if (count > ushort.MaxValue)
-                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue} !");
+                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue}");
 
                 WriteUInt16(Convert.ToUInt16(count));
                 for (int i = 0; i < count; i++)
@@ -175,7 +175,7 @@ namespace YooAsset
             {
                 int count = values.Length;
                 if (count > ushort.MaxValue)
-                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue} !");
+                    throw new FormatException($"Write array length cannot be greater than {ushort.MaxValue}");
 
                 WriteUInt16(Convert.ToUInt16(count));
                 for (int i = 0; i < count; i++)

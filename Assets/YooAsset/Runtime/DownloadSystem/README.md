@@ -4,6 +4,10 @@
 
 DownloadSystem 是 YooAsset 资源管理系统的**底层网络下载层**，负责处理所有 HTTP 网络请求。该模块提供了统一的下载接口抽象，支持文件下载、断点续传、并发请求（由上层调度）、看门狗监控等功能。
 
+### 可见性说明
+
+DownloadSystem 属于 YooAsset Runtime 的内部基础模块，目录内大多数类型为 `internal`（仅供 YooAsset Runtime 内部程序集使用）。本文示例以"模块内部调用方式"展示；业务层建议优先通过 `ResourcePackage / FileSystem / ResourceManager` 等上层接口使用下载能力，避免直接依赖本模块的内部类型。
+
 ### 核心职责
 
 - HTTP/HTTPS 文件下载
@@ -16,7 +20,7 @@ DownloadSystem 是 YooAsset 资源管理系统的**底层网络下载层**，负
 
 ## 边界与上层协作
 
-DownloadSystem 的职责是提供“可替换后端 + 统一请求接口 + 轮询式生命周期”的基础能力：
+DownloadSystem 的职责是提供"可替换后端 + 统一请求接口 + 轮询式生命周期"的基础能力：
 
 - **本模块不负责并发队列/限流调度**：并发通常由上层同时创建多个 request 并自行控制并发数。
 - **本模块不负责重试/回退策略**：失败后的重试、切换 CDN、降级等策略通常由上层系统实现。
@@ -41,20 +45,20 @@ DownloadSystem 的职责是提供“可替换后端 + 统一请求接口 + 轮�
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    上层调用者                            │
-│              (FileSystem / ResourceManager)              │
+│                    上层调用者                             │
+│              (FileSystem / ResourceManager)             │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
-│                  IDownloadBackend                        │
+│                  IDownloadBackend                       │
 │                    (后端接口)                            │
-│         定义网络库合约，工厂模式创建请求                   │
+│         定义网络库合约，工厂模式创建请求                     │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
-│                  IDownloadRequest                        │
+│                  IDownloadRequest                       │
 │                    (请求接口)                            │
-│           轮询式生命周期管理，状态机驱动                   │
+│           轮询式生命周期管理，状态机驱动                     │
 └─────────────────────────┬───────────────────────────────┘
                           │
 ┌─────────────────────────▼───────────────────────────────┐
@@ -79,22 +83,23 @@ DownloadSystem/
 │   ├── IDownloadBackend.cs                   # 后端接口（工厂模式）
 │   └── IDownloadRequest.cs                   # 请求接口层次结构
 │
-├── DefaultDownloadBackend/                   # 默认后端实现
+├── UnityWebBackend/                          # 默认后端实现
 │   ├── UnityWebRequestBackend.cs             # UnityWebRequest 后端
 │   └── UnityWebRequestCreator.cs             # UnityWebRequest 创建委托
 │
-├── DefaultDownloadRequest/                   # 默认请求实现
-│   ├── UnityWebRequestDownloaderBase.cs      # 基础下载器（抽象类）
-│   ├── UnityWebRequestFileDownloader.cs      # 文件下载器
-│   ├── UnityWebRequestHeadDownloader.cs      # HEAD 请求器
-│   ├── UnityWebRequestBytesDownloader.cs     # 字节下载器
-│   ├── UnityWebRequestTextDownloader.cs      # 文本下载器
-│   ├── UnityWebRequestAssetBundleDownloader.cs # AssetBundle 下载器
-│   └── VirtualFileDownloader.cs              # 模拟下载器（编辑器用）
+├── UnityWebRequest/                          # 默认请求实现
+│   ├── UnityWebRequestBase.cs                # 基础下载器（抽象类）
+│   ├── UnityWebRequestFile.cs                # 文件下载器
+│   ├── UnityWebRequestHead.cs                # HEAD 请求器
+│   ├── UnityWebRequestBytes.cs               # 字节下载器
+│   ├── UnityWebRequestText.cs                # 文本下载器
+│   ├── UnityWebRequestAssetBundle.cs         # AssetBundle 下载器
+│   └── SimulateRequestFile.cs                # 模拟下载器（编辑器用）
 │
-├── DownloadSystemDefine.cs                   # 枚举、结构体定义
-├── DownloadSystemHelper.cs                   # 工具函数
-└── WebRequestCounter.cs                      # 请求失败计数器
+├── EDownloadRequestStatus.cs                 # 下载请求状态枚举
+├── DownloadRequestArgs.cs                    # 请求参数结构体定义
+├── DownloadSystemTools.cs                    # 工具函数
+└── DownloadFailureCounter.cs                 # 请求失败计数器
 ```
 
 ---
@@ -106,7 +111,7 @@ DownloadSystem/
 定义网络库实现的合约，通过工厂方法创建各类下载请求。
 
 ```csharp
-public interface IDownloadBackend
+internal interface IDownloadBackend : IDisposable
 {
     /// <summary>
     /// 后端标识名称（用于日志/调试）
@@ -133,13 +138,13 @@ public interface IDownloadBackend
 所有下载请求的通用接口，定义生命周期和状态管理。
 
 ```csharp
-public interface IDownloadRequest : IDisposable
+internal interface IDownloadRequest : IDisposable
 {
     // 元信息
     string URL { get; }
 
     // 生命周期
-    bool IsDone { get; }                      // 每次访问自动轮询
+    bool IsDone { get; }                      // 访问时自动调用 PollingRequest()
     EDownloadRequestStatus Status { get; }
 
     // 进度跟踪
@@ -159,9 +164,9 @@ public interface IDownloadRequest : IDisposable
 
 ### 专化请求接口
 
-| 接口 | 用途 | 特有属性 |
+| 接口 | 用途 | 特有能力 |
 |------|------|----------|
-| `IDownloadHeadRequest` | HEAD 请求，获取响应头 | `ETag`, `LastModified`, `ContentLength`, `ContentType` |
+| `IDownloadHeadRequest` | HEAD 请求，获取响应头 | `ETag`, `LastModified`, `ContentLength`, `ContentType`, `GetResponseHeader(name)` |
 | `IDownloadFileRequest` | 文件下载到本地 | `SavePath` |
 | `IDownloadBytesRequest` | 下载到内存（字节数组） | `byte[] Result` |
 | `IDownloadTextRequest` | 下载文本内容 | `string Result` |
@@ -174,7 +179,7 @@ public interface IDownloadRequest : IDisposable
 ### 请求状态枚举
 
 ```csharp
-public enum EDownloadRequestStatus
+internal enum EDownloadRequestStatus
 {
     None,       // 未开始
     Running,    // 进行中
@@ -189,70 +194,96 @@ public enum EDownloadRequestStatus
 #### DownloadFileRequestArgs（文件下载参数）
 
 ```csharp
-public struct DownloadFileRequestArgs
+internal struct DownloadFileRequestArgs
 {
-    public string URL;                    // 请求地址
-    public int Timeout;                   // 响应超时（秒），0=无限制
-    public int WatchdogTime;              // 看门狗超时（秒）
+    public readonly string URL;                 // 请求地址
+    public readonly int Timeout;                // 响应超时（秒），0=不应用超时
+    public readonly int WatchdogTimeout;        // 看门狗超时（秒），0=禁用
 
-    public string SavePath;               // 文件保存路径
-    public bool AppendToFile;             // 追加写入（断点续传）
-    public bool RemoveFileOnAbort;        // 中止时删除文件
-    public long ResumeFromBytes;          // 断点续传起始位置
+    public readonly string SavePath;            // 文件保存路径
+    public readonly bool AppendToFile;          // 追加写入（断点续传）
+    public readonly bool RemoveFileOnAbort;     // 中止时删除文件
+    public readonly long ResumeOffset;          // 断点续传起始位置（>0 时推荐由后端设置 Range 头）
 
-    public Dictionary<string, string> Headers;  // 自定义请求头
+    public Dictionary<string, string> Headers;  // 自定义请求头（可选）
+
+    public DownloadFileRequestArgs(
+        string url,
+        string savePath,
+        int timeout,
+        int watchdogTimeout,
+        bool appendToFile = false,
+        bool removeFileOnAbort = true,
+        long resumeOffset = 0);
+
+    /// <summary>
+    /// 添加请求头（注意：相同 key 重复添加会抛异常）
+    /// </summary>
+    public void AddRequestHeader(string name, string value);
 }
 ```
 
 #### DownloadDataRequestArgs（数据下载参数）
 
 ```csharp
-public struct DownloadDataRequestArgs
+internal struct DownloadDataRequestArgs
 {
-    public string URL;                    // 请求地址
-    public int Timeout;                   // 响应超时（秒）
-    public int WatchdogTime;              // 看门狗超时（秒）
-    public Dictionary<string, string> Headers;  // 自定义请求头
+    public readonly string URL;                 // 请求地址
+    public readonly int Timeout;                // 响应超时（秒），0=不应用超时
+    public readonly int WatchdogTimeout;        // 看门狗超时（秒），0=禁用
+    public Dictionary<string, string> Headers;  // 自定义请求头（可选）
+
+    public DownloadDataRequestArgs(string url, int timeout, int watchdogTimeout);
+
+    /// <summary>
+    /// 添加请求头（注意：相同 key 重复添加会抛异常）
+    /// </summary>
+    public void AddRequestHeader(string name, string value);
 }
 ```
 
 #### DownloadAssetBundleRequestArgs（AssetBundle 下载参数）
 
 ```csharp
-public struct DownloadAssetBundleRequestArgs
+internal struct DownloadAssetBundleRequestArgs
 {
-    public string URL;                    // 请求地址
-    public int Timeout;                   // 响应超时
-    public int WatchdogTime;              // 看门狗超时
+    public readonly string URL;                 // 请求地址
+    public readonly int Timeout;                // 响应超时（秒），0=不应用超时
+    public readonly int WatchdogTimeout;        // 看门狗超时（秒），0=禁用
 
-    public bool DisableUnityWebCache;     // 禁用 Unity 缓存（推荐 true）
-    public string FileHash;               // 文件哈希（缓存启用时需要）
-    public uint UnityCRC;                 // Unity CRC 校验值
+    public readonly bool DisableUnityWebCache;  // 禁用 Unity 缓存（默认 true）
+    public readonly string FileHash;            // 文件哈希（缓存启用时需要，且不能为空）
+    public readonly uint UnityCRC;              // Unity CRC 校验值
 
-    public Dictionary<string, string> Headers;
+    public Dictionary<string, string> Headers;  // 自定义请求头（可选）
+
+    public DownloadAssetBundleRequestArgs(
+        string url,
+        int timeout,
+        int watchdogTimeout,
+        bool disableUnityWebCache = true,
+        string fileHash = null,
+        uint unityCrc = 0);
+
+    /// <summary>
+    /// 添加请求头（注意：相同 key 重复添加会抛异常）
+    /// </summary>
+    public void AddRequestHeader(string name, string value);
 }
 ```
 
 #### DownloadSimulateRequestArgs（模拟下载参数）
 
 ```csharp
-public struct DownloadSimulateRequestArgs
+internal struct DownloadSimulateRequestArgs
 {
-    public string URL;            // 标识符
-    public long FileSize;         // 模拟文件大小
-    public long DownloadSpeed;    // 模拟速度（字节/秒），默认 1MB/s
+    public readonly string URL;          // 标识符
+    public readonly long FileSize;       // 模拟文件大小
+    public readonly long DownloadSpeed;  // 模拟速度（字节/秒），默认 1MB/s
+
+    public DownloadSimulateRequestArgs(string url, long fileSize, long downloadSpeed = 1024 * 1024);
 }
 ```
-
-### 回调数据结构体
-
-| 结构体 | 用途 | 关键字段 |
-|--------|------|----------|
-| `DownloaderFinishData` | 下载完成回调 | `PackageName`, `Succeed` |
-| `DownloadUpdateData` | 进度更新回调 | `Progress`, `TotalDownloadBytes`, `CurrentDownloadBytes` |
-| `DownloadErrorData` | 下载错误回调 | `FileName`, `ErrorInfo` |
-| `DownloadFileData` | 文件完成回调 | `FileName`, `FileSize` |
-| `ImportFileInfo` | 导入文件元数据 | `FilePath`, `BundleName`, `BundleGUID` |
 
 ---
 
@@ -278,7 +309,7 @@ UnityWebRequestCreator creator = (url, method) =>
 IDownloadBackend backend = new UnityWebRequestBackend(creator);
 ```
 
-### UnityWebRequestDownloaderBase
+### UnityWebRequestBase
 
 抽象基类，封装所有下载器的通用逻辑。
 
@@ -300,12 +331,12 @@ None ──► SendRequest() ──► Running ──► PollingRequest() ──
 
 | 下载器 | 实现接口 | 使用场景 |
 |--------|----------|----------|
-| `UnityWebRequestFileDownloader` | `IDownloadFileRequest` | 大文件下载到本地 |
-| `UnityWebRequestHeadDownloader` | `IDownloadHeadRequest` | 检查资源信息 |
-| `UnityWebRequestBytesDownloader` | `IDownloadBytesRequest` | 小文件内存加载 |
-| `UnityWebRequestTextDownloader` | `IDownloadTextRequest` | 文本文件下载 |
-| `UnityWebRequestAssetBundleDownloader` | `IDownloadAssetBundleRequest` | AB 包下载加载 |
-| `VirtualFileDownloader` | `IDownloadFileRequest` | 编辑器模拟下载 |
+| `UnityWebRequestFile` | `IDownloadFileRequest` | 大文件下载到本地 |
+| `UnityWebRequestHead` | `IDownloadHeadRequest` | 检查资源信息 |
+| `UnityWebRequestBytes` | `IDownloadBytesRequest` | 小文件内存加载 |
+| `UnityWebRequestText` | `IDownloadTextRequest` | 文本文件下载 |
+| `UnityWebRequestAssetBundle` | `IDownloadAssetBundleRequest` | AB 包下载加载 |
+| `SimulateRequestFile` | `IDownloadFileRequest` | 编辑器模拟下载 |
 
 ---
 
@@ -314,36 +345,38 @@ None ──► SendRequest() ──► Running ──► PollingRequest() ──
 ### 基础文件下载
 
 ```csharp
-// 1. 创建后端和请求
 IDownloadBackend backend = new UnityWebRequestBackend();
-var args = new DownloadFileRequestArgs(
-    url: "https://example.com/file.zip",
-    savePath: "/path/to/save/file.zip",
-    timeout: 30,
-    watchdogTime: 0);
-IDownloadFileRequest request = backend.CreateFileRequest(args);
-
-// 2. 发起并轮询
-request.SendRequest();
-while (!request.IsDone)
+IDownloadFileRequest request = null;
+try
 {
-    await Task.Yield();
-    // 可选：显示进度
-    float progress = request.DownloadProgress;
-}
+    // 1. 创建请求
+    var args = new DownloadFileRequestArgs(
+        url: "https://example.com/file.zip",
+        savePath: "/path/to/save/file.zip",
+        timeout: 30,
+        watchdogTimeout: 0);
+    request = backend.CreateFileRequest(args);
 
-// 3. 检查结果
-if (request.Status == EDownloadRequestStatus.Succeed)
-{
-    Debug.Log("下载成功");
-}
-else
-{
-    Debug.LogError($"下载失败: {request.Error}");
-}
+    // 2. 发起并轮询
+    request.SendRequest();
+    while (!request.IsDone)
+    {
+        await Task.Yield();
+        float progress = request.DownloadProgress;
+    }
 
-// 4. 清理资源
-request.Dispose();
+    // 3. 检查结果
+    if (request.Status == EDownloadRequestStatus.Succeed)
+        Debug.Log("下载成功");
+    else
+        Debug.LogError($"下载失败: {request.Error}");
+}
+finally
+{
+    // 4. 清理资源
+    request?.Dispose();
+    backend.Dispose();
+}
 ```
 
 ### 断点续传
@@ -356,10 +389,10 @@ var args = new DownloadFileRequestArgs(
     url: url,
     savePath: savePath,
     timeout: 30,
-    watchdogTime: 0,
-    appendToFile: true,                 // 追加写入
-    removeFileOnAbort: false,           // 中止时保留文件
-    resumeFromBytes: existingFileSize); // 断点位置
+    watchdogTimeout: 0,
+    appendToFile: true,              // 追加写入
+    removeFileOnAbort: false,        // 中止时保留文件
+    resumeOffset: existingFileSize); // 断点位置
 
 IDownloadFileRequest request = backend.CreateFileRequest(args);
 request.SendRequest();
@@ -373,7 +406,7 @@ var args = new DownloadFileRequestArgs(
     url: url,
     savePath: path,
     timeout: 30,
-    watchdogTime: 30); // 30秒无数据自动中止
+    watchdogTimeout: 30); // 30秒无数据自动中止
 
 IDownloadFileRequest request = backend.CreateFileRequest(args);
 request.SendRequest();
@@ -396,7 +429,7 @@ if (request.Status == EDownloadRequestStatus.Aborted)
 var args = new DownloadDataRequestArgs(
     url: "https://example.com/file.zip",
     timeout: 30,
-    watchdogTime: 0);
+    watchdogTimeout: 0);
 
 IDownloadHeadRequest request = backend.CreateHeadRequest(args);
 request.SendRequest();
@@ -422,7 +455,7 @@ if (request.Status == EDownloadRequestStatus.Succeed)
 var args = new DownloadDataRequestArgs(
     url: "https://example.com/data.json",
     timeout: 30,
-    watchdogTime: 0);
+    watchdogTimeout: 0);
 
 IDownloadBytesRequest request = backend.CreateBytesRequest(args);
 request.SendRequest();
@@ -495,7 +528,7 @@ IDownloadBackend (接口)
     │
     └── 未收到数据 ──► 计时器累加
                            │
-                           └── 超过 WatchdogTime ──► AbortRequest()
+                           └── 超过 WatchdogTimeout ──► AbortRequest()
 ```
 
 ---
@@ -511,44 +544,49 @@ IDownloadRequest (基础接口)
     ├── IDownloadTextRequest        (文本下载)
     └── IDownloadAssetBundleRequest (AssetBundle 下载)
 
-UnityWebRequestDownloaderBase (抽象基类)
+UnityWebRequestBase (抽象基类)
     │
-    ├── UnityWebRequestFileDownloader      ──► IDownloadFileRequest
-    ├── UnityWebRequestHeadDownloader      ──► IDownloadHeadRequest
-    ├── UnityWebRequestBytesDownloader     ──► IDownloadBytesRequest
-    ├── UnityWebRequestTextDownloader      ──► IDownloadTextRequest
-    └── UnityWebRequestAssetBundleDownloader ──► IDownloadAssetBundleRequest
+    ├── UnityWebRequestFile          ──► IDownloadFileRequest
+    ├── UnityWebRequestHead          ──► IDownloadHeadRequest
+    ├── UnityWebRequestBytes         ──► IDownloadBytesRequest
+    ├── UnityWebRequestText          ──► IDownloadTextRequest
+    └── UnityWebRequestAssetBundle   ──► IDownloadAssetBundleRequest
 
-VirtualFileDownloader (独立实现) ──► IDownloadFileRequest
+SimulateRequestFile (独立实现) ──► IDownloadFileRequest
 ```
 
 ---
 
 ## 工具类
 
-### DownloadSystemHelper
+### DownloadSystemTools
 
-提供跨平台的工具函数：
+提供跨平台的 URL 转换和判断功能：
 
-| 方法 | 说明 |
-|------|------|
-| `ConvertToWWWPath()` | 转换本地路径为 WWW 协议 URL |
-| `IsRequestLocalFile()` | 判断是否本地文件请求 |
+| 方法 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `ToLocalURL(path)` | `string path` 本地文件路径 | 可用于 UnityWebRequest 的文件协议 URL | 转换本地路径为文件协议 URL（自动处理特殊字符） |
+| `IsLocalFileURL(url)` | `string url` 要判断的 URL | `bool` 是否为本地文件 URL | 判断 URL 是否为 `file:` 或 `jar:file:` 协议 |
 
-### WebRequestCounter
+### DownloadFailureCounter
 
-请求失败计数器，用于诊断统计：
+网络请求失败计数器（诊断用）：
 
-- 线程安全：内部使用 `Dictionary` 且未加锁，约定只在主线程调用；如需多线程统计请在外层加锁或改造实现
-- Key 规则：`$"{packageName}_{eventName}"`
-- 统计口径：**仅统计网络请求失败**（`IDownloadRequest.Status != Succeed` 时记录），不统计内容为空、校验失败、解析失败等业务层失败
+- **线程安全**：内部使用 `Dictionary` 且未加锁，约定只在 Unity 主线程调用；如需在多线程/回调线程调用，请在外层加锁或改为并发容器实现
+- **Key 格式**：`$"{packageName}_{eventName}"`
+- **统计口径**：**仅统计网络请求失败**（`IDownloadRequest.Status != Succeed` 时记录），不统计内容为空、校验失败、解析失败等业务层失败
+
+| 方法 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `RecordFailure(packageName, eventName)` | `string packageName` 资源包名称, `string eventName` 事件名称 | `void` | 记录一次失败 |
+| `GetFailureCount(packageName, eventName)` | `string packageName` 资源包名称, `string eventName` 事件名称 | `int` 失败次数（未记录过返回 0） | 获取失败次数 |
 
 ```csharp
 // 记录失败
-WebRequestCounter.RecordRequestFailed(packageName, eventName);
+DownloadFailureCounter.RecordFailure(packageName, eventName);
 
 // 查询失败次数
-int count = WebRequestCounter.GetRequestFailedCount(packageName, eventName);
+int count = DownloadFailureCounter.GetFailureCount(packageName, eventName);
 ```
 
 ---
@@ -557,6 +595,7 @@ int count = WebRequestCounter.GetRequestFailedCount(packageName, eventName);
 
 1. **资源释放**：使用完毕后务必调用 `Dispose()` 释放资源
    - `AbortRequest()` 仅用于中止请求与切换状态，不等同于释放资源；无论成功/失败/中止都需要 `Dispose()`
+   - 第三方 `IDownloadBackend` 可能持有原生资源/线程/连接池等，上层在不再使用时也应调用 `backend.Dispose()`
    - 推荐使用 `try/finally` 确保释放（尤其是上层可能提前中止的场景）
 2. **断点续传**：需要服务器支持 `Range` 请求头和 `206 Partial Content` 响应
    - 若服务端不支持 Range 仍返回 200，全量内容可能会被追加写入，导致文件损坏
@@ -565,3 +604,4 @@ int count = WebRequestCounter.GetRequestFailedCount(packageName, eventName);
 5. **驱动更新**：部分第三方网络库实现的 backend 可能需要每帧调用 `IDownloadBackend.Update()` 进行驱动
 6. **中止语义**：`Aborted` 可能来自用户主动 `AbortRequest()` 或看门狗超时；中止场景下 `HttpCode/Error` 可能为默认值（例如 0/空）
 7. **线程安全**：所有下载请求的创建和轮询应在主线程进行
+8. **模拟下载器**：`SimulateRequestFile` 仅用于模拟进度，不会落盘，且 `SavePath` 始终为 `null`；成功时 `HttpCode` 固定为 `200`

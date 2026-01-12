@@ -5,7 +5,7 @@ namespace YooAsset
     {
         internal override void InternalStart()
         {
-            Error = $"{nameof(RawBundleLoadAllAssetsOperation)} not support load all assets !";
+            Error = $"{nameof(RawBundleLoadAllAssetsOperation)} not support load all assets.";
             Status = EOperationStatus.Failed;
         }
         internal override void InternalUpdate()

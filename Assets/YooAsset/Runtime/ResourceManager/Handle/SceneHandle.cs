@@ -56,7 +56,7 @@ namespace YooAsset
             {
                 if (IsValidWithWarning == false)
                     return string.Empty;
-                return Provider.SceneName;
+                return Provider.LoadedSceneName;
             }
         }
 
@@ -116,7 +116,7 @@ namespace YooAsset
         /// 异步卸载场景对象
         /// 注意：场景卸载成功后，会自动释放该handle的引用计数！
         /// </summary>
-        public UnloadSceneOperation UnloadAsync()
+        public UnloadSceneOperation UnloadSceneAsync()
         {
             string packageName = GetAssetInfo().PackageName;
 

@@ -5,7 +5,7 @@ namespace YooAsset
     {
         internal override void InternalStart()
         {
-            Error = $"{nameof(RawBundleLoadSceneOperation)} not support load scene !";
+            Error = $"{nameof(RawBundleLoadSceneOperation)} not support load scene.";
             Status = EOperationStatus.Failed;
         }
         internal override void InternalUpdate()

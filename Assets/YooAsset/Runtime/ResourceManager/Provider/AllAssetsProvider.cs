@@ -12,7 +12,7 @@ namespace YooAsset
         {
             if (_loadAllAssetsOp == null)
             {
-                _loadAllAssetsOp = BundleResultObject.LoadAllAssetsAsync(MainAssetInfo);
+                _loadAllAssetsOp = LoadedBundleResult.LoadAllAssetsAsync(MainAssetInfo);
                 _loadAllAssetsOp.StartOperation();
                 AddChildOperation(_loadAllAssetsOp);
 
@@ -22,7 +22,7 @@ namespace YooAsset
 #endif
             }
 
-            if (IsWaitForAsyncComplete)
+            if (IsWaitingForAsyncComplete)
                 _loadAllAssetsOp.WaitForAsyncComplete();
 
             _loadAllAssetsOp.UpdateOperation();

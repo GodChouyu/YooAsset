@@ -6,32 +6,30 @@ namespace YooAsset
     {
         private readonly IFileSystem _fileSystem;
         private readonly PackageBundle _packageBundle;
+        private readonly RawBundle _rawBundle;
 
-        public RawBundleResult(IFileSystem fileSystem, PackageBundle packageBundle)
+        public RawBundleResult(IFileSystem fileSystem, PackageBundle packageBundle, RawBundle rawBundle)
         {
             _fileSystem = fileSystem;
             _packageBundle = packageBundle;
+            _rawBundle = rawBundle;
         }
 
         public override void UnloadBundleFile()
         {
+            if (_rawBundle != null)
+            {
+                _rawBundle.Unload();
+            }
         }
         public override string GetBundleFilePath()
         {
             return _fileSystem.GetBundleFilePath(_packageBundle);
         }
-        public override byte[] ReadBundleFileData()
-        {
-            return _fileSystem.ReadBundleFileData(_packageBundle);
-        }
-        public override string ReadBundleFileText()
-        {
-            return _fileSystem.ReadBundleFileText(_packageBundle);
-        }
 
         public override FSLoadAssetOperation LoadAssetAsync(AssetInfo assetInfo)
         {
-            var operation = new RawBundleLoadAssetOperation();
+            var operation = new RawBundleLoadAssetOperation(_packageBundle, _rawBundle, assetInfo);
             return operation;
         }
         public override FSLoadAllAssetsOperation LoadAllAssetsAsync(AssetInfo assetInfo)

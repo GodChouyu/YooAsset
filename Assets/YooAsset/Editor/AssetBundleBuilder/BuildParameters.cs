@@ -96,7 +96,7 @@ namespace YooAsset.Editor
         /// <summary>
         /// 资源包加密服务类
         /// </summary>
-        public IEncryptionServices EncryptionServices;
+        public IBundleEncryptionServices EncryptionServices;
 
         /// <summary>
         /// 资源清单加密服务类
@@ -146,7 +146,7 @@ namespace YooAsset.Editor
                 string message = BuildLogger.GetErrorMessage(ErrorCode.BuildPipelineIsNullOrEmpty, "Build pipeline is null or empty !");
                 throw new Exception(message);
             }
-            if (BuildBundleType == (int)EBuildBundleType.Unknown)
+            if (BuildBundleType == (int)EBundleType.Unknown)
             {
                 string message = BuildLogger.GetErrorMessage(ErrorCode.BuildBundleTypeIsUnknown, $"Build bundle type is unknown {BuildBundleType} !");
                 throw new Exception(message);

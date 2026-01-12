@@ -44,34 +44,34 @@ public class T3_TestCacheFileSystem : IPrebuildSetup, IPostBuildCleanup
             var package = YooAssets.CreatePackage(TestDefine.AssetBundlePackageName);
 
             // 初始化资源包
-            var initParams = new HostPlayModeParameters();
-            var fileDecryption = new TestFileStreamDecryption();
+            var initParams = new HostPlayModeOptions();
             var manifestServices = new TestRestoreManifest();
 
             string hostServerIP = "http://127.0.0.1/CDN/Android/Test/";
             var remoteServices = new TestRemoteServices(hostServerIP);
             initParams.BuildinFileSystemParameters = null;
-            initParams.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices, fileDecryption);
-            initParams.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_SERVICES, manifestServices);
-            var initializeOp = package.InitializeAsync(initParams);
+            initParams.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices);
+            initParams.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES, manifestServices);
+            var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(initializeOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, initializeOp.Status);
 
             // 请求资源版本
-            var requetVersionOp = package.RequestPackageVersionAsync();
+            var requetVersionOp = package.RequestVersionAsync();
             yield return requetVersionOp;
             if (requetVersionOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(requetVersionOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, requetVersionOp.Status);
 
             // 更新资源清单
-            var updateManifestOp = package.UpdatePackageManifestAsync(requetVersionOp.PackageVersion);
-            yield return updateManifestOp;
-            if (updateManifestOp.Status != EOperationStatus.Succeed)
-                Debug.LogError(updateManifestOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, updateManifestOp.Status);
+            var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
+            var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
+            yield return loadPackageManifestOp;
+            if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
+                Debug.LogError(loadPackageManifestOp.Error);
+            Assert.AreEqual(EOperationStatus.Succeed, loadPackageManifestOp.Status);
         }
     }
     private class TestRemoteServices : IRemoteServices

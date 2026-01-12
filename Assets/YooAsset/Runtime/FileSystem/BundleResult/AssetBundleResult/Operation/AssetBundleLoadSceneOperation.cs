@@ -36,7 +36,7 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadScene)
             {
-                if (IsWaitForAsyncComplete)
+                if (IsWaitingForAsyncComplete)
                 {
                     // 注意：场景同步加载方法不会立即加载场景，而是在下一帧加载。
                     Result = SceneManager.LoadScene(_assetInfo.AssetPath, _loadParams);
@@ -69,10 +69,10 @@ namespace YooAsset
             {
                 if (_asyncOperation != null)
                 {
-                    if (IsWaitForAsyncComplete)
+                    if (IsWaitingForAsyncComplete)
                     {
                         //注意：场景加载无法强制异步转同步
-                        YooLogger.Error("The scene is loading asyn !");
+                        YooLogger.Error("The scene is loading asyn.");
                     }
                     else
                     {
@@ -107,7 +107,7 @@ namespace YooAsset
         internal override void InternalWaitForAsyncComplete()
         {
             //注意：场景加载不支持异步转同步，为了支持同步加载方法需要实现该方法！
-            InternalUpdate();
+            RunOnceExecution();
         }
         public override void UnSuspendLoad()
         {

@@ -335,7 +335,7 @@ namespace YooAsset
             {
                 string error;
                 if (string.IsNullOrEmpty(location))
-                    error = $"The location is null or empty !";
+                    error = $"The location is null or empty.";
                 else
                     error = $"The location is invalid : {location}";
                 AssetInfo assetInfo = new AssetInfo(PackageName, error);
@@ -369,8 +369,8 @@ namespace YooAsset
         {
             if (IncludeAssetGUID == false)
             {
-                YooLogger.Warning("Package manifest not include asset guid ! Please check asset bundle collector settings.");
-                AssetInfo assetInfo = new AssetInfo(PackageName, "AssetGUID data is empty !");
+                YooLogger.Warning("Package manifest not include asset guid. Please check asset bundle collector settings.");
+                AssetInfo assetInfo = new AssetInfo(PackageName, "AssetGUID data is empty.");
                 return assetInfo;
             }
 
@@ -384,7 +384,7 @@ namespace YooAsset
             {
                 string error;
                 if (string.IsNullOrEmpty(assetGUID))
-                    error = $"The assetGUID is null or empty !";
+                    error = $"The assetGUID is null or empty.";
                 else
                     error = $"The assetGUID is invalid : {assetGUID}";
                 AssetInfo assetInfo = new AssetInfo(PackageName, error);

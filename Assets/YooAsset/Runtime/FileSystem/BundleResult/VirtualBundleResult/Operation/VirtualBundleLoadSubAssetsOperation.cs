@@ -28,7 +28,7 @@ namespace YooAsset
             _steps = ESteps.CheckBundle;
 #else
             _steps = ESteps.Done;
-            Error = $"{nameof(VirtualBundleLoadSubAssetsOperation)} only support unity editor platform !";
+            Error = $"{nameof(VirtualBundleLoadSubAssetsOperation)} only support unity editor platform.";
             Status = EOperationStatus.Failed;            
 #endif
         }
@@ -100,14 +100,7 @@ namespace YooAsset
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
     }
 }

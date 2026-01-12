@@ -23,7 +23,8 @@ public class TestBundleReference
             Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
 
             var pos = new Vector3(-1, -1, 0);
-            var go = assetHandle.InstantiateSync(pos, Quaternion.identity);
+            var options = new InstantiateOptions(true, pos, Quaternion.identity);
+            var go = assetHandle.InstantiateSync(options);
             Assert.IsNotNull(go);
         }
 
@@ -36,7 +37,8 @@ public class TestBundleReference
             Assert.AreEqual(EOperationStatus.Succeed, heroHandle.Status);
 
             var pos = new Vector3(1, -1, 0);
-            heroObject = heroHandle.InstantiateSync(pos, Quaternion.identity);
+            var options = new InstantiateOptions(true, pos, Quaternion.identity);
+            heroObject = heroHandle.InstantiateSync(options);
             Assert.IsNotNull(heroObject);
         }
 
@@ -61,7 +63,8 @@ public class TestBundleReference
             Assert.AreEqual(EOperationStatus.Succeed, heroHandle.Status);
 
             var pos = new Vector3(1, -1, 0);
-            heroObject = heroHandle.InstantiateSync(pos, Quaternion.identity);
+            var options = new InstantiateOptions(true, pos, Quaternion.identity);
+            heroObject = heroHandle.InstantiateSync(options);
             Assert.IsNotNull(heroObject);
 
             // 检测材质球关联的纹理是否为空

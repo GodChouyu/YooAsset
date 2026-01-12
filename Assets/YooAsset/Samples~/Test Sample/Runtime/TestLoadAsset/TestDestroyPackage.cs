@@ -16,7 +16,7 @@ public class TestDestroyPackage
         // 销毁旧资源包 ASSET_BUNDLE
         {
             var package = YooAssets.GetPackage(TestDefine.AssetBundlePackageName);
-            var destroyOp = package.DestroyAsync();
+            var destroyOp = package.DestroyPackageAsync();
             yield return destroyOp;
             if (destroyOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(destroyOp.Error);
@@ -30,7 +30,7 @@ public class TestDestroyPackage
         if (destroyRawPackage)
         {
             var package = YooAssets.GetPackage(TestDefine.RawBundlePackageName);
-            var destroyOp = package.DestroyAsync();
+            var destroyOp = package.DestroyPackageAsync();
             yield return destroyOp;
             if (destroyOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(destroyOp.Error);

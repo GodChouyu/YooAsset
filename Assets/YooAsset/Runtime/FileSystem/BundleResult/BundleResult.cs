@@ -10,19 +10,9 @@ namespace YooAsset
         public abstract void UnloadBundleFile();
 
         /// <summary>
-        /// 获取资源包文件的路径
+        /// 获取资源包文件的本地路径
         /// </summary>
         public abstract string GetBundleFilePath();
-
-        /// <summary>
-        /// 读取资源包文件的二进制数据
-        /// </summary>
-        public abstract byte[] ReadBundleFileData();
-
-        /// <summary>
-        /// 读取资源包文件的文本数据
-        /// </summary>
-        public abstract string ReadBundleFileText();
 
 
         /// <summary>

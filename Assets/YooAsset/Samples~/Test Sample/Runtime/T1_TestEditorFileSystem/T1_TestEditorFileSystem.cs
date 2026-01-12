@@ -59,27 +59,28 @@ public class T1_TestEditorFileSystem : IPrebuildSetup, IPostBuildCleanup
             var package = YooAssets.CreatePackage(TestDefine.AssetBundlePackageName);
 
             // 初始化资源包
-            var initParams = new EditorSimulateModeParameters();
+            var initParams = new EditorSimulateModeOptions();
             initParams.EditorFileSystemParameters = FileSystemParameters.CreateDefaultEditorFileSystemParameters(packageRoot);
-            var initializeOp = package.InitializeAsync(initParams);
+            var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(initializeOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, initializeOp.Status);
 
             // 请求资源版本
-            var requetVersionOp = package.RequestPackageVersionAsync();
+            var requetVersionOp = package.RequestVersionAsync();
             yield return requetVersionOp;
             if (requetVersionOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(requetVersionOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, requetVersionOp.Status);
 
             // 更新资源清单
-            var updateManifestOp = package.UpdatePackageManifestAsync(requetVersionOp.PackageVersion);
-            yield return updateManifestOp;
-            if (updateManifestOp.Status != EOperationStatus.Succeed)
-                Debug.LogError(updateManifestOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, updateManifestOp.Status);
+            var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
+            var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
+            yield return loadPackageManifestOp;
+            if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
+                Debug.LogError(loadPackageManifestOp.Error);
+            Assert.AreEqual(EOperationStatus.Succeed, loadPackageManifestOp.Status);
         }
 
         // 初始化资源包 RAW_BUNDLE
@@ -94,27 +95,28 @@ public class T1_TestEditorFileSystem : IPrebuildSetup, IPostBuildCleanup
             var package = YooAssets.CreatePackage(TestDefine.RawBundlePackageName);
 
             // 初始化资源包
-            var initParams = new EditorSimulateModeParameters();
+            var initParams = new EditorSimulateModeOptions();
             initParams.EditorFileSystemParameters = FileSystemParameters.CreateDefaultEditorFileSystemParameters(packageRoot);
-            var initializeOp = package.InitializeAsync(initParams);
+            var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(initializeOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, initializeOp.Status);
 
             // 请求资源版本
-            var requetVersionOp = package.RequestPackageVersionAsync();
+            var requetVersionOp = package.RequestVersionAsync();
             yield return requetVersionOp;
             if (requetVersionOp.Status != EOperationStatus.Succeed)
                 Debug.LogError(requetVersionOp.Error);
             Assert.AreEqual(EOperationStatus.Succeed, requetVersionOp.Status);
 
             // 更新资源清单
-            var updateManifestOp = package.UpdatePackageManifestAsync(requetVersionOp.PackageVersion);
-            yield return updateManifestOp;
-            if (updateManifestOp.Status != EOperationStatus.Succeed)
-                Debug.LogError(updateManifestOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, updateManifestOp.Status);
+            var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
+            var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
+            yield return loadPackageManifestOp;
+            if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
+                Debug.LogError(loadPackageManifestOp.Error);
+            Assert.AreEqual(EOperationStatus.Succeed, loadPackageManifestOp.Status);
         }
     }
 

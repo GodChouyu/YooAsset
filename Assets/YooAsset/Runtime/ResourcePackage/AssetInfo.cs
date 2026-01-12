@@ -19,17 +19,17 @@ namespace YooAsset
         /// <summary>
         /// 所属包裹
         /// </summary>
-        public string PackageName { private set; get; }
+        public string PackageName { get; private set; }
 
         /// <summary>
         /// 资源类型
         /// </summary>
-        public System.Type AssetType { private set; get; }
+        public System.Type AssetType { get; private set; }
 
         /// <summary>
         /// 错误信息
         /// </summary>
-        public string Error { private set; get; }
+        public string Error { get; private set; }
 
         /// <summary>
         /// 加载方法

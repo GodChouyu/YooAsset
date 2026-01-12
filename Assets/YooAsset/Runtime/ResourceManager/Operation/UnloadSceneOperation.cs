@@ -73,7 +73,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "Scene is invalid !";
+                    Error = "Scene is invalid.";
                     return;
                 }
 
@@ -81,7 +81,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "Scene is not loaded !";
+                    Error = "Scene is not loaded.";
                     return;
                 }
 
@@ -97,7 +97,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = "Unload scene failed, see the console logs !";
+                        Error = "Unload scene failed, see the console logs.";
                         return;
                     }
                 }
@@ -110,9 +110,9 @@ namespace YooAsset
                 Status = EOperationStatus.Succeed;
             }
         }
-        internal override string InternalGetDesc()
+        internal override string InternalGetDescription()
         {
-            return $"SceneName : {_provider.SceneName}";
+            return $"SceneName : {_provider.LoadedSceneName}";
         }
     }
 }

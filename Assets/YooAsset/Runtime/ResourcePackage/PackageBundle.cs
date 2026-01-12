@@ -122,8 +122,8 @@ namespace YooAsset
         {
             _mainfest = manifest;
             _bundleType = manifest.BuildBundleType;
-            _fileExtension = ManifestTools.GetRemoteBundleFileExtension(BundleName);
-            _fileName = ManifestTools.GetRemoteBundleFileName(manifest.OutputNameStyle, BundleName, _fileExtension, FileHash);
+            _fileExtension = PackageManifestTools.GetRemoteBundleFileExtension(BundleName);
+            _fileName = PackageManifestTools.GetRemoteBundleFileName(manifest.OutputNameStyle, BundleName, _fileExtension, FileHash);
         }
 
         /// <summary>
@@ -162,10 +162,7 @@ namespace YooAsset
         /// </summary>
         public bool HasAnyTags()
         {
-            if (Tags != null && Tags.Length > 0)
-                return true;
-            else
-                return false;
+            return Tags != null && Tags.Length > 0;
         }
 
         /// <summary>

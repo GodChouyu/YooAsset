@@ -1,0 +1,96 @@
+﻿using System.IO;
+
+namespace YooAsset
+{
+    internal class RequestBuiltinPackageVersionOperation : AsyncOperationBase
+    {
+        private enum ESteps
+        {
+            None,
+            TryLoadPackageVersion,
+            RequestPackageVersion,
+            CheckResult,
+            Done,
+        }
+
+        private readonly BuiltinFileSystem _fileSystem;
+        private IDownloadTextRequest _webTextRequestOp;
+        private ESteps _steps = ESteps.None;
+
+        /// <summary>
+        /// 包裹版本
+        /// </summary>
+        public string PackageVersion { private set; get; }
+
+
+        internal RequestBuiltinPackageVersionOperation(BuiltinFileSystem fileSystem)
+        {
+            _fileSystem = fileSystem;
+        }
+        internal override void InternalStart()
+        {
+            _steps = ESteps.TryLoadPackageVersion;
+        }
+        internal override void InternalUpdate()
+        {
+            if (_steps == ESteps.None || _steps == ESteps.Done)
+                return;
+
+            if (_steps == ESteps.TryLoadPackageVersion)
+            {
+                string filePath = _fileSystem.GetBuiltinPackageVersionFilePath();
+                if (File.Exists(filePath))
+                {
+                    PackageVersion = File.ReadAllText(filePath);
+                    _steps = ESteps.CheckResult;
+                }
+                else
+                {
+                    _steps = ESteps.RequestPackageVersion;
+                }
+            }
+
+            if (_steps == ESteps.RequestPackageVersion)
+            {
+                if (_webTextRequestOp == null)
+                {
+                    string filePath = _fileSystem.GetBuiltinPackageVersionFilePath();
+                    string url = DownloadSystemTools.ToLocalURL(filePath);
+                    var args = new DownloadDataRequestArgs(url, 60, 0);
+                    _webTextRequestOp = _fileSystem.DownloadBackend.CreateTextRequest(args);
+                    _webTextRequestOp.SendRequest();
+                }
+
+                if (_webTextRequestOp.IsDone == false)
+                    return;
+
+                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeed)
+                {
+                    PackageVersion = _webTextRequestOp.Result;
+                    _steps = ESteps.CheckResult;
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = _webTextRequestOp.Error;
+                }
+            }
+
+            if (_steps == ESteps.CheckResult)
+            {
+                if (string.IsNullOrEmpty(PackageVersion))
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"Builtin package version file content is empty.";
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeed;
+                }
+            }
+        }
+    }
+}

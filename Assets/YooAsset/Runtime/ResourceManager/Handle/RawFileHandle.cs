@@ -45,27 +45,6 @@ namespace YooAsset
             Provider.WaitForAsyncComplete();
         }
 
-
-        /// <summary>
-        /// 获取原生文件的二进制数据
-        /// </summary>
-        public byte[] GetRawFileData()
-        {
-            if (IsValidWithWarning == false)
-                return null;
-            return Provider.BundleResultObject.ReadBundleFileData();
-        }
-
-        /// <summary>
-        /// 获取原生文件的文本数据
-        /// </summary>
-        public string GetRawFileText()
-        {
-            if (IsValidWithWarning == false)
-                return null;
-            return Provider.BundleResultObject.ReadBundleFileText();
-        }
-
         /// <summary>
         /// 获取原生文件的路径
         /// </summary>
@@ -73,7 +52,7 @@ namespace YooAsset
         {
             if (IsValidWithWarning == false)
                 return string.Empty;
-            return Provider.BundleResultObject.GetBundleFilePath();
+            return Provider.LoadedBundleResult.GetBundleFilePath();
         }
     }
 }

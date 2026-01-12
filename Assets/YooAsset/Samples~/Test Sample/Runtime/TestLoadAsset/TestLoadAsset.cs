@@ -38,7 +38,13 @@ public class TestLoadAsset
 
         // 同步加载音效
         {
+            int loadFrame = Time.frameCount;
             var assetHandle = package.LoadAssetSync<AudioClip>("sound_b");
+            assetHandle.Completed += (AssetHandle handle) =>
+            {
+                Assert.AreEqual(loadFrame, Time.frameCount);
+            };
+            Assert.AreEqual(true, assetHandle.Provider.IsFinished);
             Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
 
             var audioClip = assetHandle.AssetObject as AudioClip;

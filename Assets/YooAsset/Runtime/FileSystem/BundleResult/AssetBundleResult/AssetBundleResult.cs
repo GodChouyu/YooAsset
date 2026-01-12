@@ -36,14 +36,6 @@ namespace YooAsset
         {
             return _fileSystem.GetBundleFilePath(_packageBundle);
         }
-        public override byte[] ReadBundleFileData()
-        {
-            return _fileSystem.ReadBundleFileData(_packageBundle);
-        }
-        public override string ReadBundleFileText()
-        {
-            return _fileSystem.ReadBundleFileText(_packageBundle);
-        }
 
         public override FSLoadAssetOperation LoadAssetAsync(AssetInfo assetInfo)
         {

@@ -9,41 +9,58 @@ namespace YooAsset
     internal class OperationScheduler : IComparable<OperationScheduler>
     {
         private readonly List<AsyncOperationBase> _operations = new List<AsyncOperationBase>(100);
-        private readonly List<AsyncOperationBase> _newList = new List<AsyncOperationBase>(100);
+        private readonly List<AsyncOperationBase> _pendingOperations = new List<AsyncOperationBase>(100);
+        private uint _priority;
 
         /// <summary>
         /// 所属包裹名称
         /// </summary>
-        public string PackageName { private set; get; }
+        public string PackageName { get; private set; }
 
         /// <summary>
         /// 调度器优先级（值越大越优先）
         /// </summary>
-        public int Priority { private set; get; }
+        public uint Priority
+        {
+            get { return _priority; }
+            set
+            {
+                if (_priority != value)
+                {
+                    _priority = value;
+                    IsDirty = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 优先级是否已变更（需要重新排序）
+        /// </summary>
+        public bool IsDirty { get; set; }
 
         /// <summary>
         /// 创建顺序（用于同优先级稳定排序）
         /// </summary>
-        public int CreateIndex { private set; get; }
+        public int CreationOrder { get; private set; }
 
 
-        public OperationScheduler(string packageName, int priority, int createIndex)
+        public OperationScheduler(string packageName, int creationOrder)
         {
             PackageName = packageName;
-            Priority = priority;
-            CreateIndex = createIndex;
+            CreationOrder = creationOrder;
         }
 
         /// <summary>
         /// 开始处理异步操作
         /// </summary>
+        /// <remarks>
+        /// 操作会立即启动，但会先添加到待处理队列。
+        /// 在下一次Update时才会合并到执行队列并参与调度更新
+        /// </remarks>
         public void StartOperation(AsyncOperationBase operation)
         {
-            _newList.Add(operation);
+            _pendingOperations.Add(operation);
             operation.StartOperation();
-
-            // 通知开始回调
-            OperationSystem.InvokeStartCallback(PackageName, operation);
         }
 
         /// <summary>
@@ -55,34 +72,32 @@ namespace YooAsset
             for (int i = _operations.Count - 1; i >= 0; i--)
             {
                 var operation = _operations[i];
-                if (operation.IsFinish)
+                if (operation.IsFinished)
                 {
                     _operations.RemoveAt(i);
-
-                    // 通知完成回调
-                    OperationSystem.InvokeFinishCallback(PackageName, operation);
                 }
             }
 
             // 添加新增的异步操作
-            if (_newList.Count > 0)
+            if (_pendingOperations.Count > 0)
             {
-                bool sorting = false;
-                foreach (var operation in _newList)
+                _operations.AddRange(_pendingOperations);
+                _pendingOperations.Clear();
+            }
+
+            // 检测是否需要执行排序
+            bool isDirty = false;
+            foreach (var operation in _operations)
+            {
+                if (operation.IsDirty)
                 {
-                    if (operation.Priority > 0)
-                    {
-                        sorting = true;
-                        break;
-                    }
+                    operation.IsDirty = false;
+                    isDirty = true;
                 }
-
-                _operations.AddRange(_newList);
-                _newList.Clear();
-
-                // 重新排序优先级
-                if (sorting)
-                    _operations.Sort();
+            }
+            if (isDirty)
+            {
+                _operations.Sort();
             }
 
             // 更新进行中的异步操作
@@ -93,7 +108,7 @@ namespace YooAsset
                     break;
 
                 var operation = _operations[i];
-                if (operation.IsFinish)
+                if (operation.IsFinished)
                     continue;
 
                 operation.UpdateOperation();
@@ -106,18 +121,16 @@ namespace YooAsset
         public void ClearAll()
         {
             // 终止临时队列里的任务
-            foreach (var operation in _newList)
+            foreach (var operation in _pendingOperations)
             {
                 operation.AbortOperation();
-                operation.FinishOperation(); //注意：强制收尾，确保Task能完成
             }
-            _newList.Clear();
+            _pendingOperations.Clear();
 
             // 终止正在进行的任务
             foreach (var operation in _operations)
             {
                 operation.AbortOperation();
-                operation.FinishOperation(); //注意：强制收尾，确保Task能完成
             }
             _operations.Clear();
         }
@@ -125,10 +138,10 @@ namespace YooAsset
         /// <summary>
         /// 获取调试信息
         /// </summary>
-        public List<DebugOperationInfo> GetDebugOperationInfos()
+        public List<DiagnosticOperationInfo> GetDebugOperationInfos()
         {
-            int totalCount = _operations.Count + _newList.Count;
-            List<DebugOperationInfo> result = new List<DebugOperationInfo>(totalCount);
+            int totalCount = _operations.Count + _pendingOperations.Count;
+            List<DiagnosticOperationInfo> result = new List<DiagnosticOperationInfo>(totalCount);
 
             // 包含正在执行的任务
             foreach (var operation in _operations)
@@ -138,7 +151,7 @@ namespace YooAsset
             }
 
             // 包含待处理的新任务
-            foreach (var operation in _newList)
+            foreach (var operation in _pendingOperations)
             {
                 var operationInfo = operation.GetDebugOperationInfo();
                 result.Add(operationInfo);
@@ -155,7 +168,7 @@ namespace YooAsset
             if (result == 0)
             {
                 // 优先级相同，按创建顺序
-                result = this.CreateIndex.CompareTo(other.CreateIndex);
+                result = this.CreationOrder.CompareTo(other.CreationOrder);
             }
             return result;
         }

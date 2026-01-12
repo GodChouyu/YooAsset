@@ -28,7 +28,7 @@ internal class FsmRequestPackageVersion : IStateNode
     {
         var packageName = (string)_machine.GetBlackboardValue("PackageName");
         var package = YooAssets.GetPackage(packageName);
-        var operation = package.RequestPackageVersionAsync();
+        var operation = package.RequestVersionAsync();
         yield return operation;
 
         if (operation.Status != EOperationStatus.Succeed)

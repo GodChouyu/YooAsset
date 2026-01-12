@@ -48,14 +48,14 @@ namespace YooAsset
         public UnityEngine.SceneManagement.Scene SceneObject { protected set; get; }
 
         /// <summary>
-        /// 获取的资源包对象
+        /// 加载的资源包结果
         /// </summary>
-        public BundleResult BundleResultObject { protected set; get; }
+        public BundleResult LoadedBundleResult { protected set; get; }
 
         /// <summary>
         /// 加载的场景名称
         /// </summary>
-        public string SceneName { protected set; get; }
+        public string LoadedSceneName { protected set; get; }
 
         /// <summary>
         /// 引用计数
@@ -80,8 +80,8 @@ namespace YooAsset
 
         private ESteps _steps = ESteps.None;
         protected readonly ResourceManager _resManager;
-        private readonly LoadBundleFileOperation _mainBundleLoader;
-        private readonly List<LoadBundleFileOperation> _bundleLoaders = new List<LoadBundleFileOperation>(10);
+        private readonly LoadBundleOperation _mainBundleLoader;
+        private readonly List<LoadBundleOperation> _bundleLoaders = new List<LoadBundleOperation>(10);
         private readonly HashSet<HandleBase> _handles = new HashSet<HandleBase>();
 
         public ProviderOperation(ResourceManager manager, string providerGUID, AssetInfo assetInfo)
@@ -137,7 +137,7 @@ namespace YooAsset
 
             if (_steps == ESteps.WaitBundleLoader)
             {
-                if (IsWaitForAsyncComplete)
+                if (IsWaitingForAsyncComplete)
                 {
                     foreach (var bundleLoader in _bundleLoaders)
                     {
@@ -165,10 +165,10 @@ namespace YooAsset
                 }
 
                 // 检测加载结果
-                BundleResultObject = _mainBundleLoader.Result;
-                if (BundleResultObject == null)
+                LoadedBundleResult = _mainBundleLoader.Result;
+                if (LoadedBundleResult == null)
                 {
-                    string error = $"Loaded bundle result is null !";
+                    string error = $"Loaded bundle result is null.";
                     InvokeCompletion(error, EOperationStatus.Failed);
                     return;
                 }
@@ -183,16 +183,9 @@ namespace YooAsset
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
-        internal override string InternalGetDesc()
+        internal override string InternalGetDescription()
         {
             return $"AssetPath : {MainAssetInfo.AssetPath}";
         }
@@ -334,12 +327,12 @@ namespace YooAsset
         /// <summary>
         /// 出生的场景
         /// </summary>
-        public string SpawnScene = string.Empty;
+        public string OriginScene = string.Empty;
 
         [Conditional("DEBUG")]
         public void InitProviderDebugInfo()
         {
-            SpawnScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            OriginScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         }
 
         /// <summary>

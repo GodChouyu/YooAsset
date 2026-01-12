@@ -13,16 +13,16 @@ namespace YooAsset.Editor
     {
         private class BundleTableData : DefaultTableData
         {
-            public DebugPackageData PackageData;
-            public DebugBundleInfo BundleInfo;
+            public DiagnosticPackageData PackageData;
+            public DiagnosticBundleInfo BundleInfo;
         }
         private class UsingTableData : DefaultTableData
         {
-            public DebugProviderInfo ProviderInfo;
+            public DiagnosticProviderInfo ProviderInfo;
         }
         private class ReferenceTableData : DefaultTableData
         {
-            public DebugBundleInfo BundleInfo;
+            public DiagnosticBundleInfo BundleInfo;
         }
 
         private VisualTreeAsset _visualAsset;
@@ -151,7 +151,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var bundleTableData = data as BundleTableData;
-                    if (bundleTableData.BundleInfo.Status == EOperationStatus.Failed.ToString())
+                    if (bundleTableData.BundleInfo.Status == EOperationStatus.Failed.ToString() ||
+                        bundleTableData.BundleInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -208,13 +209,13 @@ namespace YooAsset.Editor
                 _usingTableView.AddColumn(column);
             }
 
-            // BeginTime
+            // StartTime
             {
                 var columnStyle = new ColumnStyle(100);
                 columnStyle.Stretchable = false;
                 columnStyle.Searchable = false;
                 columnStyle.Sortable = true;
-                var column = new TableColumn("BeginTime", "Begin Time", columnStyle);
+                var column = new TableColumn("StartTime", "Start Time", columnStyle);
                 column.MakeCell = () =>
                 {
                     var label = new Label();
@@ -267,7 +268,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var usingTableData = data as UsingTableData;
-                    if (usingTableData.ProviderInfo.Status == EOperationStatus.Failed.ToString())
+                    if (usingTableData.ProviderInfo.Status == EOperationStatus.Failed.ToString() ||
+                        usingTableData.ProviderInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -341,7 +343,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var feferenceTableData = data as ReferenceTableData;
-                    if (feferenceTableData.BundleInfo.Status == EOperationStatus.Failed.ToString())
+                    if (feferenceTableData.BundleInfo.Status == EOperationStatus.Failed.ToString() ||
+                        feferenceTableData.BundleInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -357,7 +360,7 @@ namespace YooAsset.Editor
         /// <summary>
         /// 填充页面数据
         /// </summary>
-        public void FillViewData(DebugReport debugReport)
+        public void FillViewData(DiagnosticReport debugReport)
         {
             // 清空旧数据
             _bundleTableView.ClearAll(false, true);
@@ -366,7 +369,7 @@ namespace YooAsset.Editor
 
             // 填充数据源
             _sourceDatas = new List<ITableData>(1000);
-            foreach (var packageData in debugReport.PackageDatas)
+            foreach (var packageData in debugReport.PackageDataList)
             {
                 foreach (var bundleInfo in packageData.BundleInfos)
                 {
@@ -375,7 +378,7 @@ namespace YooAsset.Editor
                     rowData.BundleInfo = bundleInfo;
                     rowData.AddAssetPathCell("PackageName", packageData.PackageName);
                     rowData.AddStringValueCell("BundleName", bundleInfo.BundleName);
-                    rowData.AddLongValueCell("RefCount", bundleInfo.RefCount);
+                    rowData.AddLongValueCell("RefCount", bundleInfo.ReferenceCount);
                     rowData.AddStringValueCell("Status", bundleInfo.Status.ToString());
                     _sourceDatas.Add(rowData);
                 }
@@ -443,16 +446,16 @@ namespace YooAsset.Editor
                 var sourceDatas = new List<ITableData>(1000);
                 foreach (var providerInfo in packageData.ProviderInfos)
                 {
-                    foreach (var dependBundleName in providerInfo.DependBundles)
+                    foreach (var dependBundleName in providerInfo.DependentBundles)
                     {
                         if (dependBundleName == selectBundleInfo.BundleName)
                         {
                             var rowData = new UsingTableData();
                             rowData.ProviderInfo = providerInfo;
                             rowData.AddStringValueCell("UsingAssets", providerInfo.AssetPath);
-                            rowData.AddStringValueCell("SpawnScene", providerInfo.SpawnScene);
-                            rowData.AddStringValueCell("BeginTime", providerInfo.BeginTime);
-                            rowData.AddLongValueCell("RefCount", providerInfo.RefCount);
+                            rowData.AddStringValueCell("SpawnScene", providerInfo.OriginScene);
+                            rowData.AddStringValueCell("StartTime", providerInfo.StartTime);
+                            rowData.AddLongValueCell("RefCount", providerInfo.ReferenceCount);
                             rowData.AddStringValueCell("Status", providerInfo.Status);
                             sourceDatas.Add(rowData);
                             break;
@@ -466,13 +469,13 @@ namespace YooAsset.Editor
             // 填充ReferenceTableView
             {
                 var sourceDatas = new List<ITableData>(1000);
-                foreach (string referenceBundleName in selectBundleInfo.ReferenceBundles)
+                foreach (string referenceBundleName in selectBundleInfo.ReferencedByBundles)
                 {
                     var bundleInfo = packageData.GetBundleInfo(referenceBundleName);
                     var rowData = new ReferenceTableData();
                     rowData.BundleInfo = bundleInfo;
                     rowData.AddStringValueCell("BundleName", bundleInfo.BundleName);
-                    rowData.AddLongValueCell("RefCount", bundleInfo.RefCount);
+                    rowData.AddLongValueCell("RefCount", bundleInfo.ReferenceCount);
                     rowData.AddStringValueCell("Status", bundleInfo.Status.ToString());
                     sourceDatas.Add(rowData);
                 }

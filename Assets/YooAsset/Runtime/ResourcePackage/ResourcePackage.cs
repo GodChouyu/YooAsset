@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,15 +8,9 @@ namespace YooAsset
 {
     public class ResourcePackage
     {
-        private bool _isInitialize = false;
-        private string _initializeError = string.Empty;
-        private EOperationStatus _initializeStatus = EOperationStatus.None;
-        private EPlayMode _playMode;
-
-        // 管理器
+        private InitializePackageOperation _initializeOp;
         private ResourceManager _resourceManager;
-        private IBundleQuery _bundleQuery;
-        private IPlayMode _playModeImpl;
+        private FileSystemHost _fileSystemHost;
 
         /// <summary>
         /// 包裹名
@@ -28,7 +22,12 @@ namespace YooAsset
         /// </summary>
         public EOperationStatus InitializeStatus
         {
-            get { return _initializeStatus; }
+            get
+            {
+                if (_initializeOp == null)
+                    return EOperationStatus.None;
+                return _initializeOp.Status;
+            }
         }
 
         /// <summary>
@@ -38,55 +37,34 @@ namespace YooAsset
         {
             get
             {
-                if (_playModeImpl == null)
+                if (_fileSystemHost == null)
                     return false;
-                return _playModeImpl.ActiveManifest != null;
+                return _fileSystemHost.ActiveManifest != null;
             }
         }
 
+        /// <summary>
+        /// 包裹优先级（值越大越优先更新）
+        /// </summary>
+        public uint PackagePriority
+        {
+            get { return OperationSystem.GetSchedulerPriority(PackageName); }
+            set { OperationSystem.SetSchedulerPriority(PackageName, value); }
+        }
 
+        
         internal ResourcePackage(string packageName)
         {
             PackageName = packageName;
         }
-
-        /// <summary>
-        /// 销毁资源包裹
-        /// </summary>
-        internal void DestroyPackage()
+        internal void InternalInitialize(ResourceManager manager, FileSystemHost host)
         {
-            if (_isInitialize)
-            {
-                _isInitialize = false;
-                _initializeError = string.Empty;
-                _initializeStatus = EOperationStatus.None;
-
-                // 销毁资源管理器
-                if (_resourceManager != null)
-                {
-                    _resourceManager.Destroy();
-                    _resourceManager = null;
-                }
-
-                // 销毁文件系统
-                if (_playModeImpl != null)
-                    _playModeImpl.DestroyFileSystem();
-
-                _bundleQuery = null;
-                _playModeImpl = null;
-            }
+            _resourceManager = manager;
+            _fileSystemHost = host;
         }
-
-        /// <summary>
-        /// 异步初始化
-        /// </summary>
-        public InitializationOperation InitializeAsync(InitializeParameters parameters)
+        internal void InternalDestroy()
         {
-            // 注意：联机平台因为网络原因可能会初始化失败！
-            ResetInitializeAfterFailed();
-
-            // 检测初始化参数合法性
-            CheckInitializeParameters(parameters);
+            _initializeOp = null;
 
             // 销毁资源管理器
             if (_resourceManager != null)
@@ -95,157 +73,86 @@ namespace YooAsset
                 _resourceManager = null;
             }
 
-            // 创建资源管理器 
-            _resourceManager = new ResourceManager(PackageName);
-            var playModeImpl = new PlayModeImpl(PackageName, _playMode);
-            _bundleQuery = playModeImpl;
-            _playModeImpl = playModeImpl;
-            _resourceManager.Initialize(parameters, _bundleQuery);
-
-            // 初始化资源系统
-            InitializationOperation initializeOperation;
-            if (_playMode == EPlayMode.EditorSimulateMode)
+            // 销毁文件系统中枢
+            if (_fileSystemHost != null)
             {
-                var initializeParameters = parameters as EditorSimulateModeParameters;
-                initializeOperation = playModeImpl.InitializeAsync(initializeParameters.EditorFileSystemParameters);
+                _fileSystemHost.Destroy();
+                _fileSystemHost = null;
             }
-            else if (_playMode == EPlayMode.OfflinePlayMode)
-            {
-                var initializeParameters = parameters as OfflinePlayModeParameters;
-                initializeOperation = playModeImpl.InitializeAsync(initializeParameters.BuildinFileSystemParameters);
-            }
-            else if (_playMode == EPlayMode.HostPlayMode)
-            {
-                var initializeParameters = parameters as HostPlayModeParameters;
-                initializeOperation = playModeImpl.InitializeAsync(initializeParameters.BuildinFileSystemParameters, initializeParameters.CacheFileSystemParameters);
-            }
-            else if (_playMode == EPlayMode.WebPlayMode)
-            {
-                var initializeParameters = parameters as WebPlayModeParameters;
-                initializeOperation = playModeImpl.InitializeAsync(initializeParameters.WebServerFileSystemParameters, initializeParameters.WebRemoteFileSystemParameters);
-            }
-            else if (_playMode == EPlayMode.CustomPlayMode)
-            {
-                var initializeParameters = parameters as CustomPlayModeParameters;
-                initializeOperation = playModeImpl.InitializeAsync(initializeParameters.FileSystemParameterList);
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
-
-            // 监听初始化结果
-            _isInitialize = true;
-            OperationSystem.StartOperation(PackageName, initializeOperation);
-            initializeOperation.Completed += InitializeOperation_Completed;
-            return initializeOperation;
-        }
-        private void ResetInitializeAfterFailed()
-        {
-            if (_isInitialize && _initializeStatus == EOperationStatus.Failed)
-            {
-                _isInitialize = false;
-                _initializeStatus = EOperationStatus.None;
-                _initializeError = string.Empty;
-            }
-        }
-        private void CheckInitializeParameters(InitializeParameters parameters)
-        {
-            if (_isInitialize)
-                throw new YooPackageException(PackageName, $"Package '{PackageName}' is already initialized !");
-
-            if (parameters == null)
-                throw new YooPackageException(PackageName, $"Initialize parameters cannot be null.");
-
-#if !UNITY_EDITOR
-            if (parameters is EditorSimulateModeParameters)
-                throw new YooPlatformNotSupportedException($"Editor simulate mode only support unity editor.");
-#endif
-
-            // 检测初始化参数
-            if (parameters.BundleLoadingMaxConcurrency <= 0)
-                throw new YooPackageException(PackageName, $"{nameof(parameters.BundleLoadingMaxConcurrency)} value must be greater than zero.");
-
-            // 鉴定运行模式
-            if (parameters is EditorSimulateModeParameters)
-                _playMode = EPlayMode.EditorSimulateMode;
-            else if (parameters is OfflinePlayModeParameters)
-                _playMode = EPlayMode.OfflinePlayMode;
-            else if (parameters is HostPlayModeParameters)
-                _playMode = EPlayMode.HostPlayMode;
-            else if (parameters is WebPlayModeParameters)
-                _playMode = EPlayMode.WebPlayMode;
-            else if (parameters is CustomPlayModeParameters)
-                _playMode = EPlayMode.CustomPlayMode;
-            else
-                throw new NotImplementedException();
-
-            // 检测运行时平台
-            if (_playMode != EPlayMode.EditorSimulateMode)
-            {
-#if UNITY_WEBGL
-                if (_playMode != EPlayMode.WebPlayMode)
-                {
-                    throw new YooPlatformNotSupportedException($"{_playMode} can not support WebGL plateform !");
-                }
-#else
-                if (_playMode == EPlayMode.WebPlayMode)
-                {
-                    throw new YooPlatformNotSupportedException($"{nameof(EPlayMode.WebPlayMode)} only support WebGL plateform !");
-                }
-#endif
-            }
-        }
-        private void InitializeOperation_Completed(AsyncOperationBase op)
-        {
-            _initializeStatus = op.Status;
-            _initializeError = op.Error;
-            if (_initializeStatus != EOperationStatus.Succeed)
-                YooLogger.Error(_initializeError);
         }
 
         /// <summary>
-        /// 异步销毁
+        /// 异步初始化包裹
         /// </summary>
-        public DestroyOperation DestroyAsync()
+        public InitializePackageOperation InitializePackageAsync(InitializePackageOptions options)
         {
-            var options = new UnloadAllAssetsOptions();
-            options.ReleaseAllHandles = true;
-            options.LockLoadOperation = true;
-            var operation = new DestroyOperation(this, options);
-            OperationSystem.StartOperation(null, operation);
+            // 注意：联机平台因为网络原因可能会初始化失败！
+            ResetInitializeAfterFailed();
+
+            // 检测重复初始化
+            if (_initializeOp != null)
+                throw new YooPackageException(PackageName, $"Resource package '{PackageName}' is already initialized.");
+
+            // 开始初始化操作
+            _initializeOp = new InitializePackageOperation(this, options);
+            OperationSystem.StartOperation(PackageName, _initializeOp);
+            return _initializeOp;
+        }
+        private void ResetInitializeAfterFailed()
+        {
+            if (InitializeStatus == EOperationStatus.Failed)
+            {
+                InternalDestroy();
+            }
+        }
+
+        /// <summary>
+        /// 异步销毁包裹
+        /// </summary>
+        public DestroyPackageOperation DestroyPackageAsync()
+        {
+            var options = new UnloadAllAssetsOptions(true, true);
+            var operation = new DestroyPackageOperation(this, options);
+            OperationSystem.StartOperation(OperationSystem.GlobalSchedulerName, operation);
             return operation;
         }
 
         /// <summary>
         /// 请求最新的资源版本
+        /// 说明：超时时间默认60秒
         /// </summary>
-        /// <param name="appendTimeTicks">在URL末尾添加时间戳</param>
-        /// <param name="timeout">超时时间（默认值：60秒）</param>
-        public RequestPackageVersionOperation RequestPackageVersionAsync(bool appendTimeTicks = true, int timeout = 60)
+        public RequestVersionOperation RequestVersionAsync()
         {
-            DebugCheckInitialize(false);
-            var operation = _playModeImpl.RequestPackageVersionAsync(appendTimeTicks, timeout);
+            int defaultTimeout = 60;
+            var options = new RequestVersionOptions(true, defaultTimeout);
+            return RequestVersionAsync(options);
+        }
+
+        /// <summary>
+        /// 请求最新的资源版本
+        /// </summary>
+        public RequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
+        {
+            EnsureInitialized(false);
+            var operation = new RequestVersionOperation(_fileSystemHost, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
         /// <summary>
-        /// 更新并加载指定版本的资源清单
+        /// 加载指定版本的资源清单
         /// </summary>
-        /// <param name="packageVersion">包裹版本</param>
-        /// <param name="timeout">超时时间（默认值：60秒）</param>
-        public UpdatePackageManifestOperation UpdatePackageManifestAsync(string packageVersion, int timeout = 60)
+        public LoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
         {
-            DebugCheckInitialize(false);
+            EnsureInitialized(false);
 
             // 注意：强烈建议在更新之前保持加载器为空！
             if (_resourceManager.HasAnyLoader())
             {
-                YooLogger.Warning($"Found loaded bundle before update manifest ! Recommended to call the  {nameof(UnloadAllAssetsAsync)} method to release loaded bundle !");
+                YooLogger.Warning($"Found loaded bundle before update manifest. Recommended to call the {nameof(UnloadAllAssetsAsync)} method to release loaded bundle.");
             }
 
-            var operation = _playModeImpl.UpdatePackageManifestAsync(packageVersion, timeout);
+            var operation = new LoadManifestOperation(_fileSystemHost, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
@@ -253,44 +160,22 @@ namespace YooAsset
         /// <summary>
         /// 预下载指定版本的包裹资源
         /// </summary>
-        /// <param name="packageVersion">包裹版本</param>
-        /// <param name="timeout">资源清单下载的超时时间（默认值：60秒）</param>
-        public PreDownloadContentOperation PreDownloadContentAsync(string packageVersion, int timeout = 60)
+        public PreDownloaderOperation PreDownloaderAsync(PreDownloaderOptions options)
         {
-            DebugCheckInitialize(false);
-            var operation = _playModeImpl.PreDownloadContentAsync(packageVersion, timeout);
+            EnsureInitialized(false);
+            var operation = new PreDownloaderOperation(_fileSystemHost, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
-
+        
         /// <summary>
         /// 清理缓存文件
         /// </summary>
-        /// <param name="clearMode">清理方式</param>
-        /// <param name="clearParam">执行参数</param>
-        public ClearCacheFilesOperation ClearCacheFilesAsync(EFileClearMode clearMode, object clearParam = null)
+        public ClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
         {
-            DebugCheckInitialize(false);
-            ClearCacheFilesOptions options = new ClearCacheFilesOptions();
-            options.ClearMode = clearMode.ToString();
-            options.ClearParam = clearParam;
-            var operation = _playModeImpl.ClearCacheFilesAsync(options);
-            OperationSystem.StartOperation(PackageName, operation);
-            return operation;
-        }
-
-        /// <summary>
-        /// 清理缓存文件
-        /// </summary>
-        /// <param name="clearMode">清理方式</param>
-        /// <param name="clearParam">执行参数</param>
-        public ClearCacheFilesOperation ClearCacheFilesAsync(string clearMode, object clearParam = null)
-        {
-            DebugCheckInitialize(false);
-            ClearCacheFilesOptions options = new ClearCacheFilesOptions();
-            options.ClearMode = clearMode;
-            options.ClearParam = clearParam;
-            var operation = _playModeImpl.ClearCacheFilesAsync(options);
+            EnsureInitialized(false);
+            options.Manifest = _fileSystemHost.ActiveManifest;
+            var operation = new ClearCacheOperation(_fileSystemHost, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
@@ -302,8 +187,8 @@ namespace YooAsset
         /// </summary>
         public string GetPackageVersion()
         {
-            DebugCheckInitialize();
-            return _playModeImpl.ActiveManifest.PackageVersion;
+            EnsureInitialized();
+            return _fileSystemHost.ActiveManifest.PackageVersion;
         }
 
         /// <summary>
@@ -311,8 +196,8 @@ namespace YooAsset
         /// </summary>
         public string GetPackageNote()
         {
-            DebugCheckInitialize();
-            return _playModeImpl.ActiveManifest.PackageNote;
+            EnsureInitialized();
+            return _fileSystemHost.ActiveManifest.PackageNote;
         }
 
         /// <summary>
@@ -320,8 +205,8 @@ namespace YooAsset
         /// </summary>
         public PackageDetails GetPackageDetails()
         {
-            DebugCheckInitialize();
-            return _playModeImpl.ActiveManifest.GetPackageDetails();
+            EnsureInitialized();
+            return _fileSystemHost.ActiveManifest.GetPackageDetails();
         }
         #endregion
 
@@ -331,7 +216,7 @@ namespace YooAsset
         /// </summary>
         public UnloadAllAssetsOperation UnloadAllAssetsAsync()
         {
-            var options = new UnloadAllAssetsOptions();
+            var options = new UnloadAllAssetsOptions(true, true);
             return UnloadAllAssetsAsync(options);
         }
 
@@ -341,7 +226,7 @@ namespace YooAsset
         /// <param name="options">卸载选项</param>
         public UnloadAllAssetsOperation UnloadAllAssetsAsync(UnloadAllAssetsOptions options)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             var operation = new UnloadAllAssetsOperation(_resourceManager, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
@@ -350,12 +235,23 @@ namespace YooAsset
         /// <summary>
         /// 回收不再使用的资源
         /// 说明：卸载引用计数为零的资源
+        /// 说明：默认循环10次
         /// </summary>
-        /// <param name="loopCount">循环迭代次数</param>
-        public UnloadUnusedAssetsOperation UnloadUnusedAssetsAsync(int loopCount = 10)
+        public UnloadUnusedAssetsOperation UnloadUnusedAssetsAsync()
         {
-            DebugCheckInitialize();
-            var operation = new UnloadUnusedAssetsOperation(_resourceManager, loopCount);
+            int defaultLoopCount = 10;
+            var options = new UnloadUnusedAssetsOptions(defaultLoopCount);
+            return UnloadUnusedAssetsAsync(options);
+        }
+
+        /// <summary>
+        /// 回收不再使用的资源
+        /// 说明：卸载引用计数为零的资源
+        /// </summary>
+        public UnloadUnusedAssetsOperation UnloadUnusedAssetsAsync(UnloadUnusedAssetsOptions options)
+        {
+            EnsureInitialized();
+            var operation = new UnloadUnusedAssetsOperation(_resourceManager, options);
             OperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
@@ -366,7 +262,7 @@ namespace YooAsset
         /// </summary>
         public void TryUnloadUnusedAsset(string location, int loopCount = 10)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             _resourceManager.TryUnloadUnusedAsset(assetInfo, loopCount);
         }
@@ -377,7 +273,7 @@ namespace YooAsset
         /// </summary>
         public void TryUnloadUnusedAsset(AssetInfo assetInfo, int loopCount = 10)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             _resourceManager.TryUnloadUnusedAsset(assetInfo, loopCount);
         }
         #endregion
@@ -389,9 +285,9 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool IsNeedDownloadFromRemote(string location)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
-            return IsNeedDownloadFromRemoteInternal(assetInfo);
+            return _fileSystemHost.IsNeedDownloadFromRemoteInternal(assetInfo);
         }
 
         /// <summary>
@@ -400,8 +296,8 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool IsNeedDownloadFromRemote(AssetInfo assetInfo)
         {
-            DebugCheckInitialize();
-            return IsNeedDownloadFromRemoteInternal(assetInfo);
+            EnsureInitialized();
+            return _fileSystemHost.IsNeedDownloadFromRemoteInternal(assetInfo);
         }
 
         /// <summary>
@@ -409,8 +305,8 @@ namespace YooAsset
         /// </summary>
         public AssetInfo[] GetAllAssetInfos()
         {
-            DebugCheckInitialize();
-            return _playModeImpl.ActiveManifest.GetAllAssetInfos();
+            EnsureInitialized();
+            return _fileSystemHost.ActiveManifest.GetAllAssetInfos();
         }
 
         /// <summary>
@@ -419,9 +315,9 @@ namespace YooAsset
         /// <param name="tag">资源标签</param>
         public AssetInfo[] GetAssetInfos(string tag)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             string[] tags = new string[] { tag };
-            return _playModeImpl.ActiveManifest.GetAssetInfosByTags(tags);
+            return _fileSystemHost.ActiveManifest.GetAssetInfosByTags(tags);
         }
 
         /// <summary>
@@ -430,8 +326,8 @@ namespace YooAsset
         /// <param name="tags">资源标签列表</param>
         public AssetInfo[] GetAssetInfos(string[] tags)
         {
-            DebugCheckInitialize();
-            return _playModeImpl.ActiveManifest.GetAssetInfosByTags(tags);
+            EnsureInitialized();
+            return _fileSystemHost.ActiveManifest.GetAssetInfosByTags(tags);
         }
 
         /// <summary>
@@ -440,7 +336,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetInfo GetAssetInfo(string location)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return ConvertLocationToAssetInfo(location, null);
         }
 
@@ -451,7 +347,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetInfo GetAssetInfo(string location, System.Type type)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return ConvertLocationToAssetInfo(location, type);
         }
 
@@ -461,7 +357,7 @@ namespace YooAsset
         /// <param name="assetGUID">资源GUID</param>
         public AssetInfo GetAssetInfoByGUID(string assetGUID)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return ConvertAssetGUIDToAssetInfo(assetGUID, null);
         }
 
@@ -472,7 +368,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetInfo GetAssetInfoByGUID(string assetGUID, System.Type type)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return ConvertAssetGUIDToAssetInfo(assetGUID, type);
         }
 
@@ -482,31 +378,9 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool CheckLocationValid(string location)
         {
-            DebugCheckInitialize();
-            string assetPath = _playModeImpl.ActiveManifest.TryMappingToAssetPath(location);
+            EnsureInitialized();
+            string assetPath = _fileSystemHost.ActiveManifest.TryMappingToAssetPath(location);
             return string.IsNullOrEmpty(assetPath) == false;
-        }
-
-        private bool IsNeedDownloadFromRemoteInternal(AssetInfo assetInfo)
-        {
-            if (assetInfo.IsInvalid)
-            {
-                YooLogger.Warning(assetInfo.Error);
-                return false;
-            }
-
-            BundleInfo bundleInfo = _bundleQuery.GetMainBundleInfo(assetInfo);
-            if (bundleInfo.IsNeedDownloadFromRemote())
-                return true;
-
-            List<BundleInfo> depends = _bundleQuery.GetDependBundleInfos(assetInfo);
-            foreach (var depend in depends)
-            {
-                if (depend.IsNeedDownloadFromRemote())
-                    return true;
-            }
-
-            return false;
         }
         #endregion
 
@@ -517,7 +391,7 @@ namespace YooAsset
         /// <param name="assetInfo">资源信息</param>
         public RawFileHandle LoadRawFileSync(AssetInfo assetInfo)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadRawFileInternal(assetInfo, true, 0);
         }
 
@@ -527,7 +401,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public RawFileHandle LoadRawFileSync(string location)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadRawFileInternal(assetInfo, true, 0);
         }
@@ -539,7 +413,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public RawFileHandle LoadRawFileAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadRawFileInternal(assetInfo, false, priority);
         }
 
@@ -550,7 +424,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public RawFileHandle LoadRawFileAsync(string location, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadRawFileInternal(assetInfo, false, priority);
         }
@@ -575,7 +449,7 @@ namespace YooAsset
         /// <param name="physicsMode">场景物理模式</param>
         public SceneHandle LoadSceneSync(string location, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadSceneInternal(assetInfo, true, sceneMode, physicsMode, false, 0);
         }
@@ -588,7 +462,7 @@ namespace YooAsset
         /// <param name="physicsMode">场景物理模式</param>
         public SceneHandle LoadSceneSync(AssetInfo assetInfo, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadSceneInternal(assetInfo, true, sceneMode, physicsMode, false, 0);
         }
 
@@ -602,7 +476,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SceneHandle LoadSceneAsync(string location, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None, bool suspendLoad = false, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadSceneInternal(assetInfo, false, sceneMode, physicsMode, suspendLoad, priority);
         }
@@ -617,13 +491,13 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SceneHandle LoadSceneAsync(AssetInfo assetInfo, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None, bool suspendLoad = false, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadSceneInternal(assetInfo, false, sceneMode, physicsMode, suspendLoad, priority);
         }
 
         private SceneHandle LoadSceneInternal(AssetInfo assetInfo, bool waitForAsyncComplete, LoadSceneMode sceneMode, LocalPhysicsMode physicsMode, bool suspendLoad, uint priority)
         {
-            DebugCheckAssetLoadType(assetInfo.AssetType);
+            DebugEnsureAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadScene;
             var loadSceneParams = new LoadSceneParameters(sceneMode, physicsMode);
             var handle = _resourceManager.LoadSceneAsync(assetInfo, loadSceneParams, suspendLoad, priority);
@@ -633,14 +507,14 @@ namespace YooAsset
         }
         #endregion
 
-        #region 资源加载
+        #region 资源加载 [主资源]
         /// <summary>
         /// 同步加载资源对象
         /// </summary>
         /// <param name="assetInfo">资源信息</param>
         public AssetHandle LoadAssetSync(AssetInfo assetInfo)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadAssetInternal(assetInfo, true, 0);
         }
 
@@ -651,7 +525,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetHandle LoadAssetSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAssetInternal(assetInfo, true, 0);
         }
@@ -663,7 +537,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetHandle LoadAssetSync(string location, System.Type type)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAssetInternal(assetInfo, true, 0);
         }
@@ -674,9 +548,8 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetHandle LoadAssetSync(string location)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAssetInternal(assetInfo, true, 0);
         }
 
@@ -688,7 +561,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadAssetInternal(assetInfo, false, priority);
         }
 
@@ -700,7 +573,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAssetInternal(assetInfo, false, priority);
         }
@@ -713,7 +586,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(string location, System.Type type, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAssetInternal(assetInfo, false, priority);
         }
@@ -725,16 +598,15 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(string location, uint priority = 0)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAssetInternal(assetInfo, false, priority);
         }
 
 
         private AssetHandle LoadAssetInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugCheckAssetLoadType(assetInfo.AssetType);
+            DebugEnsureAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadAsset;
             var handle = _resourceManager.LoadAssetAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -743,14 +615,14 @@ namespace YooAsset
         }
         #endregion
 
-        #region 资源加载
+        #region 资源加载 [子资源]
         /// <summary>
         /// 同步加载子资源对象
         /// </summary>
         /// <param name="assetInfo">资源信息</param>
         public SubAssetsHandle LoadSubAssetsSync(AssetInfo assetInfo)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
 
@@ -761,7 +633,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public SubAssetsHandle LoadSubAssetsSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
@@ -773,7 +645,7 @@ namespace YooAsset
         /// <param name="type">子对象类型</param>
         public SubAssetsHandle LoadSubAssetsSync(string location, System.Type type)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
@@ -784,9 +656,8 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public SubAssetsHandle LoadSubAssetsSync(string location)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
 
@@ -798,7 +669,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
 
@@ -810,7 +681,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
@@ -823,7 +694,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(string location, System.Type type, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
@@ -835,16 +706,15 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(string location, uint priority = 0)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
 
 
         private SubAssetsHandle LoadSubAssetsInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugCheckAssetLoadType(assetInfo.AssetType);
+            DebugEnsureAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadSubAssets;
             var handle = _resourceManager.LoadSubAssetsAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -853,14 +723,14 @@ namespace YooAsset
         }
         #endregion
 
-        #region 资源加载
+        #region 资源加载 [全资源]
         /// <summary>
         /// 同步加载资源包内所有资源对象
         /// </summary>
         /// <param name="assetInfo">资源信息</param>
         public AllAssetsHandle LoadAllAssetsSync(AssetInfo assetInfo)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
 
@@ -871,7 +741,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AllAssetsHandle LoadAllAssetsSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
@@ -883,7 +753,7 @@ namespace YooAsset
         /// <param name="type">子对象类型</param>
         public AllAssetsHandle LoadAllAssetsSync(string location, System.Type type)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
@@ -894,9 +764,8 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AllAssetsHandle LoadAllAssetsSync(string location)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
 
@@ -908,7 +777,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
 
@@ -920,7 +789,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
@@ -933,7 +802,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(string location, System.Type type, uint priority = 0)
         {
-            DebugCheckInitialize();
+            EnsureInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
@@ -945,16 +814,15 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(string location, uint priority = 0)
         {
-            DebugCheckInitialize();
-            Type type = typeof(UnityEngine.Object);
-            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
+            EnsureInitialized();
+            AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
 
 
         private AllAssetsHandle LoadAllAssetsInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugCheckAssetLoadType(assetInfo.AssetType);
+            DebugEnsureAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadAllAssets;
             var handle = _resourceManager.LoadAllAssetsAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -965,232 +833,104 @@ namespace YooAsset
 
         #region 资源下载
         /// <summary>
-        /// 创建资源下载器，用于下载当前资源版本所有的资源包文件
-        /// </summary>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateResourceDownloader(int downloadingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceDownloaderByAll(downloadingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建资源下载器，用于下载指定的资源标签关联的资源包文件
-        /// </summary>
-        /// <param name="tag">资源标签</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateResourceDownloader(string tag, int downloadingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceDownloaderByTags(new string[] { tag }, downloadingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
         /// 创建资源下载器，用于下载指定的资源标签列表关联的资源包文件
         /// </summary>
-        /// <param name="tags">资源标签列表</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateResourceDownloader(string[] tags, int downloadingMaxNumber, int failedTryAgain)
+        public ResourceDownloaderOperation CreateResourceDownloader(ResourceDownloaderOptions options)
         {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceDownloaderByTags(tags, downloadingMaxNumber, failedTryAgain);
+            EnsureInitialized();
+            return _fileSystemHost.CreateResourceDownloader(options);
         }
 
         /// <summary>
-        /// 创建资源下载器，用于下载指定的资源依赖的资源包文件
+        /// 创建资源下载器，用于下载指定的资源信息列表依赖的资源包文件
         /// </summary>
-        /// <param name="location">资源的定位地址</param>
-        /// <param name="recursiveDownload">下载资源对象所属资源包内所有资源对象依赖的资源包</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateBundleDownloader(string location, bool recursiveDownload, int downloadingMaxNumber, int failedTryAgain)
+        public ResourceDownloaderOperation CreateResourceDownloader(BundleDownloaderOptions options)
         {
-            DebugCheckInitialize();
-            var assetInfo = ConvertLocationToAssetInfo(location, null);
-            AssetInfo[] assetInfos = new AssetInfo[] { assetInfo };
-            return _playModeImpl.CreateResourceDownloaderByPaths(assetInfos, recursiveDownload, downloadingMaxNumber, failedTryAgain);
-        }
-        public ResourceDownloaderOperation CreateBundleDownloader(string location, int downloadingMaxNumber, int failedTryAgain)
-        {
-            return CreateBundleDownloader(location, false, downloadingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建资源下载器，用于下载指定的资源列表依赖的资源包文件
-        /// </summary>
-        /// <param name="locations">资源的定位地址列表</param>
-        /// <param name="recursiveDownload">下载资源对象所属资源包内所有资源对象依赖的资源包</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateBundleDownloader(string[] locations, bool recursiveDownload, int downloadingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            List<AssetInfo> assetInfos = new List<AssetInfo>(locations.Length);
-            foreach (var location in locations)
-            {
-                var assetInfo = ConvertLocationToAssetInfo(location, null);
-                assetInfos.Add(assetInfo);
-            }
-            return _playModeImpl.CreateResourceDownloaderByPaths(assetInfos.ToArray(), recursiveDownload, downloadingMaxNumber, failedTryAgain);
-        }
-        public ResourceDownloaderOperation CreateBundleDownloader(string[] locations, int downloadingMaxNumber, int failedTryAgain)
-        {
-            return CreateBundleDownloader(locations, false, downloadingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建资源下载器，用于下载指定的资源依赖的资源包文件
-        /// </summary>
-        /// <param name="assetInfo">资源信息</param>
-        /// <param name="recursiveDownload">下载资源对象所属资源包内所有资源对象依赖的资源包</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateBundleDownloader(AssetInfo assetInfo, bool recursiveDownload, int downloadingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            AssetInfo[] assetInfos = new AssetInfo[] { assetInfo };
-            return _playModeImpl.CreateResourceDownloaderByPaths(assetInfos, recursiveDownload, downloadingMaxNumber, failedTryAgain);
-        }
-        public ResourceDownloaderOperation CreateBundleDownloader(AssetInfo assetInfo, int downloadingMaxNumber, int failedTryAgain)
-        {
-            return CreateBundleDownloader(assetInfo, false, downloadingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建资源下载器，用于下载指定的资源列表依赖的资源包文件
-        /// </summary>
-        /// <param name="assetInfos">资源信息列表</param>
-        /// <param name="recursiveDownload">下载资源对象所属资源包内所有资源对象依赖的资源包</param>
-        /// <param name="downloadingMaxNumber">同时下载的最大文件数</param>
-        /// <param name="failedTryAgain">下载失败的重试次数</param>
-        public ResourceDownloaderOperation CreateBundleDownloader(AssetInfo[] assetInfos, bool recursiveDownload, int downloadingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceDownloaderByPaths(assetInfos, recursiveDownload, downloadingMaxNumber, failedTryAgain);
-        }
-        public ResourceDownloaderOperation CreateBundleDownloader(AssetInfo[] assetInfos, int downloadingMaxNumber, int failedTryAgain)
-        {
-            return CreateBundleDownloader(assetInfos, false, downloadingMaxNumber, failedTryAgain);
+            EnsureInitialized();
+            return _fileSystemHost.CreateResourceDownloader(options);
         }
         #endregion
 
         #region 资源解压
         /// <summary>
-        /// 创建内置资源解压器，用于解压当前资源版本所有的资源包文件
-        /// </summary>
-        /// <param name="unpackingMaxNumber">同时解压的最大文件数</param>
-        /// <param name="failedTryAgain">解压失败的重试次数</param>
-        public ResourceUnpackerOperation CreateResourceUnpacker(int unpackingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceUnpackerByAll(unpackingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建内置资源解压器，用于解压指定的资源标签关联的资源包文件
-        /// </summary>
-        /// <param name="tag">资源标签</param>
-        /// <param name="unpackingMaxNumber">同时解压的最大文件数</param>
-        /// <param name="failedTryAgain">解压失败的重试次数</param>
-        public ResourceUnpackerOperation CreateResourceUnpacker(string tag, int unpackingMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceUnpackerByTags(new string[] { tag }, unpackingMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
         /// 创建内置资源解压器，用于解压指定的资源标签列表关联的资源包文件
         /// </summary>
-        /// <param name="tags">资源标签列表</param>
-        /// <param name="unpackingMaxNumber">同时解压的最大文件数</param>
-        /// <param name="failedTryAgain">解压失败的重试次数</param>
-        public ResourceUnpackerOperation CreateResourceUnpacker(string[] tags, int unpackingMaxNumber, int failedTryAgain)
+        public ResourceUnpackerOperation CreateResourceUnpacker(ResourceUnpackerOptions options)
         {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceUnpackerByTags(tags, unpackingMaxNumber, failedTryAgain);
+            EnsureInitialized();
+            return _fileSystemHost.CreateResourceUnpacker(options);
         }
         #endregion
 
         #region 资源导入
         /// <summary>
         /// 创建资源导入器
-        /// 注意：资源文件名称必须和资源服务器部署的文件名称一致！
         /// </summary>
-        /// <param name="filePaths">资源路径列表</param>
-        /// <param name="importerMaxNumber">同时导入的最大文件数</param>
-        /// <param name="failedTryAgain">导入失败的重试次数</param>
-        public ResourceImporterOperation CreateResourceImporter(string[] filePaths, int importerMaxNumber, int failedTryAgain)
+        public ResourceImporterOperation CreateResourceImporter(BundleImporterOptions options)
         {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceImporterByFilePaths(filePaths, importerMaxNumber, failedTryAgain);
-        }
-
-        /// <summary>
-        /// 创建资源导入器
-        /// 注意：资源信息里需要指定BundleName或BundleGUID！
-        /// </summary>
-        /// <param name="fileInfos">资源信息列表</param>
-        /// <param name="importerMaxNumber">同时导入的最大文件数</param>
-        /// <param name="failedTryAgain">导入失败的重试次数</param>
-        public ResourceImporterOperation CreateResourceImporter(ImportFileInfo[] fileInfos, int importerMaxNumber, int failedTryAgain)
-        {
-            DebugCheckInitialize();
-            return _playModeImpl.CreateResourceImporterByFileInfos(fileInfos, importerMaxNumber, failedTryAgain);
+            EnsureInitialized();
+            return _fileSystemHost.CreateResourceImporter(options);
         }
         #endregion
 
         #region 内部方法
-        private AssetInfo ConvertLocationToAssetInfo(string location, System.Type assetType)
+        internal AssetInfo ConvertLocationToAssetInfo(string location, System.Type assetType)
         {
-            return _playModeImpl.ActiveManifest.ConvertLocationToAssetInfo(location, assetType);
+            return _fileSystemHost.ActiveManifest.ConvertLocationToAssetInfo(location, assetType);
         }
-        private AssetInfo ConvertAssetGUIDToAssetInfo(string assetGUID, System.Type assetType)
+        internal AssetInfo ConvertAssetGUIDToAssetInfo(string assetGUID, System.Type assetType)
         {
-            return _playModeImpl.ActiveManifest.ConvertAssetGUIDToAssetInfo(assetGUID, assetType);
+            return _fileSystemHost.ActiveManifest.ConvertAssetGUIDToAssetInfo(assetGUID, assetType);
         }
         #endregion
 
         #region 调试方法
-        [Conditional("DEBUG")]
-        private void DebugCheckInitialize(bool checkActiveManifest = true)
+        private void EnsureInitialized(bool checkActiveManifest = true)
         {
-            if (_initializeStatus == EOperationStatus.None)
-                throw new YooPackageException(PackageName, "Package initialize not completed !");
-            else if (_initializeStatus == EOperationStatus.Failed)
-                throw new YooPackageException(PackageName, $"Package initialize failed ! {_initializeError}");
+            if (InitializeStatus != EOperationStatus.Succeed)
+            {
+                switch (InitializeStatus)
+                {
+                    case EOperationStatus.None:
+                        throw new YooPackageException(PackageName, "Resource package not initialized.");
+
+                    case EOperationStatus.Processing:
+                        throw new YooPackageException(PackageName, "Resource package initialization not completed.");
+
+                    case EOperationStatus.Failed:
+                        string error = _initializeOp == null ? string.Empty : _initializeOp.Error;
+                        throw new YooPackageException(PackageName, $"Resource package initialization failed. Error: {error}");
+
+                    case EOperationStatus.Aborted:
+                        throw new YooPackageException(PackageName, "Resource package initialization was aborted.");
+                }
+            }
 
             if (checkActiveManifest)
             {
-                if (_playModeImpl.ActiveManifest == null)
-                    throw new YooPackageException(PackageName, "Can not found active package manifest !");
+                if (_fileSystemHost.ActiveManifest == null)
+                    throw new YooPackageException(PackageName, "Cannot found active package manifest.");
             }
         }
 
         [Conditional("DEBUG")]
-        private void DebugCheckAssetLoadType(System.Type type)
+        private void DebugEnsureAssetType(System.Type type)
         {
             if (type == null)
                 return;
 
             if (typeof(UnityEngine.Behaviour).IsAssignableFrom(type))
-            {
-                throw new YooLoadException($"Load asset type is invalid : {type.FullName} !");
-            }
+                throw new YooLoadException($"Load asset type is invalid : {type.FullName}");
 
             if (typeof(UnityEngine.Object).IsAssignableFrom(type) == false)
-            {
-                throw new YooLoadException($"Load asset type is invalid : {type.FullName} !");
-            }
+                throw new YooLoadException($"Load asset type is invalid : {type.FullName}");
         }
         #endregion
 
         #region 调试信息
-        internal DebugPackageData GetDebugPackageData()
+        internal DiagnosticPackageData GetDebugPackageData()
         {
-            DebugPackageData data = new DebugPackageData();
+            DiagnosticPackageData data = new DiagnosticPackageData();
             data.PackageName = PackageName;
             data.ProviderInfos = _resourceManager.GetDebugProviderInfos();
             data.BundleInfos = _resourceManager.GetDebugBundleInfos();

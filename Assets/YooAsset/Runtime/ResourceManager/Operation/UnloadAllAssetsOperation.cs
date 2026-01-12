@@ -3,19 +3,6 @@ using UnityEngine;
 
 namespace YooAsset
 {
-    public sealed class UnloadAllAssetsOptions
-    {
-        /// <summary>
-        /// 释放所有资源句柄，防止卸载过程中触发完成回调！
-        /// </summary>
-        public bool ReleaseAllHandles = false;
-
-        /// <summary>
-        /// 卸载过程中锁定加载操作，防止新的任务请求！
-        /// </summary>
-        public bool LockLoadOperation = false;
-    }
-
     public sealed class UnloadAllAssetsOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -49,14 +36,6 @@ namespace YooAsset
 
             if (_steps == ESteps.CheckOptions)
             {
-                if (_options == null)
-                {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Failed;
-                    Error = $"{nameof(UnloadAllAssetsOptions)} is null.";
-                    return;
-                }
-
                 // 设置锁定状态
                 if (_options.LockLoadOperation)
                     _resManager.LockLoadOperation = true;

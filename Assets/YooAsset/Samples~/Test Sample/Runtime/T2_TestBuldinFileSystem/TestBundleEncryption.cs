@@ -23,7 +23,8 @@ public class TestBundleEncryption
             yield return assetHandle;
             Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
 
-            var go = assetHandle.InstantiateSync(Vector3.zero, Quaternion.identity);
+            var options = new InstantiateOptions(true, Vector3.zero, Quaternion.identity);
+            var go = assetHandle.InstantiateSync(options);
             Assert.IsNotNull(go);
         }
 
@@ -33,7 +34,8 @@ public class TestBundleEncryption
             var assetHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");
             Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
 
-            var go = assetHandle.InstantiateSync(Vector3.zero, Quaternion.identity);
+            var options = new InstantiateOptions(true, Vector3.zero, Quaternion.identity);
+            var go = assetHandle.InstantiateSync(options);
             Assert.IsNotNull(go);
         }
     }

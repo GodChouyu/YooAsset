@@ -16,18 +16,18 @@ namespace YooAsset
         {
             _loadParams = loadParams;
             _suspendLoad = suspendLoad;
-            SceneName = Path.GetFileNameWithoutExtension(assetInfo.AssetPath);
+            LoadedSceneName = Path.GetFileNameWithoutExtension(assetInfo.AssetPath);
         }
         protected override void ProcessBundleResult()
         {
             if (_loadSceneOp == null)
             {
-                _loadSceneOp = BundleResultObject.LoadSceneOperation(MainAssetInfo, _loadParams, _suspendLoad);
+                _loadSceneOp = LoadedBundleResult.LoadSceneOperation(MainAssetInfo, _loadParams, _suspendLoad);
                 _loadSceneOp.StartOperation();
                 AddChildOperation(_loadSceneOp);
             }
 
-            if (IsWaitForAsyncComplete)
+            if (IsWaitingForAsyncComplete)
                 _loadSceneOp.WaitForAsyncComplete();
 
             // 注意：场景加载中途可以取消挂起

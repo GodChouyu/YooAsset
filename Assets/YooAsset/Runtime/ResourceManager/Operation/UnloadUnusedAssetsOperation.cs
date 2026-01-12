@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace YooAsset
 {
@@ -14,19 +13,19 @@ namespace YooAsset
         }
 
         private readonly ResourceManager _resManager;
-        private readonly int _loopCount;
+        private readonly UnloadUnusedAssetsOptions _options;
         private int _loopCounter = 0;
         private ESteps _steps = ESteps.None;
 
-        internal UnloadUnusedAssetsOperation(ResourceManager resourceManager, int loopCount)
+        internal UnloadUnusedAssetsOperation(ResourceManager resourceManager, UnloadUnusedAssetsOptions options)
         {
             _resManager = resourceManager;
-            _loopCount = loopCount;
+            _options = options;
         }
         internal override void InternalStart()
         {
             _steps = ESteps.UnloadUnused;
-            _loopCounter = _loopCount;
+            _loopCounter = _options.LoopCount;
         }
         internal override void InternalUpdate()
         {
@@ -53,18 +52,11 @@ namespace YooAsset
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
-        internal override string InternalGetDesc()
+        internal override string InternalGetDescription()
         {
-            return $"LoopCount : {_loopCount}";
+            return $"LoopCount : {_options.LoopCount}";
         }
 
         /// <summary>
@@ -72,7 +64,7 @@ namespace YooAsset
         /// </summary>
         private void LoopUnloadUnused()
         {
-            var removeList = new List<LoadBundleFileOperation>(_resManager.LoaderDic.Count);
+            var removeList = new List<LoadBundleOperation>(_resManager.LoaderDic.Count);
 
             // 注意：优先销毁资源提供者
             foreach (var loader in _resManager.LoaderDic.Values)

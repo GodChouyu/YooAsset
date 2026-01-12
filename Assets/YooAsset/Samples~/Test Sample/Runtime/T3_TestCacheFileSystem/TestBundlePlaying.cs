@@ -36,9 +36,9 @@ public class TestBundlePlaying
         {
             // 验证失败结果
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
-            var assetsHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");
-            Assert.AreEqual(EOperationStatus.Failed, assetsHandle.Status);
+            var assetsHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");  
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
+            Assert.AreEqual(EOperationStatus.Failed, assetsHandle.Status);
 
             // 清理加载器
             assetsHandle.Release();
@@ -47,7 +47,9 @@ public class TestBundlePlaying
             // 验证成功结果
             // 说明：同步加载也会触发远端下载任务！
             yield return new WaitForSeconds(1f);
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             assetsHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");
+            UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
             Assert.AreEqual(EOperationStatus.Succeed, assetsHandle.Status);
         }
     }

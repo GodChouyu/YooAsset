@@ -26,7 +26,7 @@ public class TestBundleUnload
             yield return assetHandle;
             Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
 
-            DebugPackageData debugData = package.GetDebugPackageData();
+            DiagnosticPackageData debugData = package.GetDebugPackageData();
             var findItem = debugData.BundleInfos.Where(x => x.BundleName == targetBundleName);
             Assert.AreEqual(findItem.Count(), 1);
         }
@@ -36,7 +36,7 @@ public class TestBundleUnload
             assetHandle.Release();
             package.TryUnloadUnusedAsset("enemy");
 
-            DebugPackageData debugData = package.GetDebugPackageData();
+            DiagnosticPackageData debugData = package.GetDebugPackageData();
             var findItem = debugData.BundleInfos.Where(x => x.BundleName == targetBundleName);
             Assert.AreEqual(findItem.Count(), 0);
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace YooAsset
@@ -73,7 +73,7 @@ namespace YooAsset
         /// </summary>
         public static FileSystemParameters CreateDefaultEditorFileSystemParameters(string packageRoot)
         {
-            string fileSystemClass = typeof(DefaultEditorFileSystem).FullName;
+            string fileSystemClass = typeof(EditorFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, packageRoot);
             return fileSystemParams;
         }
@@ -81,13 +81,11 @@ namespace YooAsset
         /// <summary>
         /// 创建默认的内置文件系统参数
         /// </summary>
-        /// <param name="decryptionServices">加密文件解密服务类</param>
         /// <param name="packageRoot">文件系统的根目录</param>
-        public static FileSystemParameters CreateDefaultBuildinFileSystemParameters(IDecryptionServices decryptionServices = null, string packageRoot = null)
+        public static FileSystemParameters CreateDefaultBuildinFileSystemParameters(string packageRoot = null)
         {
-            string fileSystemClass = typeof(DefaultBuildinFileSystem).FullName;
+            string fileSystemClass = typeof(BuiltinFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, packageRoot);
-            fileSystemParams.AddParameter(FileSystemParametersDefine.DECRYPTION_SERVICES, decryptionServices);
             return fileSystemParams;
         }
 
@@ -95,14 +93,12 @@ namespace YooAsset
         /// 创建默认的缓存文件系统参数
         /// </summary>
         /// <param name="remoteServices">远端资源地址查询服务类</param>
-        /// <param name="decryptionServices">加密文件解密服务类</param>
         /// <param name="packageRoot">文件系统的根目录</param>
-        public static FileSystemParameters CreateDefaultCacheFileSystemParameters(IRemoteServices remoteServices, IDecryptionServices decryptionServices = null, string packageRoot = null)
+        public static FileSystemParameters CreateDefaultCacheFileSystemParameters(IRemoteServices remoteServices, string packageRoot = null)
         {
-            string fileSystemClass = typeof(DefaultCacheFileSystem).FullName;
+            string fileSystemClass = typeof(CacheFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, packageRoot);
             fileSystemParams.AddParameter(FileSystemParametersDefine.REMOTE_SERVICES, remoteServices);
-            fileSystemParams.AddParameter(FileSystemParametersDefine.DECRYPTION_SERVICES, decryptionServices);
             return fileSystemParams;
         }
 
@@ -111,11 +107,10 @@ namespace YooAsset
         /// </summary>
         /// <param name="decryptionServices">加密文件解密服务类</param>
         /// <param name="disableUnityWebCache">禁用Unity的网络缓存</param>
-        public static FileSystemParameters CreateDefaultWebServerFileSystemParameters(IWebDecryptionServices decryptionServices = null, bool disableUnityWebCache = false)
+        public static FileSystemParameters CreateDefaultWebServerFileSystemParameters(bool disableUnityWebCache = false)
         {
-            string fileSystemClass = typeof(DefaultWebServerFileSystem).FullName;
+            string fileSystemClass = typeof(WebServerFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, null);
-            fileSystemParams.AddParameter(FileSystemParametersDefine.DECRYPTION_SERVICES, decryptionServices);
             fileSystemParams.AddParameter(FileSystemParametersDefine.DISABLE_UNITY_WEB_CACHE, disableUnityWebCache);
             return fileSystemParams;
         }
@@ -126,12 +121,11 @@ namespace YooAsset
         /// <param name="remoteServices">远端资源地址查询服务类</param>
         /// <param name="decryptionServices">加密文件解密服务类</param>
         /// <param name="disableUnityWebCache">禁用Unity的网络缓存</param>
-        public static FileSystemParameters CreateDefaultWebRemoteFileSystemParameters(IRemoteServices remoteServices, IWebDecryptionServices decryptionServices = null, bool disableUnityWebCache = false)
+        public static FileSystemParameters CreateDefaultWebRemoteFileSystemParameters(IRemoteServices remoteServices, bool disableUnityWebCache = false)
         {
-            string fileSystemClass = typeof(DefaultWebRemoteFileSystem).FullName;
+            string fileSystemClass = typeof(WebRemoteFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, null);
             fileSystemParams.AddParameter(FileSystemParametersDefine.REMOTE_SERVICES, remoteServices);
-            fileSystemParams.AddParameter(FileSystemParametersDefine.DECRYPTION_SERVICES, decryptionServices);
             fileSystemParams.AddParameter(FileSystemParametersDefine.DISABLE_UNITY_WEB_CACHE, disableUnityWebCache);
             return fileSystemParams;
         }

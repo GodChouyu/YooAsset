@@ -7,18 +7,24 @@ using UnityEngine.SceneManagement;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源管理器
+    /// 注意：此类不是线程安全的，所有方法必须在Unity主线程调用
+    /// </summary>
     internal class ResourceManager
     {
         internal readonly Dictionary<string, ProviderOperation> ProviderDic = new Dictionary<string, ProviderOperation>(5000);
-        internal readonly Dictionary<string, LoadBundleFileOperation> LoaderDic = new Dictionary<string, LoadBundleFileOperation>(5000);
+        internal readonly Dictionary<string, LoadBundleOperation> LoaderDic = new Dictionary<string, LoadBundleOperation>(5000);
         internal readonly List<SceneHandle> SceneHandles = new List<SceneHandle>(100);
-        private long _sceneCreateIndex = 0;
-        private IBundleQuery _bundleQuery;
+        private readonly List<SceneHandle> _tempSceneHandles = new List<SceneHandle>(100);
+        private FileSystemHost _fileSystemHost;
         private int _bundleLoadingMaxConcurrency;
+        private int _bundleLoadingCounter;
+        private long _sceneCreateIndex;
 
         // 开发者配置选项
-        public bool AutoUnloadBundleWhenUnused { private set; get; }
-        public bool WebGLForceSyncLoadAsset { private set; get; }
+        public bool AutoUnloadBundleWhenUnused { get; private set; }
+        public bool WebGLForceSyncLoadAsset { get; private set; }
 
         /// <summary>
         /// 所属包裹
@@ -30,12 +36,6 @@ namespace YooAsset
         /// </summary>
         public bool LockLoadOperation = false;
 
-        /// <summary>
-        /// 统计正在加载的Bundle文件数量
-        /// </summary>
-        public int BundleLoadingCounter = 0;
-
-
         public ResourceManager(string packageName)
         {
             PackageName = packageName;
@@ -44,12 +44,12 @@ namespace YooAsset
         /// <summary>
         /// 初始化
         /// </summary>
-        public void Initialize(InitializeParameters parameters, IBundleQuery bundleServices)
+        public void Initialize(InitializePackageOptions options, FileSystemHost host)
         {
-            _bundleLoadingMaxConcurrency = parameters.BundleLoadingMaxConcurrency;
-            AutoUnloadBundleWhenUnused = parameters.AutoUnloadBundleWhenUnused;
-            WebGLForceSyncLoadAsset = parameters.WebGLForceSyncLoadAsset;
-            _bundleQuery = bundleServices;
+            _fileSystemHost = host;
+            _bundleLoadingMaxConcurrency = options.BundleLoadingMaxConcurrency;
+            AutoUnloadBundleWhenUnused = options.AutoUnloadBundleWhenUnused;
+            WebGLForceSyncLoadAsset = options.WebGLForceSyncLoadAsset;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
@@ -68,21 +68,24 @@ namespace YooAsset
         {
             if (assetInfo == null)
             {
-                YooLogger.Error($"{nameof(AssetInfo)} is null !");
+                YooLogger.Error($"{nameof(AssetInfo)} is null.");
                 return;
             }
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to unload asset ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to unload asset. Error: {assetInfo.Error}");
                 return;
             }
 
+            // 多次循环尝试卸载，以处理复杂的依赖链
+            // 例如：A依赖B，B依赖C，需要多次循环才能完全卸载
             while (loopCount > 0)
             {
                 loopCount--;
+                bool hasUnloaded = false;
 
                 // 卸载主资源包加载器
-                string mainBundleName = _bundleQuery.GetMainBundleName(assetInfo.Asset.BundleID);
+                string mainBundleName = _fileSystemHost.GetMainBundleName(assetInfo.Asset.BundleID);
                 var mainLoader = TryGetBundleFileLoader(mainBundleName);
                 if (mainLoader != null)
                 {
@@ -91,13 +94,14 @@ namespace YooAsset
                     {
                         mainLoader.DestroyLoader();
                         LoaderDic.Remove(mainBundleName);
+                        hasUnloaded = true;
                     }
                 }
 
                 // 卸载依赖资源包加载器
                 foreach (var dependID in assetInfo.Asset.DependBundleIDs)
                 {
-                    string dependBundleName = _bundleQuery.GetMainBundleName(dependID);
+                    string dependBundleName = _fileSystemHost.GetMainBundleName(dependID);
                     var dependLoader = TryGetBundleFileLoader(dependBundleName);
                     if (dependLoader != null)
                     {
@@ -105,9 +109,14 @@ namespace YooAsset
                         {
                             dependLoader.DestroyLoader();
                             LoaderDic.Remove(dependBundleName);
+                            hasUnloaded = true;
                         }
                     }
                 }
+
+                // 如果本次循环没有卸载任何资源，提前退出
+                if (hasUnloaded == false)
+                    break;
             }
         }
 
@@ -120,7 +129,7 @@ namespace YooAsset
         {
             if (LockLoadOperation)
             {
-                string error = $"The load operation locked !";
+                string error = $"The load operation locked.";
                 YooLogger.Error(error);
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(error);
@@ -129,7 +138,7 @@ namespace YooAsset
 
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to load scene ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to load scene. Error: {assetInfo.Error}");
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(assetInfo.Error);
                 return completedProvider.CreateHandle<SceneHandle>();
@@ -159,7 +168,7 @@ namespace YooAsset
         {
             if (LockLoadOperation)
             {
-                string error = $"The load operation locked !";
+                string error = $"The load operation locked.";
                 YooLogger.Error(error);
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(error);
@@ -168,7 +177,7 @@ namespace YooAsset
 
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to load asset ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to load asset. Error: {assetInfo.Error}");
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(assetInfo.Error);
                 return completedProvider.CreateHandle<AssetHandle>();
@@ -195,7 +204,7 @@ namespace YooAsset
         {
             if (LockLoadOperation)
             {
-                string error = $"The load operation locked !";
+                string error = $"The load operation locked.";
                 YooLogger.Error(error);
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(error);
@@ -204,7 +213,7 @@ namespace YooAsset
 
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to load sub assets ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to load sub assets. Error: {assetInfo.Error}");
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(assetInfo.Error);
                 return completedProvider.CreateHandle<SubAssetsHandle>();
@@ -231,7 +240,7 @@ namespace YooAsset
         {
             if (LockLoadOperation)
             {
-                string error = $"The load operation locked !";
+                string error = $"The load operation locked.";
                 YooLogger.Error(error);
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(error);
@@ -240,7 +249,7 @@ namespace YooAsset
 
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to load all assets ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to load all assets. Error: {assetInfo.Error}");
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(assetInfo.Error);
                 return completedProvider.CreateHandle<AllAssetsHandle>();
@@ -267,7 +276,7 @@ namespace YooAsset
         {
             if (LockLoadOperation)
             {
-                string error = $"The load operation locked !";
+                string error = $"The load operation locked.";
                 YooLogger.Error(error);
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(error);
@@ -276,7 +285,7 @@ namespace YooAsset
 
             if (assetInfo.IsInvalid)
             {
-                YooLogger.Error($"Failed to load raw file ! {assetInfo.Error}");
+                YooLogger.Error($"Failed to load raw file. Error: {assetInfo.Error}");
                 CompletedProvider completedProvider = new CompletedProvider(this, assetInfo);
                 completedProvider.SetCompletedWithError(assetInfo.Error);
                 return completedProvider.CreateHandle<RawFileHandle>();
@@ -296,15 +305,15 @@ namespace YooAsset
             return provider.CreateHandle<RawFileHandle>();
         }
 
-        internal LoadBundleFileOperation CreateMainBundleFileLoader(AssetInfo assetInfo)
+        internal LoadBundleOperation CreateMainBundleFileLoader(AssetInfo assetInfo)
         {
-            BundleInfo bundleInfo = _bundleQuery.GetMainBundleInfo(assetInfo);
+            BundleInfo bundleInfo = _fileSystemHost.GetMainBundleInfo(assetInfo);
             return CreateBundleFileLoaderInternal(bundleInfo);
         }
-        internal List<LoadBundleFileOperation> CreateDependBundleFileLoaders(AssetInfo assetInfo)
+        internal List<LoadBundleOperation> CreateDependBundleFileLoaders(AssetInfo assetInfo)
         {
-            List<BundleInfo> bundleInfos = _bundleQuery.GetDependBundleInfos(assetInfo);
-            List<LoadBundleFileOperation> result = new List<LoadBundleFileOperation>(bundleInfos.Count);
+            List<BundleInfo> bundleInfos = _fileSystemHost.GetDependBundleInfos(assetInfo);
+            List<LoadBundleOperation> result = new List<LoadBundleOperation>(bundleInfos.Count);
             foreach (var bundleInfo in bundleInfos)
             {
                 var bundleLoader = CreateBundleFileLoaderInternal(bundleInfo);
@@ -321,7 +330,7 @@ namespace YooAsset
         }
         internal bool CheckBundleDestroyed(int bundleID)
         {
-            string bundleName = _bundleQuery.GetMainBundleName(bundleID);
+            string bundleName = _fileSystemHost.GetMainBundleName(bundleID);
             var bundleFileLoader = TryGetBundleFileLoader(bundleName);
             if (bundleFileLoader == null)
                 return true;
@@ -329,7 +338,7 @@ namespace YooAsset
         }
         internal bool CheckBundleReleasable(int bundleID)
         {
-            string bundleName = _bundleQuery.GetMainBundleName(bundleID);
+            string bundleName = _fileSystemHost.GetMainBundleName(bundleID);
             var bundleFileLoader = TryGetBundleFileLoader(bundleName);
             if (bundleFileLoader == null)
                 return true;
@@ -339,27 +348,44 @@ namespace YooAsset
         {
             return LoaderDic.Count > 0;
         }
+        internal void IncrementBundleLoadingCounter()
+        {
+            _bundleLoadingCounter++;
+        }
+        internal void DecrementBundleLoadingCounter()
+        {
+            _bundleLoadingCounter--;
+            if (_bundleLoadingCounter < 0)
+            {
+                YooLogger.Error("BundleLoadingCounter is negative.");
+                _bundleLoadingCounter = 0;
+            }
+        }
+        internal int GetBundleLoadingCounter()
+        {
+            return _bundleLoadingCounter;
+        }
         internal bool BundleLoadingIsBusy()
         {
-            return BundleLoadingCounter >= _bundleLoadingMaxConcurrency;
+            return _bundleLoadingCounter >= _bundleLoadingMaxConcurrency;
         }
 
-        private LoadBundleFileOperation CreateBundleFileLoaderInternal(BundleInfo bundleInfo)
+        private LoadBundleOperation CreateBundleFileLoaderInternal(BundleInfo bundleInfo)
         {
             // 如果加载器已经存在
             string bundleName = bundleInfo.Bundle.BundleName;
-            LoadBundleFileOperation loaderOperation = TryGetBundleFileLoader(bundleName);
+            LoadBundleOperation loaderOperation = TryGetBundleFileLoader(bundleName);
             if (loaderOperation != null)
                 return loaderOperation;
 
             // 新增下载需求
-            loaderOperation = new LoadBundleFileOperation(this, bundleInfo);
+            loaderOperation = new LoadBundleOperation(this, bundleInfo);
             LoaderDic.Add(bundleName, loaderOperation);
             return loaderOperation;
         }
-        private LoadBundleFileOperation TryGetBundleFileLoader(string bundleName)
+        private LoadBundleOperation TryGetBundleFileLoader(string bundleName)
         {
-            if (LoaderDic.TryGetValue(bundleName, out LoadBundleFileOperation value))
+            if (LoaderDic.TryGetValue(bundleName, out LoadBundleOperation value))
                 return value;
             else
                 return null;
@@ -373,7 +399,7 @@ namespace YooAsset
         }
         private void OnSceneUnloaded(Scene scene)
         {
-            List<SceneHandle> removeList = new List<SceneHandle>();
+            _tempSceneHandles.Clear(); //复用列表
             foreach (var sceneHandle in SceneHandles)
             {
                 if (sceneHandle.IsValid)
@@ -381,45 +407,45 @@ namespace YooAsset
                     if (sceneHandle.SceneObject == scene)
                     {
                         sceneHandle.Release();
-                        removeList.Add(sceneHandle);
+                        _tempSceneHandles.Add(sceneHandle);
                     }
                 }
             }
-            foreach (var sceneHandle in removeList)
+            foreach (var sceneHandle in _tempSceneHandles)
             {
                 SceneHandles.Remove(sceneHandle);
             }
         }
 
         #region 调试信息
-        internal List<DebugProviderInfo> GetDebugProviderInfos()
+        internal List<DiagnosticProviderInfo> GetDebugProviderInfos()
         {
-            List<DebugProviderInfo> result = new List<DebugProviderInfo>(ProviderDic.Count);
+            List<DiagnosticProviderInfo> result = new List<DiagnosticProviderInfo>(ProviderDic.Count);
             foreach (var provider in ProviderDic.Values)
             {
-                DebugProviderInfo providerInfo = new DebugProviderInfo();
+                DiagnosticProviderInfo providerInfo = new DiagnosticProviderInfo();
                 providerInfo.AssetPath = provider.MainAssetInfo.AssetPath;
-                providerInfo.SpawnScene = provider.SpawnScene;
-                providerInfo.BeginTime = provider.BeginTime;
-                providerInfo.LoadingTime = provider.ProcessTime;
-                providerInfo.RefCount = provider.RefCount;
+                providerInfo.OriginScene = provider.OriginScene;
+                providerInfo.StartTime = provider.StartTime;
+                providerInfo.ElapsedMS = provider.ElapsedMS;
+                providerInfo.ReferenceCount = provider.RefCount;
                 providerInfo.Status = provider.Status.ToString();
-                providerInfo.DependBundles = provider.GetDebugDependBundles();
+                providerInfo.DependentBundles = provider.GetDebugDependBundles();
                 result.Add(providerInfo);
             }
             return result;
         }
-        internal List<DebugBundleInfo> GetDebugBundleInfos()
+        internal List<DiagnosticBundleInfo> GetDebugBundleInfos()
         {
-            List<DebugBundleInfo> result = new List<DebugBundleInfo>(LoaderDic.Values.Count);
+            List<DiagnosticBundleInfo> result = new List<DiagnosticBundleInfo>(LoaderDic.Values.Count);
             foreach (var bundleLoader in LoaderDic.Values)
             {
                 var packageBundle = bundleLoader.LoadBundleInfo.Bundle;
-                var bundleInfo = new DebugBundleInfo();
+                var bundleInfo = new DiagnosticBundleInfo();
                 bundleInfo.BundleName = packageBundle.BundleName;
-                bundleInfo.RefCount = bundleLoader.RefCount;
+                bundleInfo.ReferenceCount = bundleLoader.RefCount;
                 bundleInfo.Status = bundleLoader.Status.ToString();
-                bundleInfo.ReferenceBundles = FilterReferenceBundles(packageBundle);
+                bundleInfo.ReferencedByBundles = FilterReferenceBundles(packageBundle);
                 result.Add(bundleInfo);
             }
             return result;

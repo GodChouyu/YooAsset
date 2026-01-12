@@ -19,7 +19,7 @@ namespace YooAsset.Editor
                 buildParameters.BuildOutputRoot = AssetBundleBuilderHelper.GetDefaultBuildOutputRoot();
                 buildParameters.BuildinFileRoot = AssetBundleBuilderHelper.GetStreamingAssetsRoot();
                 buildParameters.BuildPipeline = EBuildPipeline.EditorSimulateBuildPipeline.ToString();
-                buildParameters.BuildBundleType = (int)EBuildBundleType.VirtualBundle;
+                buildParameters.BuildBundleType = (int)EBundleType.VirtualBundle;
                 buildParameters.BuildTarget = EditorUserBuildSettings.activeBuildTarget;
                 buildParameters.PackageName = packageName;
                 buildParameters.PackageVersion = "Simulate";

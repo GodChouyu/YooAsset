@@ -40,10 +40,13 @@ internal class FsmInitializePackage : IStateNode
         InitializationOperation initializationOperation = null;
         if (playMode == EPlayMode.EditorSimulateMode)
         {
-            var buildResult = EditorSimulateModeHelper.SimulateBuild(packageName);
+            var buildResult = EditorSimulateBuildInvoker.Build(packageName);
             var packageRoot = buildResult.PackageRootDirectory;
             var createParameters = new EditorSimulateModeParameters();
             createParameters.EditorFileSystemParameters = FileSystemParameters.CreateDefaultEditorFileSystemParameters(packageRoot);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_WEBGL_MODE, true);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_DOWNLOAD_MODE, true);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_DOWNLOAD_SPEED, 1024 * 1000);
             initializationOperation = package.InitializeAsync(createParameters);
         }
 
@@ -63,7 +66,11 @@ internal class FsmInitializePackage : IStateNode
             IRemoteServices remoteServices = new RemoteServices(defaultHostServer, fallbackHostServer);
             var createParameters = new HostPlayModeParameters();
             createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters();
+            createParameters.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.COPY_BUILDIN_PACKAGE_MANIFEST, true);
             createParameters.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_CONCURRENCY, 5);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_REQUEST_PER_FRAME, 1);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_WATCH_DOG_TIME, 10);
             initializationOperation = package.InitializeAsync(createParameters);
         }
 

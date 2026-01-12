@@ -39,7 +39,7 @@ namespace YooAsset
                 if (_assetBundle == null)
                 {
                     _steps = ESteps.Done;
-                    Error = $"The bundle {_packageBundle.BundleName} has been destroyed due to unity engine bugs !";
+                    Error = $"The bundle {_packageBundle.BundleName} has been destroyed due to unity engine bugs.";
                     Status = EOperationStatus.Failed;
                     return;
                 }
@@ -49,7 +49,7 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadAsset)
             {
-                if (IsWaitForAsyncComplete)
+                if (IsWaitingForAsyncComplete)
                 {
                     if (_assetInfo.AssetType == null)
                         Result = _assetBundle.LoadAssetWithSubAssets(_assetInfo.AssetPath);
@@ -71,7 +71,7 @@ namespace YooAsset
             {
                 if (_request != null)
                 {
-                    if (IsWaitForAsyncComplete)
+                    if (IsWaitingForAsyncComplete)
                     {
                         // 强制挂起主线程（注意：该操作会很耗时）
                         YooLogger.Warning("Suspend the main thread to load unity asset.");
@@ -108,14 +108,7 @@ namespace YooAsset
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
     }
 }

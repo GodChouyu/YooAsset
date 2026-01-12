@@ -46,13 +46,13 @@ namespace YooAsset.Editor
         /// <summary>
         /// 创建资源包加密服务类实例
         /// </summary>
-        protected IEncryptionServices CreateEncryptionServicesInstance()
+        protected IBundleEncryptionServices CreateEncryptionServicesInstance()
         {
             var className = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(PackageName, PipelineName);
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IEncryptionServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptionServices));
             var classType = classTypes.Find(x => x.FullName.Equals(className));
             if (classType != null)
-                return (IEncryptionServices)Activator.CreateInstance(classType);
+                return (IBundleEncryptionServices)Activator.CreateInstance(classType);
             else
                 return null;
         }
@@ -184,7 +184,7 @@ namespace YooAsset.Editor
         protected PopupField<Type> CreateEncryptionServicesField(VisualElement container)
         {
             // 资源包加密服务类
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IEncryptionServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptionServices));
             if (classTypes.Count > 0)
             {
                 var className = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(PackageName, PipelineName);

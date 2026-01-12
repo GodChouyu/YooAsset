@@ -24,13 +24,6 @@ public class TestLoadRawFile
 
             var filePath = rawFileHandle.GetRawFilePath();
             Assert.IsNotNull(filePath);
-
-            var fileText = rawFileHandle.GetRawFileText();
-            TestLogger.Log(this, fileText);
-            Assert.IsNotNull(fileText);
-
-            var fileData = rawFileHandle.GetRawFileData();
-            Assert.IsNotNull(fileData);
         }
 
         // 测试同步加载
@@ -40,13 +33,6 @@ public class TestLoadRawFile
 
             var filePath = rawFileHandle.GetRawFilePath();
             Assert.IsNotNull(filePath);
-
-            var fileText = rawFileHandle.GetRawFileText();
-            TestLogger.Log(this, fileText);
-            Assert.IsNotNull(fileText);
-
-            var fileData = rawFileHandle.GetRawFileData();
-            Assert.IsNotNull(fileData);
         }
     }
 }

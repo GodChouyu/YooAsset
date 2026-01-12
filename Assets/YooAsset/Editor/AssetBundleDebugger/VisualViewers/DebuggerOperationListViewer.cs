@@ -13,8 +13,8 @@ namespace YooAsset.Editor
     {
         private class OperationTableData : DefaultTableData
         {
-            public DebugPackageData PackageData;
-            public DebugOperationInfo OperationInfo;
+            public DiagnosticPackageData PackageData;
+            public DiagnosticOperationInfo OperationInfo;
         }
 
         private VisualTreeAsset _visualAsset;
@@ -147,13 +147,13 @@ namespace YooAsset.Editor
                 _operationTableView.AddColumn(column);
             }
 
-            // BeginTime
+            // StartTime
             {
                 var columnStyle = new ColumnStyle(100);
                 columnStyle.Stretchable = false;
                 columnStyle.Searchable = false;
                 columnStyle.Sortable = true;
-                var column = new TableColumn("BeginTime", "Begin Time", columnStyle);
+                var column = new TableColumn("StartTime", "Start Time", columnStyle);
                 column.MakeCell = () =>
                 {
                     var label = new Label();
@@ -168,14 +168,14 @@ namespace YooAsset.Editor
                 _operationTableView.AddColumn(column);
             }
 
-            // ProcessTime
+            // ElapsedMS
             {
                 var columnStyle = new ColumnStyle(130);
                 columnStyle.Stretchable = false;
                 columnStyle.Searchable = false;
                 columnStyle.Sortable = true;
                 columnStyle.Units = "ms";
-                var column = new TableColumn("ProcessTime", "Process Time", columnStyle);
+                var column = new TableColumn("ElapsedMS", "Elapsed MS", columnStyle);
                 column.MakeCell = () =>
                 {
                     var label = new Label();
@@ -207,7 +207,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var operationTableData = data as OperationTableData;
-                    if (operationTableData.OperationInfo.Status == EOperationStatus.Failed.ToString())
+                    if (operationTableData.OperationInfo.Status == EOperationStatus.Failed.ToString() ||
+                        operationTableData.OperationInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -259,19 +260,19 @@ namespace YooAsset.Editor
                 _bottomToolbar.Add(button);
             }
 
-            // BeginTime
+            // StartTime
             {
                 ToolbarButton button = new ToolbarButton();
-                button.text = "BeginTime";
+                button.text = "StartTime";
                 button.style.flexGrow = 0;
                 button.style.width = 100;
                 _bottomToolbar.Add(button);
             }
 
-            // ProcessTime
+            // ElapsedMS
             {
                 ToolbarButton button = new ToolbarButton();
-                button.text = "ProcessTime (ms)";
+                button.text = "ElapsedMS";
                 button.style.flexGrow = 0;
                 button.style.width = 130;
                 _bottomToolbar.Add(button);
@@ -299,7 +300,7 @@ namespace YooAsset.Editor
         /// <summary>
         /// 填充页面数据
         /// </summary>
-        public void FillViewData(DebugReport debugReport)
+        public void FillViewData(DiagnosticReport debugReport)
         {
             // 清空旧数据
             _operationTableView.ClearAll(false, true);
@@ -308,7 +309,7 @@ namespace YooAsset.Editor
 
             // 填充数据源
             _sourceDatas = new List<ITableData>(1000);
-            foreach (var packageData in debugReport.PackageDatas)
+            foreach (var packageData in debugReport.PackageDataList)
             {
                 foreach (var operationInfo in packageData.OperationInfos)
                 {
@@ -319,8 +320,8 @@ namespace YooAsset.Editor
                     rowData.AddStringValueCell("OperationName", operationInfo.OperationName);
                     rowData.AddLongValueCell("Priority", operationInfo.Priority);
                     rowData.AddDoubleValueCell("Progress", operationInfo.Progress);
-                    rowData.AddStringValueCell("BeginTime", operationInfo.BeginTime);
-                    rowData.AddLongValueCell("LoadingTime", operationInfo.ProcessTime);
+                    rowData.AddStringValueCell("StartTime", operationInfo.StartTime);
+                    rowData.AddLongValueCell("ElapsedMS", operationInfo.ElapsedMS);
                     rowData.AddStringValueCell("Status", operationInfo.Status.ToString());
                     rowData.AddStringValueCell("Desc", operationInfo.OperationDesc);
                     _sourceDatas.Add(rowData);
@@ -377,8 +378,8 @@ namespace YooAsset.Editor
         private void OnOperationTableViewSelectionChanged(ITableData data)
         {
             var operationTableData = data as OperationTableData;
-            DebugPackageData packageData = operationTableData.PackageData;
-            DebugOperationInfo operationInfo = operationTableData.OperationInfo;
+            DiagnosticPackageData packageData = operationTableData.PackageData;
+            DiagnosticOperationInfo operationInfo = operationTableData.OperationInfo;
 
             TreeNode rootNode = new TreeNode(operationInfo);
             FillTreeData(operationInfo, rootNode);
@@ -408,20 +409,20 @@ namespace YooAsset.Editor
                 container.Add(label);
             }
 
-            // BeginTime
+            // StartTime
             {
                 var label = new Label();
-                label.name = "BeginTime";
+                label.name = "StartTime";
                 label.style.flexGrow = 0f;
                 label.style.width = 100;
                 label.style.unityTextAlign = TextAnchor.MiddleLeft;
                 container.Add(label);
             }
 
-            // ProcessTime
+            // ElapsedMS
             {
                 var label = new Label();
-                label.name = "ProcessTime";
+                label.name = "ElapsedMS";
                 label.style.flexGrow = 0f;
                 label.style.width = 130;
                 label.style.unityTextAlign = TextAnchor.MiddleLeft;
@@ -450,7 +451,7 @@ namespace YooAsset.Editor
         }
         private void BindTreeViewItem(VisualElement container, object userData)
         {
-            var operationInfo = (DebugOperationInfo)userData;
+            var operationInfo = (DiagnosticOperationInfo)userData;
 
             // OperationName
             {
@@ -464,22 +465,23 @@ namespace YooAsset.Editor
                 label.text = operationInfo.Progress.ToString();
             }
 
-            // BeginTime
+            // StartTime
             {
-                var label = container.Q<Label>("BeginTime");
-                label.text = operationInfo.BeginTime;
+                var label = container.Q<Label>("StartTime");
+                label.text = operationInfo.StartTime;
             }
 
-            // ProcessTime
+            // ElapsedMS
             {
-                var label = container.Q<Label>("ProcessTime");
-                label.text = operationInfo.ProcessTime.ToString();
+                var label = container.Q<Label>("ElapsedMS");
+                label.text = operationInfo.ElapsedMS.ToString();
             }
 
             // Status
             {
                 StyleColor textColor;
-                if (operationInfo.Status == EOperationStatus.Failed.ToString())
+                if (operationInfo.Status == EOperationStatus.Failed.ToString() ||
+                    operationInfo.Status == EOperationStatus.Aborted.ToString())
                     textColor = new StyleColor(Color.yellow);
                 else
                     textColor = new StyleColor(Color.white);
@@ -495,9 +497,9 @@ namespace YooAsset.Editor
                 label.text = operationInfo.OperationDesc;
             }
         }
-        private void FillTreeData(DebugOperationInfo parentOperation, TreeNode rootNode)
+        private void FillTreeData(DiagnosticOperationInfo parentOperation, TreeNode rootNode)
         {
-            foreach (var childOperation in parentOperation.Childs)
+            foreach (var childOperation in parentOperation.Children)
             {
                 var childNode = new TreeNode(childOperation);
                 rootNode.AddChild(childNode);

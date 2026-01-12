@@ -22,32 +22,32 @@ namespace YooAsset
         /// <summary>
         /// 初始化文件系统
         /// </summary>
-        FSInitializeFileSystemOperation InitializeFileSystemAsync();
-
-        /// <summary>
-        /// 加载包裹清单
-        /// </summary>
-        FSLoadPackageManifestOperation LoadPackageManifestAsync(string packageVersion, int timeout);
+        FSInitializeOperation InitializeAsync();
 
         /// <summary>
         /// 查询包裹版本
         /// </summary>
-        FSRequestPackageVersionOperation RequestPackageVersionAsync(bool appendTimeTicks, int timeout);
+        FSRequestVersionOperation RequestVersionAsync(RequestVersionOptions options);
+
+        /// <summary>
+        /// 加载包裹清单
+        /// </summary>
+        FSLoadManifestOperation LoadManifestAsync(LoadManifestOptions options);
 
         /// <summary>
         /// 清理缓存文件
         /// </summary>
-        FSClearCacheFilesOperation ClearCacheFilesAsync(PackageManifest manifest, ClearCacheFilesOptions options);
+        FSClearCacheOperation ClearCacheAsync(ClearCacheOptions options);
 
         /// <summary>
         /// 下载Bundle文件
         /// </summary>
-        FSDownloadFileOperation DownloadFileAsync(PackageBundle bundle, DownloadFileOptions options);
-        
+        FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options);
+
         /// <summary>
         /// 加载Bundle文件
         /// </summary>
-        FSLoadBundleOperation LoadBundleFile(PackageBundle bundle);
+        FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options);
 
 
         /// <summary>
@@ -91,20 +91,9 @@ namespace YooAsset
         /// </summary>
         bool NeedImport(PackageBundle bundle);
 
-
         /// <summary>
-        /// 获取Bundle文件路径
+        /// 获取资源包本地路径
         /// </summary>
         string GetBundleFilePath(PackageBundle bundle);
-
-        /// <summary>
-        /// 读取Bundle文件的二进制数据
-        /// </summary>
-        byte[] ReadBundleFileData(PackageBundle bundle);
-
-        /// <summary>
-        /// 读取Bundle文件的文本数据
-        /// </summary>
-        string ReadBundleFileText(PackageBundle bundle);
     }
 }

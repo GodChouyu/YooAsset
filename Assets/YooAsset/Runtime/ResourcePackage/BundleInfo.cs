@@ -26,21 +26,22 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 加载资源包
+        /// 创建加载器
         /// </summary>
-        public FSLoadBundleOperation LoadBundleFile()
+        public FSLoadBundleOperation CreateBundleLoader()
         {
-            return _fileSystem.LoadBundleFile(Bundle);
+            var options = new LoadBundleOptions(Bundle);
+            return _fileSystem.LoadBundleAsync(options);
         }
 
         /// <summary>
         /// 创建下载器
         /// </summary>
-        public FSDownloadFileOperation CreateDownloader(int failedTryAgain)
+        public FSDownloadFileOperation CreateBundleDownloader(int failedTryAgain)
         {
-            DownloadFileOptions options = new DownloadFileOptions(failedTryAgain);
+            DownloadFileOptions options = new DownloadFileOptions(Bundle, failedTryAgain);
             options.ImportFilePath = _importFilePath;
-            return _fileSystem.DownloadFileAsync(Bundle, options);
+            return _fileSystem.DownloadFileAsync(options);
         }
 
         /// <summary>

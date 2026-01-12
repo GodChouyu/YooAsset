@@ -20,16 +20,17 @@ public class TestBundleImporter
         DirectoryInfo packageDir = new DirectoryInfo(packageRoot);
         string fileRoot = $"{packageDir.Parent.FullName}/OutputCache";
 
-        ImportFileInfo fileInfoA = new ImportFileInfo();
+        ImportBundleInfo fileInfoA = new ImportBundleInfo();
         fileInfoA.FilePath = $"{fileRoot}/assets_samples_test_sample_testres3_import_prefab_importa.bundle.encrypt";
         fileInfoA.BundleName = "assets_samples_test_sample_testres3_import_prefab_importa.bundle";
 
-        ImportFileInfo fileInfoB = new ImportFileInfo();
+        ImportBundleInfo fileInfoB = new ImportBundleInfo();
         fileInfoB.FilePath = $"{fileRoot}/assets_samples_test_sample_testres3_import_prefab_importb.bundle.encrypt";
         fileInfoB.BundleName = "assets_samples_test_sample_testres3_import_prefab_importb.bundle";
 
-        ImportFileInfo[] importInfos = { fileInfoA, fileInfoB };
-        var unpacker = package.CreateResourceImporter(importInfos, 10, 1);
+        ImportBundleInfo[] importInfos = { fileInfoA, fileInfoB };
+        var options = new BundleImporterOptions(importInfos, 10, 1);
+        var unpacker = package.CreateResourceImporter(options);
         Assert.AreEqual(unpacker.TotalDownloadCount, 2);
 
         unpacker.BeginDownload();

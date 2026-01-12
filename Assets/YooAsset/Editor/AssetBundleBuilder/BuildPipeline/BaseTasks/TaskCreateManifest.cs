@@ -31,7 +31,7 @@ namespace YooAsset.Editor
 
             // 创建新补丁清单
             PackageManifest manifest = new PackageManifest();
-            manifest.FileVersion = ManifestDefine.FileVersion;
+            manifest.FileVersion = PackageManifestDefine.FileVersion;
             manifest.EnableAddressable = buildMapContext.Command.EnableAddressable;
             manifest.SupportExtensionless = buildMapContext.Command.SupportExtensionless;
             manifest.LocationToLower = buildMapContext.Command.LocationToLower;
@@ -71,7 +71,7 @@ namespace YooAsset.Editor
             {
                 string fileName = YooAssetSettingsData.GetManifestJsonFileName(buildParameters.PackageName, buildParameters.PackageVersion);
                 string filePath = $"{packageOutputDirectory}/{fileName}";
-                ManifestTools.SerializeToJson(filePath, manifest);
+                PackageManifestTools.SerializeToJson(filePath, manifest);
                 BuildLogger.Log($"Create package manifest file: {filePath}");
             }
 
@@ -81,7 +81,7 @@ namespace YooAsset.Editor
             {
                 string fileName = YooAssetSettingsData.GetManifestBinaryFileName(buildParameters.PackageName, buildParameters.PackageVersion);
                 packagePath = $"{packageOutputDirectory}/{fileName}";
-                ManifestTools.SerializeToBinary(packagePath, manifest, buildParameters.ManifestProcessServices);
+                PackageManifestTools.SerializeToBinary(packagePath, manifest, buildParameters.ManifestProcessServices);
                 packageHash = HashUtility.FileCRC32(packagePath);
                 BuildLogger.Log($"Create package manifest file: {packagePath}");
             }
@@ -106,7 +106,7 @@ namespace YooAsset.Editor
             {
                 ManifestContext manifestContext = new ManifestContext();
                 byte[] bytesData = FileUtility.ReadAllBytes(packagePath);
-                manifestContext.Manifest = ManifestTools.DeserializeFromBinary(bytesData, buildParameters.ManifestRestoreServices);
+                manifestContext.Manifest = PackageManifestTools.DeserializeFromBinary(bytesData, buildParameters.ManifestRestoreServices);
                 context.SetContextObject(manifestContext);
             }
         }

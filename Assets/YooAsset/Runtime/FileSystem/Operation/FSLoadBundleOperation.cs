@@ -11,12 +11,12 @@ namespace YooAsset
         /// <summary>
         /// 下载进度
         /// </summary>
-        public float DownloadProgress { protected set; get; } = 0;
+        public float DownloadProgress { protected set; get; }
 
         /// <summary>
         /// 下载大小
         /// </summary>
-        public long DownloadedBytes { protected set; get; } = 0;
+        public long DownloadedBytes { protected set; get; }
 
         /// <summary>
         /// 终止下载文件

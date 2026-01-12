@@ -16,7 +16,8 @@ public class TestBundleDownloader
         ResourcePackage package = YooAssets.GetPackage(TestDefine.AssetBundlePackageName);
         Assert.IsNotNull(package);
 
-        var downloader = package.CreateResourceDownloader(10, 1);
+        var options = new ResourceDownloaderOptions(10, 1);
+        var downloader = package.CreateResourceDownloader(options);
         Assert.AreNotEqual(downloader.TotalDownloadCount, 0);
 
         downloader.BeginDownload();

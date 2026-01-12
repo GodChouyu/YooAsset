@@ -6,7 +6,7 @@ namespace YooAsset
     /// 可轮询的下载请求接口
     /// </summary>
     /// <remarks>
-    /// 上层通常会在每帧轮询 Status IsDone，并在完成后读取结果。
+    /// 上层通常在每帧检查 IsDone 属性，完成后读取结果并调用 Dispose() 释放资源。
     /// </remarks>
     internal interface IDownloadRequest : IDisposable
     {
@@ -18,6 +18,9 @@ namespace YooAsset
         /// <summary>
         /// 是否完成（成功/失败/中止）
         /// </summary>
+        /// <remarks>
+        /// 注意：访问此属性时会自动调用 PollingRequest() 进行轮询。
+        /// </remarks>
         bool IsDone { get; }
 
         /// <summary>

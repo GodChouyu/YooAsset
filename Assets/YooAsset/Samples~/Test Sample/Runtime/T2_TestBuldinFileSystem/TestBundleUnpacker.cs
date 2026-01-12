@@ -16,7 +16,8 @@ public class TestBundleUnpacker
         ResourcePackage package = YooAssets.GetPackage(TestDefine.AssetBundlePackageName);
         Assert.IsNotNull(package);
 
-        var resourceUnpacker = package.CreateResourceUnpacker("unpack", 10, 1);
+        var options = new ResourceUnpackerOptions("unpack", 10, 1);
+        var resourceUnpacker = package.CreateResourceUnpacker(options);
         Assert.AreEqual(resourceUnpacker.TotalDownloadCount, 2);
 
         resourceUnpacker.BeginDownload();

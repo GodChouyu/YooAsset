@@ -14,12 +14,7 @@ namespace YooAsset
         }
 
         private readonly AssetHandle _handle;
-        private readonly bool _setPositionAndRotation;
-        private readonly Vector3 _position;
-        private readonly Quaternion _rotation;
-        private readonly Transform _parent;
-        private readonly bool _worldPositionStays;
-        private readonly bool _actived;
+        private readonly InstantiateOptions _options;
         private ESteps _steps = ESteps.None;
 
 #if UNITY_2023_3_OR_NEWER
@@ -32,16 +27,10 @@ namespace YooAsset
         public GameObject Result = null;
 
 
-        internal InstantiateOperation(AssetHandle handle, bool setPositionAndRotation, Vector3 position, Quaternion rotation,
-            Transform parent, bool worldPositionStays, bool actived)
+        internal InstantiateOperation(AssetHandle handle, InstantiateOptions options)
         {
             _handle = handle;
-            _setPositionAndRotation = setPositionAndRotation;
-            _position = position;
-            _rotation = rotation;
-            _parent = parent;
-            _worldPositionStays = worldPositionStays;
-            _actived = actived;
+            _options = options;
         }
         internal override void InternalStart()
         {
@@ -61,6 +50,9 @@ namespace YooAsset
                     Error = $"{nameof(AssetHandle)} is invalid.";
                     return;
                 }
+
+                if (IsWaitingForAsyncComplete)
+                    _handle.WaitForAsyncComplete();
 
                 if (_handle.IsDone == false)
                     return;
@@ -87,8 +79,8 @@ namespace YooAsset
             if (_steps == ESteps.CloneSync)
             {
                 // 实例化游戏对象
-                Result = InstantiateInternal(_handle.AssetObject, _setPositionAndRotation, _position, _rotation, _parent, _worldPositionStays);
-                if (_actived == false)
+                Result = InstantiateInternal(_handle.AssetObject, _options);
+                if (_options.Actived == false)
                     Result.SetActive(false);
 
                 _steps = ESteps.Done;
@@ -100,10 +92,10 @@ namespace YooAsset
             {
                 if (_instantiateAsync == null)
                 {
-                    _instantiateAsync = InstantiateAsyncInternal(_handle.AssetObject, _setPositionAndRotation, _position, _rotation, _parent, _worldPositionStays);
+                    _instantiateAsync = InstantiateAsyncInternal(_handle.AssetObject, _options);
                 }
 
-                if (IsWaitForAsyncComplete)
+                if (IsWaitingForAsyncComplete)
                     _instantiateAsync.WaitForCompletion();
 
                 if (_instantiateAsync.isDone == false)
@@ -114,7 +106,7 @@ namespace YooAsset
                     Result = _instantiateAsync.Result[0] as GameObject;
                     if (Result != null)
                     {
-                        if (_actived == false)
+                        if (_options.Actived == false)
                             Result.SetActive(false);
 
                         _steps = ESteps.Done;
@@ -124,34 +116,23 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Instantiate game object is null !";
+                        Error = $"Instantiate game object is null.";
                     }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Instantiate async results is null !";
+                    Error = $"Instantiate async results is null.";
                 }
             }
 #endif
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                // 等待句柄完成
-                if (_handle != null)
-                    _handle.WaitForAsyncComplete();
-
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
-        internal override string InternalGetDesc()
+        internal override string InternalGetDescription()
         {
             var assetInfo = _handle.GetAssetInfo();
             return $"AssetPath : {assetInfo.AssetPath}";
@@ -173,22 +154,22 @@ namespace YooAsset
         /// <summary>
         /// 同步实例化
         /// </summary>
-        internal static GameObject InstantiateInternal(UnityEngine.Object assetObject, bool setPositionAndRotation, Vector3 position, Quaternion rotation, Transform parent, bool worldPositionStays)
+        internal static GameObject InstantiateInternal(UnityEngine.Object assetObject, InstantiateOptions options)
         {
             if (assetObject == null)
                 return null;
 
-            if (setPositionAndRotation)
+            if (options.SetPositionAndRotation)
             {
-                if (parent != null)
-                    return UnityEngine.Object.Instantiate(assetObject as GameObject, position, rotation, parent);
+                if (options.Parent != null)
+                    return UnityEngine.Object.Instantiate(assetObject as GameObject, options.Position, options.Rotation, options.Parent);
                 else
-                    return UnityEngine.Object.Instantiate(assetObject as GameObject, position, rotation);
+                    return UnityEngine.Object.Instantiate(assetObject as GameObject, options.Position, options.Rotation);
             }
             else
             {
-                if (parent != null)
-                    return UnityEngine.Object.Instantiate(assetObject as GameObject, parent, worldPositionStays);
+                if (options.Parent != null)
+                    return UnityEngine.Object.Instantiate(assetObject as GameObject, options.Parent, options.InWorldSpace);
                 else
                     return UnityEngine.Object.Instantiate(assetObject as GameObject);
             }
@@ -200,19 +181,19 @@ namespace YooAsset
         /// 注意：Unity2022.3.20f1及以上版本生效
         /// https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Object.InstantiateAsync.html
         /// </summary>
-        internal static AsyncInstantiateOperation InstantiateAsyncInternal(UnityEngine.Object assetObject, bool setPositionAndRotation, Vector3 position, Quaternion rotation, Transform parent, bool worldPositionStays)
+        internal static AsyncInstantiateOperation InstantiateAsyncInternal(UnityEngine.Object assetObject, InstantiateOptions options)
         {
-            if (setPositionAndRotation)
+            if (options.SetPositionAndRotation)
             {
-                if (parent != null)
-                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, parent, position, rotation);
+                if (options.Parent != null)
+                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, options.Parent, options.Position, options.Rotation);
                 else
-                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, position, rotation);
+                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, options.Position, options.Rotation);
             }
             else
             {
-                if (parent != null)
-                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, parent);
+                if (options.Parent != null)
+                    return UnityEngine.Object.InstantiateAsync(assetObject as GameObject, options.Parent);
                 else
                     return UnityEngine.Object.InstantiateAsync(assetObject as GameObject);
             }

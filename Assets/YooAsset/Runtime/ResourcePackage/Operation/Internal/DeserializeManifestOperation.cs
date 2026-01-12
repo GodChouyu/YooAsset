@@ -31,7 +31,7 @@ namespace YooAsset
         /// <summary>
         /// 解析的清单实例
         /// </summary>
-        public PackageManifest Manifest { private set; get; }
+        public PackageManifest Manifest { get; private set; }
 
         public DeserializeManifestOperation(IManifestRestoreServices services, byte[] binaryData)
         {
@@ -47,187 +47,170 @@ namespace YooAsset
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            try
+            if (_steps == ESteps.RestoreFileData)
             {
-                if (_steps == ESteps.RestoreFileData)
+                if (_services != null)
                 {
-                    if (_services != null)
-                    {
-                        var resultData = _services.RestoreManifest(_sourceData);
-                        if (resultData != null)
-                            _sourceData = resultData;
-                    }
-
-                    _buffer = new BufferReader(_sourceData);
-                    _steps = ESteps.DeserializeFileHeader;
+                    var resultData = _services.RestoreManifest(_sourceData);
+                    if (resultData != null)
+                        _sourceData = resultData;
                 }
 
-                if (_steps == ESteps.DeserializeFileHeader)
+                _buffer = new BufferReader(_sourceData);
+                _steps = ESteps.DeserializeFileHeader;
+            }
+
+            if (_steps == ESteps.DeserializeFileHeader)
+            {
+                if (_buffer.IsValid == false)
                 {
-                    if (_buffer.IsValid == false)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = "Buffer is invalid !";
-                        return;
-                    }
-
-                    // 读取文件标记
-                    uint fileSign = _buffer.ReadUInt32();
-                    if (fileSign != ManifestDefine.FileSign)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = "The manifest file format is invalid !";
-                        return;
-                    }
-
-                    // 读取文件版本
-                    string fileVersion = _buffer.ReadUTF8();
-                    Version fileVer = new Version(fileVersion);
-                    Version ver2025_8_28 = new Version(ManifestDefine.VERSION_2025_8_28);
-                    Version ver2025_9_30 = new Version(ManifestDefine.VERSION_2025_9_30);
-                    if (fileVer < ver2025_8_28)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = $"The manifest file version are not compatible : {fileVersion} != {ManifestDefine.FileVersion}";
-                        return;
-                    }
-
-                    // 读取文件头信息
-                    Manifest = new PackageManifest();
-                    Manifest.FileVersion = fileVersion;
-                    Manifest.EnableAddressable = _buffer.ReadBool();
-                    Manifest.SupportExtensionless = _buffer.ReadBool();
-                    Manifest.LocationToLower = _buffer.ReadBool();
-                    Manifest.IncludeAssetGUID = _buffer.ReadBool();
-                    if (fileVer >= ver2025_9_30)
-                        Manifest.ReplaceAssetPathWithAddress = _buffer.ReadBool();
-                    else
-                        Manifest.ReplaceAssetPathWithAddress = false;
-                    Manifest.OutputNameStyle = _buffer.ReadInt32();
-                    Manifest.BuildBundleType = _buffer.ReadInt32();
-                    Manifest.BuildPipeline = _buffer.ReadUTF8();
-                    Manifest.PackageName = _buffer.ReadUTF8();
-                    Manifest.PackageVersion = _buffer.ReadUTF8();
-                    Manifest.PackageNote = _buffer.ReadUTF8();
-
-                    // 检测配置
-                    if (Manifest.EnableAddressable && Manifest.LocationToLower)
-                        throw new YooManifestException("Addressable not support location to lower !");
-                    if (Manifest.EnableAddressable == false && Manifest.ReplaceAssetPathWithAddress)
-                        throw new YooManifestException("Replace asset path with address need enable Addressable !");
-
-                    _steps = ESteps.PrepareAssetList;
-                }
-
-                if (_steps == ESteps.PrepareAssetList)
-                {
-                    _packageAssetCount = _buffer.ReadInt32();
-                    _progressTotalValue = _packageAssetCount;
-                    CreateAssetCollection(Manifest, _packageAssetCount);
-                    _steps = ESteps.DeserializeAssetList;
-                }
-                if (_steps == ESteps.DeserializeAssetList)
-                {
-                    bool replaceAssetPath = false;
-                    if (UnityEngine.Application.isPlaying)
-                    {
-                        if (Manifest.EnableAddressable && Manifest.ReplaceAssetPathWithAddress)
-                            replaceAssetPath = true;
-                    }
-
-                    while (_packageAssetCount > 0)
-                    {
-                        var packageAsset = new PackageAsset();
-                        packageAsset.Address = _buffer.ReadUTF8();
-                        if (replaceAssetPath)
-                        {
-                            packageAsset.AssetPath = packageAsset.Address;
-                            _buffer.SkipUTF8(); //跳过解析AssetPath
-                        }
-                        else
-                        {
-                            packageAsset.AssetPath = _buffer.ReadUTF8();
-                        }
-                        packageAsset.AssetGUID = _buffer.ReadUTF8();
-                        packageAsset.AssetTags = _buffer.ReadUTF8Array();
-                        packageAsset.BundleID = _buffer.ReadInt32();
-                        packageAsset.DependBundleIDs = _buffer.ReadInt32Array();
-                        FillAssetCollection(Manifest, packageAsset, replaceAssetPath);
-
-                        _packageAssetCount--;
-                        Progress = 1f - _packageAssetCount / _progressTotalValue;
-                        if (IsBusy)
-                            break;
-                    }
-
-                    if (_packageAssetCount <= 0)
-                    {
-                        _steps = ESteps.PrepareBundleList;
-                    }
-                }
-
-                if (_steps == ESteps.PrepareBundleList)
-                {
-                    _packageBundleCount = _buffer.ReadInt32();
-                    _progressTotalValue = _packageBundleCount;
-                    CreateBundleCollection(Manifest, _packageBundleCount);
-                    _steps = ESteps.DeserializeBundleList;
-                }
-                if (_steps == ESteps.DeserializeBundleList)
-                {
-                    while (_packageBundleCount > 0)
-                    {
-                        var packageBundle = new PackageBundle();
-                        packageBundle.BundleName = _buffer.ReadUTF8();
-                        packageBundle.UnityCRC = _buffer.ReadUInt32();
-                        packageBundle.FileHash = _buffer.ReadUTF8();
-                        packageBundle.FileCRC = _buffer.ReadUInt32();
-                        packageBundle.FileSize = _buffer.ReadInt64();
-                        packageBundle.Encrypted = _buffer.ReadBool();
-                        packageBundle.Tags = _buffer.ReadUTF8Array();
-                        packageBundle.DependBundleIDs = _buffer.ReadInt32Array();
-                        FillBundleCollection(Manifest, packageBundle);
-
-                        _packageBundleCount--;
-                        Progress = 1f - _packageBundleCount / _progressTotalValue;
-                        if (IsBusy)
-                            break;
-                    }
-
-                    if (_packageBundleCount <= 0)
-                    {
-                        _steps = ESteps.InitManifest;
-                    }
-                }
-
-                if (_steps == ESteps.InitManifest)
-                {
-                    Manifest.Initialize();
                     _steps = ESteps.Done;
-                    Status = EOperationStatus.Succeed;
+                    Status = EOperationStatus.Failed;
+                    Error = "Buffer is invalid.";
+                    return;
+                }
+
+                // 读取文件标记
+                uint fileSign = _buffer.ReadUInt32();
+                if (fileSign != PackageManifestDefine.FileSign)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = "The manifest file format is invalid.";
+                    return;
+                }
+
+                // 读取文件版本
+                string fileVersion = _buffer.ReadUTF8();
+                Version fileVer = new Version(fileVersion);
+                Version ver2025_8_28 = new Version(PackageManifestDefine.VERSION_2025_8_28);
+                Version ver2025_9_30 = new Version(PackageManifestDefine.VERSION_2025_9_30);
+                if (fileVer < ver2025_8_28)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"The manifest version is lower than the minimum compatible version : {fileVer} < {ver2025_8_28}";
+                    return;
+                }
+
+                // 读取文件头信息
+                Manifest = new PackageManifest();
+                Manifest.FileVersion = fileVersion;
+                Manifest.EnableAddressable = _buffer.ReadBool();
+                Manifest.SupportExtensionless = _buffer.ReadBool();
+                Manifest.LocationToLower = _buffer.ReadBool();
+                Manifest.IncludeAssetGUID = _buffer.ReadBool();
+                if (fileVer >= ver2025_9_30)
+                    Manifest.ReplaceAssetPathWithAddress = _buffer.ReadBool();
+                else
+                    Manifest.ReplaceAssetPathWithAddress = false;
+                Manifest.OutputNameStyle = _buffer.ReadInt32();
+                Manifest.BuildBundleType = _buffer.ReadInt32();
+                Manifest.BuildPipeline = _buffer.ReadUTF8();
+                Manifest.PackageName = _buffer.ReadUTF8();
+                Manifest.PackageVersion = _buffer.ReadUTF8();
+                Manifest.PackageNote = _buffer.ReadUTF8();
+
+                // 检测配置
+                if (Manifest.EnableAddressable && Manifest.LocationToLower)
+                    throw new YooManifestException("Addressable not support location to lower.");
+                if (Manifest.EnableAddressable == false && Manifest.ReplaceAssetPathWithAddress)
+                    throw new YooManifestException("Replace asset path with address need enable Addressable.");
+
+                _steps = ESteps.PrepareAssetList;
+            }
+
+            if (_steps == ESteps.PrepareAssetList)
+            {
+                _packageAssetCount = _buffer.ReadInt32();
+                _progressTotalValue = _packageAssetCount;
+                CreateAssetCollection(Manifest, _packageAssetCount);
+                _steps = ESteps.DeserializeAssetList;
+            }
+            if (_steps == ESteps.DeserializeAssetList)
+            {
+                bool replaceAssetPath = false;
+                if (UnityEngine.Application.isPlaying)
+                {
+                    if (Manifest.EnableAddressable && Manifest.ReplaceAssetPathWithAddress)
+                        replaceAssetPath = true;
+                }
+
+                while (_packageAssetCount > 0)
+                {
+                    var packageAsset = new PackageAsset();
+                    packageAsset.Address = _buffer.ReadUTF8();
+                    if (replaceAssetPath)
+                    {
+                        packageAsset.AssetPath = packageAsset.Address;
+                        _buffer.SkipUTF8(); //跳过解析AssetPath
+                    }
+                    else
+                    {
+                        packageAsset.AssetPath = _buffer.ReadUTF8();
+                    }
+                    packageAsset.AssetGUID = _buffer.ReadUTF8();
+                    packageAsset.AssetTags = _buffer.ReadUTF8Array();
+                    packageAsset.BundleID = _buffer.ReadInt32();
+                    packageAsset.DependBundleIDs = _buffer.ReadInt32Array();
+                    FillAssetCollection(Manifest, packageAsset, replaceAssetPath);
+
+                    _packageAssetCount--;
+                    Progress = 1f - (_packageAssetCount / (float)_progressTotalValue);
+                    if (IsBusy)
+                        break;
+                }
+
+                if (_packageAssetCount <= 0)
+                {
+                    _steps = ESteps.PrepareBundleList;
                 }
             }
-            catch (System.Exception ex)
+
+            if (_steps == ESteps.PrepareBundleList)
             {
-                Manifest = null;
+                _packageBundleCount = _buffer.ReadInt32();
+                _progressTotalValue = _packageBundleCount;
+                CreateBundleCollection(Manifest, _packageBundleCount);
+                _steps = ESteps.DeserializeBundleList;
+            }
+            if (_steps == ESteps.DeserializeBundleList)
+            {
+                while (_packageBundleCount > 0)
+                {
+                    var packageBundle = new PackageBundle();
+                    packageBundle.BundleName = _buffer.ReadUTF8();
+                    packageBundle.UnityCRC = _buffer.ReadUInt32();
+                    packageBundle.FileHash = _buffer.ReadUTF8();
+                    packageBundle.FileCRC = _buffer.ReadUInt32();
+                    packageBundle.FileSize = _buffer.ReadInt64();
+                    packageBundle.Encrypted = _buffer.ReadBool();
+                    packageBundle.Tags = _buffer.ReadUTF8Array();
+                    packageBundle.DependBundleIDs = _buffer.ReadInt32Array();
+                    FillBundleCollection(Manifest, packageBundle);
+
+                    _packageBundleCount--;
+                    Progress = 1f - (_packageBundleCount / (float)_progressTotalValue);
+                    if (IsBusy)
+                        break;
+                }
+
+                if (_packageBundleCount <= 0)
+                {
+                    _steps = ESteps.InitManifest;
+                }
+            }
+
+            if (_steps == ESteps.InitManifest)
+            {
+                Manifest.Initialize();
                 _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = ex.Message;
+                Status = EOperationStatus.Succeed;
             }
         }
         internal override void InternalWaitForAsyncComplete()
         {
-            while (true)
-            {
-                if (ExecuteWhileDone())
-                {
-                    _steps = ESteps.Done;
-                    break;
-                }
-            }
+            RunBatchExecution();
         }
 
         private void CreateAssetCollection(PackageManifest manifest, int assetCount)

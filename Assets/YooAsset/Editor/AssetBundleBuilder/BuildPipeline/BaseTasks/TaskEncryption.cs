@@ -24,7 +24,7 @@ namespace YooAsset.Editor
             string pipelineOutputDirectory = buildParametersContext.GetPipelineOutputDirectory();
             foreach (var bundleInfo in buildMapContext.Collection)
             {
-                EncryptFileInfo fileInfo = new EncryptFileInfo();
+                BundleEncryptionContext fileInfo = new BundleEncryptionContext();
                 fileInfo.BundleName = bundleInfo.BundleName;
                 fileInfo.FileLoadPath = $"{pipelineOutputDirectory}/{bundleInfo.BundleName}";
                 var encryptResult = encryptionServices.Encrypt(fileInfo);

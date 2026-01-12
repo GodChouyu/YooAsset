@@ -13,12 +13,12 @@ namespace YooAsset.Editor
     {
         private class ProviderTableData : DefaultTableData
         {
-            public DebugPackageData PackageData;
-            public DebugProviderInfo ProviderInfo;
+            public DiagnosticPackageData PackageData;
+            public DiagnosticProviderInfo ProviderInfo;
         }
         private class DependTableData : DefaultTableData
         {
-            public DebugBundleInfo BundleInfo;
+            public DiagnosticBundleInfo BundleInfo;
         }
 
         private VisualTreeAsset _visualAsset;
@@ -125,13 +125,13 @@ namespace YooAsset.Editor
                 _providerTableView.AddColumn(column);
             }
 
-            // BeginTime
+            // StartTime
             {
                 var columnStyle = new ColumnStyle(100);
                 columnStyle.Stretchable = false;
                 columnStyle.Searchable = false;
                 columnStyle.Sortable = true;
-                var column = new TableColumn("BeginTime", "Begin Time", columnStyle);
+                var column = new TableColumn("StartTime", "Start Time", columnStyle);
                 column.MakeCell = () =>
                 {
                     var label = new Label();
@@ -206,7 +206,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var providerTableData = data as ProviderTableData;
-                    if (providerTableData.ProviderInfo.Status == EOperationStatus.Failed.ToString())
+                    if (providerTableData.ProviderInfo.Status == EOperationStatus.Failed.ToString() ||
+                        providerTableData.ProviderInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -280,7 +281,8 @@ namespace YooAsset.Editor
                 {
                     StyleColor textColor;
                     var dependTableData = data as DependTableData;
-                    if (dependTableData.BundleInfo.Status == EOperationStatus.Failed.ToString())
+                    if (dependTableData.BundleInfo.Status == EOperationStatus.Failed.ToString() ||
+                        dependTableData.BundleInfo.Status == EOperationStatus.Aborted.ToString())
                         textColor = new StyleColor(Color.yellow);
                     else
                         textColor = new StyleColor(Color.white);
@@ -296,7 +298,7 @@ namespace YooAsset.Editor
         /// <summary>
         /// 填充页面数据
         /// </summary>
-        public void FillViewData(DebugReport debugReport)
+        public void FillViewData(DiagnosticReport debugReport)
         {
             // 清空旧数据
             _providerTableView.ClearAll(false, true);
@@ -304,7 +306,7 @@ namespace YooAsset.Editor
 
             // 填充数据源
             _sourceDatas = new List<ITableData>(1000);
-            foreach (var packageData in debugReport.PackageDatas)
+            foreach (var packageData in debugReport.PackageDataList)
             {
                 foreach (var providerInfo in packageData.ProviderInfos)
                 {
@@ -313,10 +315,10 @@ namespace YooAsset.Editor
                     rowData.ProviderInfo = providerInfo;
                     rowData.AddAssetPathCell("PackageName", packageData.PackageName);
                     rowData.AddStringValueCell("AssetPath", providerInfo.AssetPath);
-                    rowData.AddStringValueCell("SpawnScene", providerInfo.SpawnScene);
-                    rowData.AddStringValueCell("BeginTime", providerInfo.BeginTime);
-                    rowData.AddLongValueCell("LoadingTime", providerInfo.LoadingTime);
-                    rowData.AddLongValueCell("RefCount", providerInfo.RefCount);
+                    rowData.AddStringValueCell("SpawnScene", providerInfo.OriginScene);
+                    rowData.AddStringValueCell("StartTime", providerInfo.StartTime);
+                    rowData.AddLongValueCell("LoadingTime", providerInfo.ElapsedMS);
+                    rowData.AddLongValueCell("RefCount", providerInfo.ReferenceCount);
                     rowData.AddStringValueCell("Status", providerInfo.Status.ToString());
                     _sourceDatas.Add(rowData);
                 }
@@ -372,18 +374,18 @@ namespace YooAsset.Editor
         private void OnProviderTableViewSelectionChanged(ITableData data)
         {
             var providerTableData = data as ProviderTableData;
-            DebugPackageData packageData = providerTableData.PackageData;
-            DebugProviderInfo providerInfo = providerTableData.ProviderInfo;
+            DiagnosticPackageData packageData = providerTableData.PackageData;
+            DiagnosticProviderInfo providerInfo = providerTableData.ProviderInfo;
 
             // 填充依赖数据
-            var sourceDatas = new List<ITableData>(providerInfo.DependBundles.Count);
-            foreach (var bundleName in providerInfo.DependBundles)
+            var sourceDatas = new List<ITableData>(providerInfo.DependentBundles.Count);
+            foreach (var bundleName in providerInfo.DependentBundles)
             {
                 var dependBundleInfo = packageData.GetBundleInfo(bundleName);
                 var rowData = new DependTableData();
                 rowData.BundleInfo = dependBundleInfo;
                 rowData.AddStringValueCell("DependBundles", dependBundleInfo.BundleName);
-                rowData.AddLongValueCell("RefCount", dependBundleInfo.RefCount);
+                rowData.AddLongValueCell("RefCount", dependBundleInfo.ReferenceCount);
                 rowData.AddStringValueCell("Status", dependBundleInfo.Status.ToString());
                 sourceDatas.Add(rowData);
             }

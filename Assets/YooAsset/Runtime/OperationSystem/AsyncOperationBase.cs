@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,39 +6,61 @@ using System.Threading.Tasks;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 异步操作基类，所有异步操作的抽象基类
+    /// 支持协程（IEnumerator）、Task（async/await）、回调等多种异步编程模式
+    /// </summary>
     public abstract class AsyncOperationBase : IEnumerator, IComparable<AsyncOperationBase>
     {
-        private List<AsyncOperationBase> _childs;
-        private Action<AsyncOperationBase> _callback;
-        private int _whileFrame = 1000;
+        private List<AsyncOperationBase> _children;
+        private Action<AsyncOperationBase> _completedCallbacks;
+        private uint _priority;
 
         /// <summary>
-        /// 等待异步执行完成
+        /// 是否正处于同步等待状态
         /// </summary>
-        internal bool IsWaitForAsyncComplete { private set; get; } = false;
+        internal bool IsWaitingForAsyncComplete { get; private set; }
 
         /// <summary>
-        /// 是否已经完成
+        /// 标记脏（用于调度器检测并重排）
         /// </summary>
-        internal bool IsFinish { private set; get; } = false;
+        internal bool IsDirty { get; set; }
 
         /// <summary>
-        /// 异步系统是否繁忙
+        /// 任务是否已结束（已触发回调和Task完成）
+        /// </summary>
+        internal bool IsFinished { get; private set; }
+
+        /// <summary>
+        /// 当前帧时间切片是否已用完（同步等待时始终返回false）
         /// </summary>
         internal bool IsBusy
         {
             get
             {
-                if (IsWaitForAsyncComplete)
+                if (IsWaitingForAsyncComplete)
                     return false;
                 return OperationSystem.IsBusy;
             }
         }
 
         /// <summary>
-        /// 任务优先级
+        /// 任务优先级（值越大越优先执行）
         /// </summary>
-        public uint Priority { set; get; } = 0;
+        public uint Priority
+        {
+            set
+            {
+                if (_priority == value)
+                    return;
+                _priority = value;
+                IsDirty = true;
+            }
+            get
+            {
+                return _priority;
+            }
+        }
 
         /// <summary>
         /// 任务状态
@@ -56,13 +78,13 @@ namespace YooAsset
         public float Progress { get; protected set; }
 
         /// <summary>
-        /// 是否已经完成
+        /// 任务逻辑是否完成（Status为Succeed、Failed或Aborted）
         /// </summary>
         public bool IsDone
         {
             get
             {
-                return Status == EOperationStatus.Failed || Status == EOperationStatus.Succeed;
+                return Status == EOperationStatus.Succeed || Status == EOperationStatus.Failed || Status == EOperationStatus.Aborted;
             }
         }
 
@@ -80,6 +102,7 @@ namespace YooAsset
                 {
                     try
                     {
+                        //注意：任务已完成，立即调用回调
                         value.Invoke(this);
                     }
                     catch (Exception ex)
@@ -89,17 +112,17 @@ namespace YooAsset
                 }
                 else
                 {
-                    _callback += value;
+                    _completedCallbacks += value;
                 }
             }
             remove
             {
-                _callback -= value;
+                _completedCallbacks -= value;
             }
         }
 
         /// <summary>
-        /// 异步操作任务
+        /// 用于 async/await 的 Task 对象
         /// </summary>
         public Task Task
         {
@@ -115,16 +138,37 @@ namespace YooAsset
             }
         }
 
+
+        /// <summary>
+        /// 内部启动方法（子类必须实现）
+        /// </summary>
         internal abstract void InternalStart();
+
+        /// <summary>
+        /// 内部更新方法（子类必须实现）
+        /// </summary>
         internal abstract void InternalUpdate();
+
+        /// <summary>
+        /// 内部中止方法（子类可选实现）
+        /// </summary>
         internal virtual void InternalAbort()
         {
         }
+
+        /// <summary>
+        /// 内部同步等待方法（子类可选实现）
+        /// 默认抛出异常，如果异步操作需要支持，子类应重写以支持同步等待
+        /// </summary>
         internal virtual void InternalWaitForAsyncComplete()
         {
-            throw new System.NotImplementedException(this.GetType().Name);
+            throw new YooInternalException($"InternalWaitForAsyncComplete() not implemented : {this.GetType().Name}");
         }
-        internal virtual string InternalGetDesc()
+
+        /// <summary>
+        /// 获取操作的描述信息（子类可选实现）
+        /// </summary>
+        internal virtual string InternalGetDescription()
         {
             return string.Empty;
         }
@@ -134,15 +178,25 @@ namespace YooAsset
         /// </summary>
         internal void AddChildOperation(AsyncOperationBase child)
         {
-            if (_childs == null)
-                _childs = new List<AsyncOperationBase>(10);
+            if (_children == null)
+                _children = new List<AsyncOperationBase>(10);
 
-#if UNITY_EDITOR
-            if (_childs.Contains(child))
-                throw new YooInternalException($"The child node {child.GetType().Name} already exists !");
+#if UNITY_EDITOR || DEBUG
+            if (child == null)
+                throw new YooInternalException("The child node is null.");
+
+            if (ReferenceEquals(child, this))
+                throw new YooInternalException("The child node cannot be itself.");
+
+            if (_children.Contains(child))
+                throw new YooInternalException($"The child node {child.GetType().Name} already exists.");
+
+            // 禁止形成环依赖
+            if (WouldCreateCycle(child))
+                throw new YooInternalException($"AddChildOperation would create a cycle : {this.GetType().Name} -> {child.GetType().Name}");
 #endif
 
-            _childs.Add(child);
+            _children.Add(child);
         }
 
         /// <summary>
@@ -150,23 +204,26 @@ namespace YooAsset
         /// </summary>
         internal void RemoveChildOperation(AsyncOperationBase child)
         {
-            if (_childs == null)
+            if (_children == null)
                 return;
 
-#if UNITY_EDITOR
-            if (_childs.Contains(child) == false)
-                throw new YooInternalException($"The child node {child.GetType().Name} not exists !");
+#if UNITY_EDITOR || DEBUG
+            if (child == null)
+                throw new YooInternalException("The child node is null.");
+
+            if (_children.Contains(child) == false)
+                throw new YooInternalException($"The child node {child.GetType().Name} not exists.");
 #endif
 
-            _childs.Remove(child);
+            _children.Remove(child);
         }
 
         /// <summary>
         /// 获取异步操作说明
         /// </summary>
-        internal string GetOperationDesc()
+        internal string GetOperationDescription()
         {
-            return InternalGetDesc();
+            return InternalGetDescription();
         }
 
         /// <summary>
@@ -182,7 +239,16 @@ namespace YooAsset
                 DebugBeginRecording();
 
                 // 开始任务
-                InternalStart();
+                try
+                {
+                    InternalStart();
+                }
+                catch (Exception ex)
+                {
+                    Status = EOperationStatus.Failed;
+                    Error = ex.ToString();
+                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalStart : {ex}");
+                }
             }
         }
 
@@ -197,23 +263,34 @@ namespace YooAsset
                 DebugUpdateRecording();
 
                 // 更新任务
-                InternalUpdate();
+                // 注意：兜底隔离机制
+                // 说明：检测的异常源包含：I/O（解压/读写权限/磁盘满），平台差异等
+                try
+                {
+                    InternalUpdate();
+                }
+                catch (Exception ex)
+                {
+                    Status = EOperationStatus.Failed;
+                    Error = ex.ToString();
+                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalUpdate : {ex}");
+                }
             }
 
-            if (IsDone && IsFinish == false)
+            if (IsDone && IsFinished == false)
             {
                 FinishOperation();
             }
         }
 
         /// <summary>
-        /// 终止异步任务
+        /// 终止异步任务（递归中止所有子任务）
         /// </summary>
         internal void AbortOperation()
         {
-            if (_childs != null)
+            if (_children != null)
             {
-                foreach (var child in _childs)
+                foreach (var child in _children)
                 {
                     child.AbortOperation();
                 }
@@ -222,164 +299,264 @@ namespace YooAsset
             if (IsDone == false)
             {
                 InternalAbort();
-                Status = EOperationStatus.Failed;
+                Status = EOperationStatus.Aborted;
                 Error = "user abort";
-                YooLogger.Warning($"Async operation {this.GetType().Name} has been aborted !");
+                YooLogger.Warning($"Async operation {this.GetType().Name} has been aborted.");
             }
+
+            //注意：强制收尾，确保Task能完成
+            FinishOperation();
         }
 
         /// <summary>
-        /// 强制结束异步任务
+        /// 完成异步任务（触发回调和Task完成）
         /// </summary>
-        internal void FinishOperation()
+        private void FinishOperation()
         {
-            if (IsFinish == false)
+            if (IsFinished == false)
             {
-                IsFinish = true;
+                IsFinished = true;
                 Progress = 1f;
 
                 // 结束记录
                 DebugEndRecording();
 
-                try
+                if (_completedCallbacks != null)
                 {
-                    _callback?.Invoke(this);
+                    var invocationList = _completedCallbacks.GetInvocationList();
+                    foreach (var handler in invocationList)
+                    {
+                        try
+                        {
+                            ((Action<AsyncOperationBase>)handler).Invoke(this);
+                        }
+                        catch (Exception ex)
+                        {
+                            YooLogger.Error($"Exception in completion callback: {ex}");
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    YooLogger.Error($"Exception in completion callback: {ex}");
-                }
-                finally
-                {
-                    _callback = null;
-                    if (_taskCompletionSource != null)
-                        _taskCompletionSource.TrySetResult(null);
-                }
+
+                _completedCallbacks = null;
+                if (_taskCompletionSource != null)
+                    _taskCompletionSource.TrySetResult(null);
             }
         }
 
         /// <summary>
-        /// 执行While循环
+        /// 执行一次更新逻辑
         /// </summary>
-        protected bool ExecuteWhileDone()
-        {
-            if (IsDone == false)
-            {
-                // 执行更新逻辑
-                InternalUpdate();
-
-                // 当执行次数用完时
-                _whileFrame--;
-                if (_whileFrame <= 0)
-                {
-                    Status = EOperationStatus.Failed;
-                    Error = $"Operation {this.GetType().Name} failed to wait for async complete !";
-                    YooLogger.Error(Error);
-                }
-            }
-            return IsDone;
-        }
-
-        /// <summary>
-        /// 等待异步执行完毕
-        /// </summary>
-        public void WaitForAsyncComplete()
+        protected void RunOnceExecution()
         {
             if (IsDone)
                 return;
 
-            //TODO 防止异步操作被挂起陷入无限死循环！
-            // 例如：文件解压任务或者文件导入任务！
+            UpdateOperation();
+        }
+
+        /// <summary>
+        /// 批量执行一定次数的更新逻辑
+        /// </summary>
+        /// <param name="count">最大执行次数，默认1000次</param>
+        /// <remarks>
+        /// 用于需要快速完成但又不想完全阻塞主线程的场景。
+        /// </remarks>
+        protected void RunBatchExecution(int count = 1000)
+        {
+            if (IsDone)
+                return;
+
+            int runCount = count;
+            while (true)
+            {
+                // 执行更新逻辑
+                UpdateOperation();
+                if (IsDone)
+                    break;
+
+                // 当执行次数用完时
+                runCount--;
+                if (runCount <= 0)
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 无限次数的执行更新逻辑，直到任务完成
+        /// 注意：该方法会阻塞主线程
+        /// </summary>
+        /// <param name="sleepMS">休眠时长</param>
+        protected void RunUntilCompletion(int sleepMS = 1)
+        {
+            if (IsDone)
+                return;
+
+            while (true)
+            {
+                UpdateOperation();
+                if (IsDone)
+                    break;
+
+                // 注意： 短暂休眠避免完全占用CPU资源
+                System.Threading.Thread.Sleep(sleepMS);
+            }
+        }
+
+        /// <summary>
+        /// 同步等待异步执行完毕（会阻塞当前线程）
+        /// </summary>
+        public void WaitForAsyncComplete()
+        {
+            //注意：防止异步操作被挂起陷入无限死循环！
             if (Status == EOperationStatus.None)
             {
                 StartOperation();
             }
 
-            if (IsWaitForAsyncComplete == false)
+            if (IsWaitingForAsyncComplete == false)
             {
-                IsWaitForAsyncComplete = true;
-                InternalWaitForAsyncComplete();
+                IsWaitingForAsyncComplete = true;
 
-#if UNITY_EDITOR
                 if (IsDone == false)
-                    throw new YooInternalException($"WaitForAsyncComplete() must complete operation: {this.GetType().Name}");
-#endif
+                    InternalWaitForAsyncComplete();
+
+                if (IsDone == false)
+                {
+                    Status = EOperationStatus.Failed;
+                    Error = $"Operation {this.GetType().Name} failed to wait for async complete.";
+                    YooLogger.Error(Error);
+                }
+
+                //注意：强制收尾，确保Task能完成
+                FinishOperation();
             }
         }
 
         #region 调试信息
         /// <summary>
-        /// 开始的时间
+        /// 任务开始的时间（格式：HH:MM:SS，仅DEBUG模式有效）
         /// </summary>
-        public string BeginTime = string.Empty;
+        public string StartTime { get; protected set; }
 
         /// <summary>
         /// 处理耗时（单位：毫秒）
         /// </summary>
-        public long ProcessTime { protected set; get; }
+        public long ElapsedMS { get; protected set; }
 
-        // 加载耗时统计
-        private Stopwatch _watch = null;
+        /// <summary>
+        /// 任务耗时计时器
+        /// </summary>
+        private Stopwatch _stopwatch = null;
 
         [Conditional("DEBUG")]
         private void DebugBeginRecording()
         {
-            if (_watch == null)
+            if (_stopwatch == null)
             {
-                BeginTime = SpawnTimeToString(UnityEngine.Time.realtimeSinceStartup);
-                _watch = Stopwatch.StartNew();
+                StartTime = FormatElapsedTime(TimeUtility.RealtimeSinceStartup);
+                _stopwatch = Stopwatch.StartNew();
             }
         }
 
         [Conditional("DEBUG")]
         private void DebugUpdateRecording()
         {
-            if (_watch != null)
+            if (_stopwatch != null)
             {
-                ProcessTime = _watch.ElapsedMilliseconds;
+                ElapsedMS = _stopwatch.ElapsedMilliseconds;
             }
         }
 
         [Conditional("DEBUG")]
         private void DebugEndRecording()
         {
-            if (_watch != null)
+            if (_stopwatch != null)
             {
-                ProcessTime = _watch.ElapsedMilliseconds;
-                _watch = null;
+                ElapsedMS = _stopwatch.ElapsedMilliseconds;
+                _stopwatch = null;
             }
         }
 
-        private string SpawnTimeToString(float spawnTime)
+        /// <summary>
+        /// 将游戏运行时间格式化为 HH:MM:SS 格式
+        /// </summary>
+        /// <param name="time">运行时间（秒）</param>
+        private string FormatElapsedTime(double time)
         {
-            float h = UnityEngine.Mathf.FloorToInt(spawnTime / 3600f);
-            float m = UnityEngine.Mathf.FloorToInt(spawnTime / 60f - h * 60f);
-            float s = UnityEngine.Mathf.FloorToInt(spawnTime - m * 60f - h * 3600f);
+            double h = System.Math.Floor(time / 3600);
+            double m = System.Math.Floor(time / 60 - h * 60);
+            double s = System.Math.Floor(time - m * 60 - h * 3600);
             return h.ToString("00") + ":" + m.ToString("00") + ":" + s.ToString("00");
         }
 
-        internal DebugOperationInfo GetDebugOperationInfo()
+        /// <summary>
+        /// 检测添加子任务是否会形成循环依赖
+        /// 使用深度优先搜索（DFS）遍历子任务图
+        /// </summary>
+        private bool WouldCreateCycle(AsyncOperationBase child)
         {
-            var operationInfo = new DebugOperationInfo();
+            const int MaxCycleCheckDepth = 4096; // 循环检测最大深度
+            var stack = new Stack<AsyncOperationBase>();
+            var visited = new HashSet<AsyncOperationBase>();
+            stack.Push(child);
+
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+                if (node == null)
+                    continue;
+
+                // 防止重复访问
+                if (visited.Add(node) == false)
+                    continue;
+
+                // 防止无限循环（图过大）
+                if (visited.Count > MaxCycleCheckDepth)
+                    throw new YooInternalException("Child operation graph is too large, cycle check aborted.");
+
+                // 检测循环：如果遍历到自己，说明形成循环
+                if (ReferenceEquals(node, this))
+                    return true;
+
+                if (node._children == null)
+                    continue;
+
+                // 将子节点加入栈
+                for (int i = 0; i < node._children.Count; i++)
+                {
+                    stack.Push(node._children[i]);
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 获取调试信息
+        /// 注意：递归构建子树存在深度风险
+        /// </summary>
+        internal DiagnosticOperationInfo GetDebugOperationInfo()
+        {
+            var operationInfo = new DiagnosticOperationInfo();
             operationInfo.OperationName = this.GetType().Name;
-            operationInfo.OperationDesc = GetOperationDesc();
+            operationInfo.OperationDesc = GetOperationDescription();
             operationInfo.Priority = Priority;
             operationInfo.Progress = Progress;
-            operationInfo.BeginTime = BeginTime;
-            operationInfo.ProcessTime = ProcessTime;
+            operationInfo.StartTime = StartTime;
+            operationInfo.ElapsedMS = ElapsedMS;
             operationInfo.Status = Status.ToString();
 
-            if (_childs == null)
+            if (_children == null)
             {
-                operationInfo.Childs = new List<DebugOperationInfo>();
+                operationInfo.Children = new List<DiagnosticOperationInfo>();
             }
             else
             {
-                operationInfo.Childs = new List<DebugOperationInfo>(_childs.Count);
-                foreach (var child in _childs)
+                operationInfo.Children = new List<DiagnosticOperationInfo>(_children.Count);
+                foreach (var child in _children)
                 {
                     var childInfo = child.GetDebugOperationInfo();
-                    operationInfo.Childs.Add(childInfo);
+                    operationInfo.Children.Add(childInfo);
                 }
             }
 
@@ -395,6 +572,11 @@ namespace YooAsset
         #endregion
 
         #region 异步编程相关
+        /// <summary>
+        /// 用于支持 async/await 的任务完成源
+        /// </summary>
+        private TaskCompletionSource<object> _taskCompletionSource;
+
         bool IEnumerator.MoveNext()
         {
             return !IsDone;
@@ -403,8 +585,6 @@ namespace YooAsset
         {
         }
         object IEnumerator.Current => null;
-
-        private TaskCompletionSource<object> _taskCompletionSource;
         #endregion
     }
 }

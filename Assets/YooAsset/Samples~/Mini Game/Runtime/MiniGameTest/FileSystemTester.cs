@@ -11,7 +11,7 @@ namespace YooAsset
 
             // 初始化小游戏文件系统
             Debug.Log("初始化小游戏文件系统！");
-            var initializeFileSystemOp = fileSystem.InitializeFileSystemAsync();
+            var initializeFileSystemOp = fileSystem.InitializeAsync();
             OperationSystem.StartOperation(packageName, initializeFileSystemOp);
             yield return initializeFileSystemOp;
             if (initializeFileSystemOp.Status != EOperationStatus.Succeed)
@@ -22,7 +22,8 @@ namespace YooAsset
 
             // 请求资源版本
             Debug.Log("请求资源版本信息！");
-            var requestPackageVersionOp = fileSystem.RequestPackageVersionAsync(true, 60);
+            var requestPackageVersionOptions = new RequestVersionOptions(true, 60);
+            var requestPackageVersionOp = fileSystem.RequestVersionAsync(requestPackageVersionOptions);
             OperationSystem.StartOperation(packageName, requestPackageVersionOp);
             yield return requestPackageVersionOp;
             if (requestPackageVersionOp.Status != EOperationStatus.Succeed)
@@ -34,7 +35,8 @@ namespace YooAsset
             // 请求资源清单
             string packageVersion = requestPackageVersionOp.PackageVersion;
             Debug.Log($"加载资源清单文件！{packageVersion}");
-            var loadPackageManifestOp = fileSystem.LoadPackageManifestAsync(packageVersion, 60);
+            var loadPackageManifestOptions = new LoadManifestOptions(packageVersion, 60);
+            var loadPackageManifestOp = fileSystem.LoadManifestAsync(loadPackageManifestOptions);
             OperationSystem.StartOperation(packageName, loadPackageManifestOp);
             yield return loadPackageManifestOp;
             if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
@@ -48,8 +50,8 @@ namespace YooAsset
             {
                 var manifest = loadPackageManifestOp.Manifest;
                 var packageBundle = GetPackageBundle(manifest, testLocation);
-                var options = new DownloadFileOptions(1);
-                var downloadFileOp = fileSystem.DownloadFileAsync(packageBundle, options);
+                var options = new DownloadFileOptions(packageBundle, 1);
+                var downloadFileOp = fileSystem.DownloadFileAsync(options);
                 OperationSystem.StartOperation(packageName, downloadFileOp);
                 yield return downloadFileOp;
                 if (downloadFileOp.Status != EOperationStatus.Succeed)
@@ -68,7 +70,8 @@ namespace YooAsset
             {
                 var manifest = loadPackageManifestOp.Manifest;
                 var packageBundle = GetPackageBundle(manifest, testLocation);
-                var loadBundleFileOp = fileSystem.LoadBundleFile(packageBundle);
+                var loadBundleFileOptions = new LoadBundleOptions(packageBundle);
+                var loadBundleFileOp = fileSystem.LoadBundleAsync(loadBundleFileOptions);
                 OperationSystem.StartOperation(packageName, loadBundleFileOp);
                 yield return loadBundleFileOp;
                 if (loadBundleFileOp.Status != EOperationStatus.Succeed)

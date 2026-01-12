@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using YooAsset;
 
-public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObject : UnityEngine.Object
+public class LoadAssetsByTagOperation<TObject> : AsyncOperationBase where TObject : UnityEngine.Object
 {
     private enum ESteps
     {
@@ -14,6 +14,7 @@ public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObjec
         Done,
     }
 
+    private readonly string _packageName;
     private readonly string _tag;
     private ESteps _steps = ESteps.None;
     private List<AssetHandle> _handles;
@@ -24,26 +25,28 @@ public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObjec
     public List<TObject> AssetObjects { private set; get; }
 
 
-    public LoadAssetsByTagOperation(string tag)
+    public LoadAssetsByTagOperation(string packageName, string tag)
     {
+        _packageName = packageName;
         _tag = tag;
     }
-    protected override void OnStart()
+    internal override void InternalStart()
     {
         _steps = ESteps.LoadAssets;
     }
-    protected override void OnUpdate()
+    internal override void InternalUpdate()
     {
         if (_steps == ESteps.None || _steps == ESteps.Done)
             return;
 
         if (_steps == ESteps.LoadAssets)
         {
-            AssetInfo[] assetInfos = YooAssets.GetAssetInfos(_tag);
+            var package = YooAssets.GetPackage(_packageName);
+            AssetInfo[] assetInfos = package.GetAssetInfos(_tag);
             _handles = new List<AssetHandle>(assetInfos.Length);
             foreach (var assetInfo in assetInfos)
             {
-                var handle = YooAssets.LoadAssetAsync(assetInfo);
+                var handle = package.LoadAssetAsync(assetInfo);
                 _handles.Add(handle);
             }
             _steps = ESteps.CheckResult;
@@ -53,7 +56,7 @@ public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObjec
         {
             int index = 0;
             foreach (var handle in _handles)
-            {			
+            {
                 if (handle.IsDone == false)
                 {
                     Progress = (float)index / _handles.Count;
@@ -77,7 +80,7 @@ public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObjec
                         string error = $"资源类型转换失败：{handle.AssetObject.name}";
                         Debug.LogError($"{error}");
                         AssetObjects.Clear();
-                        SetFinish(false, error);
+                        SetFailed(error);
                         return;
                     }
                 }
@@ -85,21 +88,23 @@ public class LoadAssetsByTagOperation<TObject> : GameAsyncOperation where TObjec
                 {
                     Debug.LogError($"{handle.LastError}");
                     AssetObjects.Clear();
-                    SetFinish(false, handle.LastError);
+                    SetFailed(handle.LastError);
                     return;
                 }
             }
 
-            SetFinish(true);
+            SetSucceed();
         }
     }
-    protected override void OnAbort()
+    private void SetSucceed()
     {
+        Status = EOperationStatus.Succeed;
+        _steps = ESteps.Done;
     }
-    private void SetFinish(bool succeed, string error = "")
+    private void SetFailed(string error)
     {
         Error = error;
-        Status = succeed ? EOperationStatus.Succeed : EOperationStatus.Failed;
+        Status = EOperationStatus.Failed;
         _steps = ESteps.Done;
     }
 

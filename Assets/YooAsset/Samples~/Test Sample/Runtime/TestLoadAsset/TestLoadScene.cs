@@ -52,7 +52,7 @@ public class TestLoadScene
         // 异步销毁附加场景
         yield return new WaitForSeconds(0.2f);
         {
-            var unloadSceneOp = cachedHandle.UnloadAsync();
+            var unloadSceneOp = cachedHandle.UnloadSceneAsync();
             yield return unloadSceneOp;
             Assert.AreEqual(EOperationStatus.Succeed, unloadSceneOp.Status);
         }
