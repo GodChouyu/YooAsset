@@ -48,11 +48,11 @@ namespace YooAsset
         /// </summary>
         public uint PackagePriority
         {
-            get { return OperationSystem.GetSchedulerPriority(PackageName); }
-            set { OperationSystem.SetSchedulerPriority(PackageName, value); }
+            get { return AsyncOperationSystem.GetSchedulerPriority(PackageName); }
+            set { AsyncOperationSystem.SetSchedulerPriority(PackageName, value); }
         }
 
-        
+
         internal ResourcePackage(string packageName)
         {
             PackageName = packageName;
@@ -95,7 +95,7 @@ namespace YooAsset
 
             // 开始初始化操作
             _initializeOp = new InitializePackageOperation(this, options);
-            OperationSystem.StartOperation(PackageName, _initializeOp);
+            AsyncOperationSystem.StartOperation(PackageName, _initializeOp);
             return _initializeOp;
         }
         private void ResetInitializeAfterFailed()
@@ -113,7 +113,7 @@ namespace YooAsset
         {
             var options = new UnloadAllAssetsOptions(true, true);
             var operation = new DestroyPackageOperation(this, options);
-            OperationSystem.StartOperation(OperationSystem.GlobalSchedulerName, operation);
+            AsyncOperationSystem.StartOperation(AsyncOperationSystem.GlobalSchedulerName, operation);
             return operation;
         }
 
@@ -133,9 +133,9 @@ namespace YooAsset
         /// </summary>
         public RequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
         {
-            EnsureInitialized(false);
+            CheckInitialized(false);
             var operation = new RequestVersionOperation(_fileSystemHost, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
@@ -144,7 +144,7 @@ namespace YooAsset
         /// </summary>
         public LoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
         {
-            EnsureInitialized(false);
+            CheckInitialized(false);
 
             // 注意：强烈建议在更新之前保持加载器为空！
             if (_resourceManager.HasAnyLoader())
@@ -153,7 +153,7 @@ namespace YooAsset
             }
 
             var operation = new LoadManifestOperation(_fileSystemHost, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
@@ -162,21 +162,21 @@ namespace YooAsset
         /// </summary>
         public PreDownloaderOperation PreDownloaderAsync(PreDownloaderOptions options)
         {
-            EnsureInitialized(false);
+            CheckInitialized(false);
             var operation = new PreDownloaderOperation(_fileSystemHost, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
-        
+
         /// <summary>
         /// 清理缓存文件
         /// </summary>
         public ClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
         {
-            EnsureInitialized(false);
+            CheckInitialized(false);
             options.Manifest = _fileSystemHost.ActiveManifest;
             var operation = new ClearCacheOperation(_fileSystemHost, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
@@ -187,7 +187,7 @@ namespace YooAsset
         /// </summary>
         public string GetPackageVersion()
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.ActiveManifest.PackageVersion;
         }
 
@@ -196,7 +196,7 @@ namespace YooAsset
         /// </summary>
         public string GetPackageNote()
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.ActiveManifest.PackageNote;
         }
 
@@ -205,7 +205,7 @@ namespace YooAsset
         /// </summary>
         public PackageDetails GetPackageDetails()
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.ActiveManifest.GetPackageDetails();
         }
         #endregion
@@ -226,9 +226,9 @@ namespace YooAsset
         /// <param name="options">卸载选项</param>
         public UnloadAllAssetsOperation UnloadAllAssetsAsync(UnloadAllAssetsOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             var operation = new UnloadAllAssetsOperation(_resourceManager, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
@@ -250,9 +250,9 @@ namespace YooAsset
         /// </summary>
         public UnloadUnusedAssetsOperation UnloadUnusedAssetsAsync(UnloadUnusedAssetsOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             var operation = new UnloadUnusedAssetsOperation(_resourceManager, options);
-            OperationSystem.StartOperation(PackageName, operation);
+            AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
@@ -262,7 +262,7 @@ namespace YooAsset
         /// </summary>
         public void TryUnloadUnusedAsset(string location, int loopCount = 10)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             _resourceManager.TryUnloadUnusedAsset(assetInfo, loopCount);
         }
@@ -273,7 +273,7 @@ namespace YooAsset
         /// </summary>
         public void TryUnloadUnusedAsset(AssetInfo assetInfo, int loopCount = 10)
         {
-            EnsureInitialized();
+            CheckInitialized();
             _resourceManager.TryUnloadUnusedAsset(assetInfo, loopCount);
         }
         #endregion
@@ -285,7 +285,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool IsNeedDownloadFromRemote(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return _fileSystemHost.IsNeedDownloadFromRemoteInternal(assetInfo);
         }
@@ -296,7 +296,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool IsNeedDownloadFromRemote(AssetInfo assetInfo)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.IsNeedDownloadFromRemoteInternal(assetInfo);
         }
 
@@ -305,7 +305,7 @@ namespace YooAsset
         /// </summary>
         public AssetInfo[] GetAllAssetInfos()
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.ActiveManifest.GetAllAssetInfos();
         }
 
@@ -315,7 +315,7 @@ namespace YooAsset
         /// <param name="tag">资源标签</param>
         public AssetInfo[] GetAssetInfos(string tag)
         {
-            EnsureInitialized();
+            CheckInitialized();
             string[] tags = new string[] { tag };
             return _fileSystemHost.ActiveManifest.GetAssetInfosByTags(tags);
         }
@@ -326,7 +326,7 @@ namespace YooAsset
         /// <param name="tags">资源标签列表</param>
         public AssetInfo[] GetAssetInfos(string[] tags)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.ActiveManifest.GetAssetInfosByTags(tags);
         }
 
@@ -336,7 +336,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetInfo GetAssetInfo(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return ConvertLocationToAssetInfo(location, null);
         }
 
@@ -347,7 +347,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetInfo GetAssetInfo(string location, System.Type type)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return ConvertLocationToAssetInfo(location, type);
         }
 
@@ -357,7 +357,7 @@ namespace YooAsset
         /// <param name="assetGUID">资源GUID</param>
         public AssetInfo GetAssetInfoByGUID(string assetGUID)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return ConvertAssetGUIDToAssetInfo(assetGUID, null);
         }
 
@@ -368,7 +368,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetInfo GetAssetInfoByGUID(string assetGUID, System.Type type)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return ConvertAssetGUIDToAssetInfo(assetGUID, type);
         }
 
@@ -378,7 +378,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public bool CheckLocationValid(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             string assetPath = _fileSystemHost.ActiveManifest.TryMappingToAssetPath(location);
             return string.IsNullOrEmpty(assetPath) == false;
         }
@@ -391,7 +391,7 @@ namespace YooAsset
         /// <param name="assetInfo">资源信息</param>
         public RawFileHandle LoadRawFileSync(AssetInfo assetInfo)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadRawFileInternal(assetInfo, true, 0);
         }
 
@@ -401,7 +401,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public RawFileHandle LoadRawFileSync(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadRawFileInternal(assetInfo, true, 0);
         }
@@ -413,7 +413,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public RawFileHandle LoadRawFileAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadRawFileInternal(assetInfo, false, priority);
         }
 
@@ -424,7 +424,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public RawFileHandle LoadRawFileAsync(string location, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadRawFileInternal(assetInfo, false, priority);
         }
@@ -449,7 +449,7 @@ namespace YooAsset
         /// <param name="physicsMode">场景物理模式</param>
         public SceneHandle LoadSceneSync(string location, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadSceneInternal(assetInfo, true, sceneMode, physicsMode, false, 0);
         }
@@ -462,7 +462,7 @@ namespace YooAsset
         /// <param name="physicsMode">场景物理模式</param>
         public SceneHandle LoadSceneSync(AssetInfo assetInfo, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadSceneInternal(assetInfo, true, sceneMode, physicsMode, false, 0);
         }
 
@@ -476,7 +476,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SceneHandle LoadSceneAsync(string location, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None, bool suspendLoad = false, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, null);
             return LoadSceneInternal(assetInfo, false, sceneMode, physicsMode, suspendLoad, priority);
         }
@@ -491,13 +491,13 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SceneHandle LoadSceneAsync(AssetInfo assetInfo, LoadSceneMode sceneMode = LoadSceneMode.Single, LocalPhysicsMode physicsMode = LocalPhysicsMode.None, bool suspendLoad = false, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadSceneInternal(assetInfo, false, sceneMode, physicsMode, suspendLoad, priority);
         }
 
         private SceneHandle LoadSceneInternal(AssetInfo assetInfo, bool waitForAsyncComplete, LoadSceneMode sceneMode, LocalPhysicsMode physicsMode, bool suspendLoad, uint priority)
         {
-            DebugEnsureAssetType(assetInfo.AssetType);
+            DebugCheckAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadScene;
             var loadSceneParams = new LoadSceneParameters(sceneMode, physicsMode);
             var handle = _resourceManager.LoadSceneAsync(assetInfo, loadSceneParams, suspendLoad, priority);
@@ -514,7 +514,7 @@ namespace YooAsset
         /// <param name="assetInfo">资源信息</param>
         public AssetHandle LoadAssetSync(AssetInfo assetInfo)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadAssetInternal(assetInfo, true, 0);
         }
 
@@ -525,7 +525,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetHandle LoadAssetSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAssetInternal(assetInfo, true, 0);
         }
@@ -537,7 +537,7 @@ namespace YooAsset
         /// <param name="type">资源类型</param>
         public AssetHandle LoadAssetSync(string location, System.Type type)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAssetInternal(assetInfo, true, 0);
         }
@@ -548,7 +548,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AssetHandle LoadAssetSync(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAssetInternal(assetInfo, true, 0);
         }
@@ -561,7 +561,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadAssetInternal(assetInfo, false, priority);
         }
 
@@ -573,7 +573,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAssetInternal(assetInfo, false, priority);
         }
@@ -586,7 +586,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(string location, System.Type type, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAssetInternal(assetInfo, false, priority);
         }
@@ -598,7 +598,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AssetHandle LoadAssetAsync(string location, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAssetInternal(assetInfo, false, priority);
         }
@@ -606,7 +606,7 @@ namespace YooAsset
 
         private AssetHandle LoadAssetInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugEnsureAssetType(assetInfo.AssetType);
+            DebugCheckAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadAsset;
             var handle = _resourceManager.LoadAssetAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -622,7 +622,7 @@ namespace YooAsset
         /// <param name="assetInfo">资源信息</param>
         public SubAssetsHandle LoadSubAssetsSync(AssetInfo assetInfo)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
 
@@ -633,7 +633,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public SubAssetsHandle LoadSubAssetsSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
@@ -645,7 +645,7 @@ namespace YooAsset
         /// <param name="type">子对象类型</param>
         public SubAssetsHandle LoadSubAssetsSync(string location, System.Type type)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
@@ -656,7 +656,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public SubAssetsHandle LoadSubAssetsSync(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadSubAssetsInternal(assetInfo, true, 0);
         }
@@ -669,7 +669,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
 
@@ -681,7 +681,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
@@ -694,7 +694,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(string location, System.Type type, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
@@ -706,7 +706,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public SubAssetsHandle LoadSubAssetsAsync(string location, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadSubAssetsInternal(assetInfo, false, priority);
         }
@@ -714,7 +714,7 @@ namespace YooAsset
 
         private SubAssetsHandle LoadSubAssetsInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugEnsureAssetType(assetInfo.AssetType);
+            DebugCheckAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadSubAssets;
             var handle = _resourceManager.LoadSubAssetsAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -730,7 +730,7 @@ namespace YooAsset
         /// <param name="assetInfo">资源信息</param>
         public AllAssetsHandle LoadAllAssetsSync(AssetInfo assetInfo)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
 
@@ -741,7 +741,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AllAssetsHandle LoadAllAssetsSync<TObject>(string location) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
@@ -753,7 +753,7 @@ namespace YooAsset
         /// <param name="type">子对象类型</param>
         public AllAssetsHandle LoadAllAssetsSync(string location, System.Type type)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
@@ -764,7 +764,7 @@ namespace YooAsset
         /// <param name="location">资源的定位地址</param>
         public AllAssetsHandle LoadAllAssetsSync(string location)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAllAssetsInternal(assetInfo, true, 0);
         }
@@ -777,7 +777,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(AssetInfo assetInfo, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
 
@@ -789,7 +789,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync<TObject>(string location, uint priority = 0) where TObject : UnityEngine.Object
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(TObject));
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
@@ -802,7 +802,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(string location, System.Type type, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, type);
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
@@ -814,7 +814,7 @@ namespace YooAsset
         /// <param name="priority">加载的优先级</param>
         public AllAssetsHandle LoadAllAssetsAsync(string location, uint priority = 0)
         {
-            EnsureInitialized();
+            CheckInitialized();
             AssetInfo assetInfo = ConvertLocationToAssetInfo(location, typeof(UnityEngine.Object));
             return LoadAllAssetsInternal(assetInfo, false, priority);
         }
@@ -822,7 +822,7 @@ namespace YooAsset
 
         private AllAssetsHandle LoadAllAssetsInternal(AssetInfo assetInfo, bool waitForAsyncComplete, uint priority)
         {
-            DebugEnsureAssetType(assetInfo.AssetType);
+            DebugCheckAssetType(assetInfo.AssetType);
             assetInfo.LoadMethod = AssetInfo.ELoadMethod.LoadAllAssets;
             var handle = _resourceManager.LoadAllAssetsAsync(assetInfo, priority);
             if (waitForAsyncComplete)
@@ -837,7 +837,7 @@ namespace YooAsset
         /// </summary>
         public ResourceDownloaderOperation CreateResourceDownloader(ResourceDownloaderOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.CreateResourceDownloader(options);
         }
 
@@ -846,7 +846,7 @@ namespace YooAsset
         /// </summary>
         public ResourceDownloaderOperation CreateResourceDownloader(BundleDownloaderOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.CreateResourceDownloader(options);
         }
         #endregion
@@ -857,7 +857,7 @@ namespace YooAsset
         /// </summary>
         public ResourceUnpackerOperation CreateResourceUnpacker(ResourceUnpackerOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.CreateResourceUnpacker(options);
         }
         #endregion
@@ -868,7 +868,7 @@ namespace YooAsset
         /// </summary>
         public ResourceImporterOperation CreateResourceImporter(BundleImporterOptions options)
         {
-            EnsureInitialized();
+            CheckInitialized();
             return _fileSystemHost.CreateResourceImporter(options);
         }
         #endregion
@@ -885,9 +885,9 @@ namespace YooAsset
         #endregion
 
         #region 调试方法
-        private void EnsureInitialized(bool checkActiveManifest = true)
+        private void CheckInitialized(bool checkActiveManifest = true)
         {
-            if (InitializeStatus != EOperationStatus.Succeed)
+            if (InitializeStatus != EOperationStatus.Succeeded)
             {
                 switch (InitializeStatus)
                 {
@@ -914,7 +914,7 @@ namespace YooAsset
         }
 
         [Conditional("DEBUG")]
-        private void DebugEnsureAssetType(System.Type type)
+        private void DebugCheckAssetType(System.Type type)
         {
             if (type == null)
                 return;
@@ -934,7 +934,7 @@ namespace YooAsset
             data.PackageName = PackageName;
             data.ProviderInfos = _resourceManager.GetDebugProviderInfos();
             data.BundleInfos = _resourceManager.GetDebugBundleInfos();
-            data.OperationInfos = OperationSystem.GetDebugOperationInfos(PackageName);
+            data.OperationInfos = AsyncOperationSystem.GetDiagnosticInfos(PackageName);
             return data;
         }
         #endregion

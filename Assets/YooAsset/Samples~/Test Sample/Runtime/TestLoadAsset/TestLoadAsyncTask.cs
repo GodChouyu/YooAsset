@@ -24,14 +24,14 @@ public class TestAsyncTask
             while (!handleTask.IsCompleted)
                 yield return null;
             yield return null;
-            Assert.AreEqual(EOperationStatus.Succeed, assetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetsHandle.Status);
 
             var instantiateOp = assetsHandle.InstantiateAsync();
             var operationTask = instantiateOp.Task;
             while (!operationTask.IsCompleted)
                 yield return null;
             yield return null;
-            Assert.AreEqual(EOperationStatus.Succeed, instantiateOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, instantiateOp.Status);
 
             Assert.IsNotNull(instantiateOp.Result);
             TestLogger.Log(this, instantiateOp.Result.name);

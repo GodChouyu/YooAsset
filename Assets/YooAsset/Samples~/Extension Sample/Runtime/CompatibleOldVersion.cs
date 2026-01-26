@@ -183,7 +183,7 @@ public static class CompatibleResourcePackage
             options.EditorFileSystemParameters = initializeParameters.EditorFileSystemParameters;
             var operation = package.InitializePackageAsync(options);
             var wrapper = new InitializationOperation(operation);
-            OperationSystem.StartOperation(package.PackageName, wrapper);
+            AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
             return wrapper;
         }
         else if (parameters is OfflinePlayModeParameters)
@@ -196,7 +196,7 @@ public static class CompatibleResourcePackage
             options.BuildinFileSystemParameters = initializeParameters.BuildinFileSystemParameters;
             var operation = package.InitializePackageAsync(options);
             var wrapper = new InitializationOperation(operation);
-            OperationSystem.StartOperation(package.PackageName, wrapper);
+            AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
             return wrapper;
         }
         else if (parameters is HostPlayModeParameters)
@@ -210,7 +210,7 @@ public static class CompatibleResourcePackage
             options.CacheFileSystemParameters = initializeParameters.CacheFileSystemParameters;
             var operation = package.InitializePackageAsync(options);
             var wrapper = new InitializationOperation(operation);
-            OperationSystem.StartOperation(package.PackageName, wrapper);
+            AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
             return wrapper;
         }
         else if (parameters is WebPlayModeParameters)
@@ -224,7 +224,7 @@ public static class CompatibleResourcePackage
             options.WebRemoteFileSystemParameters = initializeParameters.WebRemoteFileSystemParameters;
             var operation = package.InitializePackageAsync(options);
             var wrapper = new InitializationOperation(operation);
-            OperationSystem.StartOperation(package.PackageName, wrapper);
+            AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
             return wrapper;
         }
         else
@@ -240,7 +240,7 @@ public static class CompatibleResourcePackage
     {
         var operation = package.DestroyPackageAsync();
         var wrapper = new DestroyOperation(operation);
-        OperationSystem.StartOperation(package.PackageName, wrapper);
+        AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
         return wrapper;
     }
 
@@ -261,7 +261,7 @@ public static class CompatibleResourcePackage
         var options = new LoadManifestOptions(packageVersion, timeout);
         var operation = package.LoadManifestAsync(options);
         var wrapper = new UpdatePackageManifestOperation(operation);
-        OperationSystem.StartOperation(package.PackageName, wrapper);
+        AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
         return wrapper;
     }
 

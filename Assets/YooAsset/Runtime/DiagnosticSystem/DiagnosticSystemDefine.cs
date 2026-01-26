@@ -8,9 +8,9 @@ namespace YooAsset
     internal class DiagnosticSystemDefine
     {
         /// <summary>
-        /// 调试器版本号
+        /// 通信协议版本号
         /// </summary>
-        public const string DebuggerVersion = "1.0";
+        public const string ProtocolVersion = "1.0";
 
         /// <summary>
         /// Player 向 Editor 发送消息的标识符

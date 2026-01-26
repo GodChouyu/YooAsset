@@ -65,7 +65,7 @@ public class GameObjectAssetReference : MonoBehaviour
 
     private void Handle_Completed(AssetHandle handle)
     {
-        if (handle.Status == EOperationStatus.Succeed)
+        if (handle.Status == EOperationStatus.Succeeded)
         {
             handle.InstantiateSync(this.transform);
         }

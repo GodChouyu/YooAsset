@@ -321,7 +321,7 @@ namespace YooAsset.Editor
                     rowData.AddLongValueCell("Priority", operationInfo.Priority);
                     rowData.AddDoubleValueCell("Progress", operationInfo.Progress);
                     rowData.AddStringValueCell("StartTime", operationInfo.StartTime);
-                    rowData.AddLongValueCell("ElapsedMS", operationInfo.ElapsedMS);
+                    rowData.AddLongValueCell("ElapsedMS", operationInfo.ElapsedMilliseconds);
                     rowData.AddStringValueCell("Status", operationInfo.Status.ToString());
                     rowData.AddStringValueCell("Desc", operationInfo.OperationDesc);
                     _sourceDatas.Add(rowData);
@@ -474,7 +474,7 @@ namespace YooAsset.Editor
             // ElapsedMS
             {
                 var label = container.Q<Label>("ElapsedMS");
-                label.text = operationInfo.ElapsedMS.ToString();
+                label.text = operationInfo.ElapsedMilliseconds.ToString();
             }
 
             // Status

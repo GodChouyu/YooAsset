@@ -21,7 +21,7 @@ public class TestBundleEncryption
         {
             var assetHandle = package.LoadAssetAsync<GameObject>("prefab_encryptA");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var options = new InstantiateOptions(true, Vector3.zero, Quaternion.identity);
             var go = assetHandle.InstantiateSync(options);
@@ -32,7 +32,7 @@ public class TestBundleEncryption
         // 说明：测试内置文件解压
         {
             var assetHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var options = new InstantiateOptions(true, Vector3.zero, Quaternion.identity);
             var go = assetHandle.InstantiateSync(options);

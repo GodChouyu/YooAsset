@@ -22,7 +22,7 @@ public class TestBundleDownloader
 
         downloader.BeginDownload();
         yield return downloader;
-        Assert.AreEqual(EOperationStatus.Succeed, downloader.Status);
+        Assert.AreEqual(EOperationStatus.Succeeded, downloader.Status);
     }
 }
 

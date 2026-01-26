@@ -64,7 +64,7 @@ internal class SceneBattle : MonoBehaviour
         {
             var package = YooAssets.GetPackage("DefaultPackage");
             var operation = package.UnloadUnusedAssetsAsync();
-            operation.WaitForAsyncComplete();
+            operation.WaitForCompletion();
         }
     }
     private void Update()

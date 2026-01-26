@@ -20,7 +20,7 @@ public class TestLoadAllAssets
         {
             var allAssetsHandle = package.LoadAllAssetsAsync<GameObject>("prefab_a");
             yield return allAssetsHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, allAssetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, allAssetsHandle.Status);
 
             var allAssetObjects = allAssetsHandle.AllAssetObjects;
             Assert.IsNotNull(allAssetObjects);
@@ -32,7 +32,7 @@ public class TestLoadAllAssets
         // 同步加载所有资源
         {
             var allAssetsHandle = package.LoadAllAssetsSync<GameObject>("prefab_x");
-            Assert.AreEqual(EOperationStatus.Succeed, allAssetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, allAssetsHandle.Status);
 
             var allAssetObjects = allAssetsHandle.AllAssetObjects;
             Assert.IsNotNull(allAssetObjects);

@@ -139,7 +139,7 @@ namespace YooAsset
         {
             DeserializeManifestOperation operation = new DeserializeManifestOperation(services, binaryData);
             operation.StartOperation();
-            operation.WaitForAsyncComplete();
+            operation.WaitForCompletion();
             return operation.Manifest;
         }
 

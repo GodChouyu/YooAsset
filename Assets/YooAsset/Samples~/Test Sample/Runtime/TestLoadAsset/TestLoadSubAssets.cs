@@ -20,7 +20,7 @@ public class TestLoadSubAssets
         {
             var subAssetsHandle = package.LoadSubAssetsAsync<Sprite>("image_a");
             yield return subAssetsHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, subAssetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, subAssetsHandle.Status);
 
             var subAssetObjects = subAssetsHandle.SubAssetObjects;
             Assert.IsNotNull(subAssetObjects);
@@ -32,7 +32,7 @@ public class TestLoadSubAssets
         // 同步加载子对象
         {
             var subAssetsHandle = package.LoadSubAssetsSync<Sprite>("image_b");
-            Assert.AreEqual(EOperationStatus.Succeed, subAssetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, subAssetsHandle.Status);
 
             var subAssetObjects = subAssetsHandle.SubAssetObjects;
             Assert.IsNotNull(subAssetObjects);

@@ -32,7 +32,7 @@ public class FsmDownloadPackageFiles : IStateNode
         yield return downloader;
 
         // 检测下载结果
-        if (downloader.Status != EOperationStatus.Succeed)
+        if (downloader.Status != EOperationStatus.Succeeded)
             yield break;
 
         _machine.ChangeState<FsmDownloadPackageOver>();

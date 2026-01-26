@@ -31,7 +31,7 @@ public class SpriteAtlasLoader : MonoBehaviour
         {
             var package = YooAssets.GetPackage("DefaultPackage");
             var loadHandle = package.LoadAssetSync<SpriteAtlas>(atlasName);
-            if (loadHandle.Status != EOperationStatus.Succeed)
+            if (loadHandle.Status != EOperationStatus.Succeeded)
             {
                 Debug.LogWarning($"Failed to load sprite atlas : {atlasName} ! {loadHandle.LastError}");
                 return;

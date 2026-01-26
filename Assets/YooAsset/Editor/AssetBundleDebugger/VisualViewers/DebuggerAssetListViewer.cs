@@ -315,9 +315,9 @@ namespace YooAsset.Editor
                     rowData.ProviderInfo = providerInfo;
                     rowData.AddAssetPathCell("PackageName", packageData.PackageName);
                     rowData.AddStringValueCell("AssetPath", providerInfo.AssetPath);
-                    rowData.AddStringValueCell("SpawnScene", providerInfo.OriginScene);
+                    rowData.AddStringValueCell("SpawnScene", providerInfo.SpawnScene);
                     rowData.AddStringValueCell("StartTime", providerInfo.StartTime);
-                    rowData.AddLongValueCell("LoadingTime", providerInfo.ElapsedMS);
+                    rowData.AddLongValueCell("LoadingTime", providerInfo.ElapsedMilliseconds);
                     rowData.AddLongValueCell("RefCount", providerInfo.ReferenceCount);
                     rowData.AddStringValueCell("Status", providerInfo.Status.ToString());
                     _sourceDatas.Add(rowData);
@@ -378,8 +378,8 @@ namespace YooAsset.Editor
             DiagnosticProviderInfo providerInfo = providerTableData.ProviderInfo;
 
             // 填充依赖数据
-            var sourceDatas = new List<ITableData>(providerInfo.DependentBundles.Count);
-            foreach (var bundleName in providerInfo.DependentBundles)
+            var sourceDatas = new List<ITableData>(providerInfo.Dependencies.Count);
+            foreach (var bundleName in providerInfo.Dependencies)
             {
                 var dependBundleInfo = packageData.GetBundleInfo(bundleName);
                 var rowData = new DependTableData();

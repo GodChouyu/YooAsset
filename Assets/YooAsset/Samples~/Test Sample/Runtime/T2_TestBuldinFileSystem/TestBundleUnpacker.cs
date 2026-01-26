@@ -22,7 +22,7 @@ public class TestBundleUnpacker
 
         resourceUnpacker.BeginDownload();
         yield return resourceUnpacker;
-        Assert.AreEqual(EOperationStatus.Succeed, resourceUnpacker.Status);
+        Assert.AreEqual(EOperationStatus.Succeeded, resourceUnpacker.Status);
     }
 }
 

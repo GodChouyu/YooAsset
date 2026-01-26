@@ -18,9 +18,9 @@ public class TestDestroyPackage
             var package = YooAssets.GetPackage(TestDefine.AssetBundlePackageName);
             var destroyOp = package.DestroyPackageAsync();
             yield return destroyOp;
-            if (destroyOp.Status != EOperationStatus.Succeed)
+            if (destroyOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(destroyOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, destroyOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, destroyOp.Status);
 
             bool result = YooAssets.RemovePackage(TestDefine.AssetBundlePackageName);
             Assert.IsTrue(result);
@@ -32,9 +32,9 @@ public class TestDestroyPackage
             var package = YooAssets.GetPackage(TestDefine.RawBundlePackageName);
             var destroyOp = package.DestroyPackageAsync();
             yield return destroyOp;
-            if (destroyOp.Status != EOperationStatus.Succeed)
+            if (destroyOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(destroyOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, destroyOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, destroyOp.Status);
 
             bool result = YooAssets.RemovePackage(TestDefine.RawBundlePackageName);
             Assert.IsTrue(result);

@@ -20,7 +20,7 @@ public class TestLoadScriptableObject
         {
             var assetHandle = package.LoadAssetAsync("config_a");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var testScriptableObject = assetHandle.AssetObject as TestScriptableObject;
             Assert.IsNotNull(testScriptableObject);
@@ -31,7 +31,7 @@ public class TestLoadScriptableObject
         {
             var assetHandle = package.LoadAssetSync("config_b");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var testScriptableObject = assetHandle.AssetObject as TestScriptableObject;
             Assert.IsNotNull(testScriptableObject);

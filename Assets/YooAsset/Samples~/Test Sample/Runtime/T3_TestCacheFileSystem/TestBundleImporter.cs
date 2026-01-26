@@ -35,7 +35,7 @@ public class TestBundleImporter
 
         unpacker.BeginDownload();
         yield return unpacker;
-        Assert.AreEqual(EOperationStatus.Succeed, unpacker.Status);
+        Assert.AreEqual(EOperationStatus.Succeeded, unpacker.Status);
     }
 }
 

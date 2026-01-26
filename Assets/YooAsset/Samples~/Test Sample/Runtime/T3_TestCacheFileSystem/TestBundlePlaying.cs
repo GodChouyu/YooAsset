@@ -29,7 +29,7 @@ public class TestBundlePlaying
         {
             var assetsHandle = package.LoadAssetAsync<GameObject>("prefab_encryptA");
             yield return assetsHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetsHandle.Status);
         }
 
         // 测试同步加载远端资源
@@ -50,7 +50,7 @@ public class TestBundlePlaying
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             assetsHandle = package.LoadAssetSync<GameObject>("prefab_encryptB");
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = false;
-            Assert.AreEqual(EOperationStatus.Succeed, assetsHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetsHandle.Status);
         }
     }
 }

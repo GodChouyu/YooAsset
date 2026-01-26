@@ -20,7 +20,7 @@ public class TestLoadAsset
         {
             var assetHandle = package.LoadAssetAsync<AudioClip>("music_a");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var audioClip = assetHandle.AssetObject as AudioClip;
             Assert.IsNotNull(audioClip);
@@ -30,7 +30,7 @@ public class TestLoadAsset
         {
             var assetHandle = package.LoadAssetAsync<AudioClip>("sound_a");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var audioClip = assetHandle.AssetObject as AudioClip;
             Assert.IsNotNull(audioClip);
@@ -45,7 +45,7 @@ public class TestLoadAsset
                 Assert.AreEqual(loadFrame, Time.frameCount);
             };
             Assert.AreEqual(true, assetHandle.Provider.IsFinished);
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var audioClip = assetHandle.AssetObject as AudioClip;
             Assert.IsNotNull(audioClip);

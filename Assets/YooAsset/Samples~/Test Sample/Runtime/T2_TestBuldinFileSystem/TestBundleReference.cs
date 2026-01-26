@@ -20,7 +20,7 @@ public class TestBundleReference
         {
             var assetHandle = package.LoadAssetAsync<GameObject>("hero_a");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             var pos = new Vector3(-1, -1, 0);
             var options = new InstantiateOptions(true, pos, Quaternion.identity);
@@ -34,7 +34,7 @@ public class TestBundleReference
         {
             heroHandle = package.LoadAssetAsync<GameObject>("hero_b");
             yield return heroHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, heroHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, heroHandle.Status);
 
             var pos = new Vector3(1, -1, 0);
             var options = new InstantiateOptions(true, pos, Quaternion.identity);
@@ -53,14 +53,14 @@ public class TestBundleReference
         {
             var operation = package.UnloadUnusedAssetsAsync();
             yield return operation;
-            Assert.AreEqual(EOperationStatus.Succeed, operation.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, operation.Status);
         }
 
         // 再次加载HeroB
         {
             heroHandle = package.LoadAssetAsync<GameObject>("hero_b");
             yield return heroHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, heroHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, heroHandle.Status);
 
             var pos = new Vector3(1, -1, 0);
             var options = new InstantiateOptions(true, pos, Quaternion.identity);

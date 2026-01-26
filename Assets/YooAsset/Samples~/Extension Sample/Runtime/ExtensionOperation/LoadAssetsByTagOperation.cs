@@ -68,7 +68,7 @@ public class LoadAssetsByTagOperation<TObject> : AsyncOperationBase where TObjec
             AssetObjects = new List<TObject>(_handles.Count);
             foreach (var handle in _handles)
             {
-                if (handle.Status == EOperationStatus.Succeed)
+                if (handle.Status == EOperationStatus.Succeeded)
                 {
                     var assetObject = handle.AssetObject as TObject;
                     if (assetObject != null)
@@ -98,7 +98,7 @@ public class LoadAssetsByTagOperation<TObject> : AsyncOperationBase where TObjec
     }
     private void SetSucceed()
     {
-        Status = EOperationStatus.Succeed;
+        Status = EOperationStatus.Succeeded;
         _steps = ESteps.Done;
     }
     private void SetFailed(string error)

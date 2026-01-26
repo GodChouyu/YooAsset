@@ -86,7 +86,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             if (File.Exists(manifestFilePath))
             {
                 _steps = ESteps.Done;
-                Status = EOperationStatus.Succeed;
+                Status = EOperationStatus.Succeeded;
                 return;
             }
 
@@ -111,7 +111,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             if (_manifestFileRequestOp.Status == EDownloadRequestStatus.Succeed)
             {
                 _steps = ESteps.Done;
-                Status = EOperationStatus.Succeed;
+                Status = EOperationStatus.Succeeded;
             }
             else
             {

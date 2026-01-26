@@ -11,6 +11,6 @@ public class OperationHelper
     /// </summary>
     public static void StartOperation(AsyncOperationBase operation)
     {
-        OperationSystem.StartOperation(OperationSystem.GlobalSchedulerName, operation);
+        AsyncOperationSystem.StartOperation(AsyncOperationSystem.GlobalSchedulerName, operation);
     }
 }

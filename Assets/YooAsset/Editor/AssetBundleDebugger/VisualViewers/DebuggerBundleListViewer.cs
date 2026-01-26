@@ -446,14 +446,14 @@ namespace YooAsset.Editor
                 var sourceDatas = new List<ITableData>(1000);
                 foreach (var providerInfo in packageData.ProviderInfos)
                 {
-                    foreach (var dependBundleName in providerInfo.DependentBundles)
+                    foreach (var dependBundleName in providerInfo.Dependencies)
                     {
                         if (dependBundleName == selectBundleInfo.BundleName)
                         {
                             var rowData = new UsingTableData();
                             rowData.ProviderInfo = providerInfo;
                             rowData.AddStringValueCell("UsingAssets", providerInfo.AssetPath);
-                            rowData.AddStringValueCell("SpawnScene", providerInfo.OriginScene);
+                            rowData.AddStringValueCell("SpawnScene", providerInfo.SpawnScene);
                             rowData.AddStringValueCell("StartTime", providerInfo.StartTime);
                             rowData.AddLongValueCell("RefCount", providerInfo.ReferenceCount);
                             rowData.AddStringValueCell("Status", providerInfo.Status);
@@ -469,7 +469,7 @@ namespace YooAsset.Editor
             // 填充ReferenceTableView
             {
                 var sourceDatas = new List<ITableData>(1000);
-                foreach (string referenceBundleName in selectBundleInfo.ReferencedByBundles)
+                foreach (string referenceBundleName in selectBundleInfo.Referencers)
                 {
                     var bundleInfo = packageData.GetBundleInfo(referenceBundleName);
                     var rowData = new ReferenceTableData();

@@ -9,7 +9,7 @@ public static class YooAssetsExtension
     public static LoadGameObjectOperation LoadGameObjectAsync(this ResourcePackage package, string location, Vector3 position, Quaternion rotation, Transform parent, bool destroyGoOnRelease = false)
     {
         var operation = new LoadGameObjectOperation(package.PackageName, location, position, rotation, parent, destroyGoOnRelease);
-        OperationSystem.StartOperation(OperationSystem.GlobalSchedulerName, operation);
+        AsyncOperationSystem.StartOperation(AsyncOperationSystem.GlobalSchedulerName, operation);
         return operation;
     }
 }
@@ -68,7 +68,7 @@ public class LoadGameObjectOperation : AsyncOperationBase
             if (_handle.IsDone == false)
                 return;
 
-            if (_handle.Status != EOperationStatus.Succeed)
+            if (_handle.Status != EOperationStatus.Succeeded)
             {
                 Error = _handle.LastError;
                 Status = EOperationStatus.Failed;
@@ -77,7 +77,7 @@ public class LoadGameObjectOperation : AsyncOperationBase
             else
             {
                 Go = _handle.InstantiateSync(_positon, _rotation, _parent);
-                Status = EOperationStatus.Succeed;
+                Status = EOperationStatus.Succeeded;
                 _steps = ESteps.Done;
             }
         }

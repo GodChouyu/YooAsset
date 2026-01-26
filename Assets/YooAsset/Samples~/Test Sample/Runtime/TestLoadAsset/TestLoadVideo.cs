@@ -19,7 +19,7 @@ public class TestLoadVideo
 
         var rawFileHandle = package.LoadRawFileAsync("video_logo");
         yield return rawFileHandle;
-        Assert.AreEqual(EOperationStatus.Succeed, rawFileHandle.Status);
+        Assert.AreEqual(EOperationStatus.Succeeded, rawFileHandle.Status);
 
         // 获取视频文件地址
         string videoFilePath = rawFileHandle.GetRawFilePath();

@@ -194,9 +194,9 @@ namespace YooAsset.Editor
             int playerId = args.playerId;
             var debugReport = DiagnosticReport.Deserialize(args.data);
 
-            if (debugReport.DebuggerVersion != DiagnosticSystemDefine.DebuggerVersion)
+            if (debugReport.ProtocolVersion != DiagnosticSystemDefine.ProtocolVersion)
             {
-                Debug.LogWarning($"Debugger versions are inconsistent : {debugReport.DebuggerVersion} != {DiagnosticSystemDefine.DebuggerVersion}");
+                Debug.LogWarning($"Debugger versions are inconsistent : {debugReport.ProtocolVersion} != {DiagnosticSystemDefine.ProtocolVersion}");
                 return;
             }
 
@@ -254,10 +254,10 @@ namespace YooAsset.Editor
         private void OnRecordToggleValueChange(ChangeEvent<bool> evt)
         {
             // 发送采集数据的命令
-            RemoteDebugCommand command = new RemoteDebugCommand();
-            command.CommandType = (int)EDebugCommandType.AutoSampling;
+            DiagnosticCommand command = new DiagnosticCommand();
+            command.CommandType = (int)EDiagnosticCommandType.AutoSampling;
             command.Parameter = evt.newValue ? "open" : "close";
-            byte[] data = RemoteDebugCommand.Serialize(command);
+            byte[] data = DiagnosticCommand.Serialize(command);
             EditorConnection.instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
             MockEditorConnection.Instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
         }
@@ -265,10 +265,10 @@ namespace YooAsset.Editor
         private void SampleBtn_onClick()
         {
             // 发送采集数据的命令
-            RemoteDebugCommand command = new RemoteDebugCommand();
-            command.CommandType = (int)EDebugCommandType.SampleOnce;
+            DiagnosticCommand command = new DiagnosticCommand();
+            command.CommandType = (int)EDiagnosticCommandType.SampleOnce;
             command.Parameter = string.Empty;
-            byte[] data = RemoteDebugCommand.Serialize(command);
+            byte[] data = DiagnosticCommand.Serialize(command);
             EditorConnection.instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
             MockEditorConnection.Instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
         }
@@ -289,7 +289,7 @@ namespace YooAsset.Editor
                     packageData.ProviderInfos.Sort();
                     foreach (var providerInfo in packageData.ProviderInfos)
                     {
-                        providerInfo.DependentBundles.Sort();
+                        providerInfo.Dependencies.Sort();
                     }
                 }
 

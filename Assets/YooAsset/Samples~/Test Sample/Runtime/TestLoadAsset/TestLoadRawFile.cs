@@ -20,7 +20,7 @@ public class TestLoadRawFile
         {
             var rawFileHandle = package.LoadRawFileAsync("raw_file_a");
             yield return rawFileHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, rawFileHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, rawFileHandle.Status);
 
             var filePath = rawFileHandle.GetRawFilePath();
             Assert.IsNotNull(filePath);
@@ -29,7 +29,7 @@ public class TestLoadRawFile
         // 测试同步加载
         {
             var rawFileHandle = package.LoadRawFileSync("raw_file_b");
-            Assert.AreEqual(EOperationStatus.Succeed, rawFileHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, rawFileHandle.Status);
 
             var filePath = rawFileHandle.GetRawFilePath();
             Assert.IsNotNull(filePath);

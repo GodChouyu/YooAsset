@@ -57,7 +57,7 @@ public class GetBuildinPackageVersionOperation : AsyncOperationBase
             if (_versionFileRequestOp.Status == EDownloadRequestStatus.Succeed)
             {
                 _steps = ESteps.Done;
-                Status = EOperationStatus.Succeed;
+                Status = EOperationStatus.Succeeded;
                 PackageVersion = _versionFileRequestOp.Result;
             }
             else

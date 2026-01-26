@@ -18,7 +18,7 @@ public class TestLoadSpriteAtlas
 
         var assetHandle = package.LoadAssetAsync<SpriteAtlas>("atlas_icon");
         yield return assetHandle;
-        Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+        Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
         var spriteAtals = assetHandle.AssetObject as SpriteAtlas;
         Assert.IsNotNull(spriteAtals);

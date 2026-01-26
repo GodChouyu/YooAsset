@@ -54,7 +54,7 @@ public class GetCacheBundleSizeOperation : AsyncOperationBase
 
             TotalSize = totalSize;
             _steps = ESteps.Done;
-            Status = EOperationStatus.Succeed;
+            Status = EOperationStatus.Succeeded;
         }
     }
 

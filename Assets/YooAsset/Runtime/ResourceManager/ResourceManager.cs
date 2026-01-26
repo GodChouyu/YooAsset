@@ -151,7 +151,7 @@ namespace YooAsset
                 provider = new SceneProvider(this, providerGUID, assetInfo, loadSceneParams, suspendLoad);
                 provider.InitProviderDebugInfo();
                 ProviderDic.Add(providerGUID, provider);
-                OperationSystem.StartOperation(PackageName, provider);
+                AsyncOperationSystem.StartOperation(PackageName, provider);
             }
 
             provider.Priority = priority;
@@ -190,7 +190,7 @@ namespace YooAsset
                 provider = new AssetProvider(this, providerGUID, assetInfo);
                 provider.InitProviderDebugInfo();
                 ProviderDic.Add(providerGUID, provider);
-                OperationSystem.StartOperation(PackageName, provider);
+                AsyncOperationSystem.StartOperation(PackageName, provider);
             }
 
             provider.Priority = priority;
@@ -226,7 +226,7 @@ namespace YooAsset
                 provider = new SubAssetsProvider(this, providerGUID, assetInfo);
                 provider.InitProviderDebugInfo();
                 ProviderDic.Add(providerGUID, provider);
-                OperationSystem.StartOperation(PackageName, provider);
+                AsyncOperationSystem.StartOperation(PackageName, provider);
             }
 
             provider.Priority = priority;
@@ -262,7 +262,7 @@ namespace YooAsset
                 provider = new AllAssetsProvider(this, providerGUID, assetInfo);
                 provider.InitProviderDebugInfo();
                 ProviderDic.Add(providerGUID, provider);
-                OperationSystem.StartOperation(PackageName, provider);
+                AsyncOperationSystem.StartOperation(PackageName, provider);
             }
 
             provider.Priority = priority;
@@ -298,7 +298,7 @@ namespace YooAsset
                 provider = new RawFileProvider(this, providerGUID, assetInfo);
                 provider.InitProviderDebugInfo();
                 ProviderDic.Add(providerGUID, provider);
-                OperationSystem.StartOperation(PackageName, provider);
+                AsyncOperationSystem.StartOperation(PackageName, provider);
             }
 
             provider.Priority = priority;
@@ -425,12 +425,12 @@ namespace YooAsset
             {
                 DiagnosticProviderInfo providerInfo = new DiagnosticProviderInfo();
                 providerInfo.AssetPath = provider.MainAssetInfo.AssetPath;
-                providerInfo.OriginScene = provider.OriginScene;
+                providerInfo.SpawnScene= provider.SpawnScene;
                 providerInfo.StartTime = provider.StartTime;
-                providerInfo.ElapsedMS = provider.ElapsedMS;
+                providerInfo.ElapsedMilliseconds = provider.ElapsedMilliseconds;
                 providerInfo.ReferenceCount = provider.RefCount;
                 providerInfo.Status = provider.Status.ToString();
-                providerInfo.DependentBundles = provider.GetDebugDependBundles();
+                providerInfo.Dependencies = provider.GetDebugDependBundles();
                 result.Add(providerInfo);
             }
             return result;
@@ -445,7 +445,7 @@ namespace YooAsset
                 bundleInfo.BundleName = packageBundle.BundleName;
                 bundleInfo.ReferenceCount = bundleLoader.RefCount;
                 bundleInfo.Status = bundleLoader.Status.ToString();
-                bundleInfo.ReferencedByBundles = FilterReferenceBundles(packageBundle);
+                bundleInfo.Referencers = FilterReferenceBundles(packageBundle);
                 result.Add(bundleInfo);
             }
             return result;

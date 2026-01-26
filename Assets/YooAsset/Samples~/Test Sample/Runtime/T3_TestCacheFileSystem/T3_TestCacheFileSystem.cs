@@ -54,24 +54,24 @@ public class T3_TestCacheFileSystem : IPrebuildSetup, IPostBuildCleanup
             initParams.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES, manifestServices);
             var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
-            if (initializeOp.Status != EOperationStatus.Succeed)
+            if (initializeOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(initializeOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, initializeOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, initializeOp.Status);
 
             // 请求资源版本
             var requetVersionOp = package.RequestVersionAsync();
             yield return requetVersionOp;
-            if (requetVersionOp.Status != EOperationStatus.Succeed)
+            if (requetVersionOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(requetVersionOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, requetVersionOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, requetVersionOp.Status);
 
             // 更新资源清单
             var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
             var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
             yield return loadPackageManifestOp;
-            if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
+            if (loadPackageManifestOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(loadPackageManifestOp.Error);
-            Assert.AreEqual(EOperationStatus.Succeed, loadPackageManifestOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, loadPackageManifestOp.Status);
         }
     }
     private class TestRemoteServices : IRemoteServices

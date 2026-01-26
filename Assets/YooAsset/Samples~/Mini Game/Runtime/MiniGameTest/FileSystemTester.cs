@@ -12,9 +12,9 @@ namespace YooAsset
             // 初始化小游戏文件系统
             Debug.Log("初始化小游戏文件系统！");
             var initializeFileSystemOp = fileSystem.InitializeAsync();
-            OperationSystem.StartOperation(packageName, initializeFileSystemOp);
+            AsyncOperationSystem.StartOperation(packageName, initializeFileSystemOp);
             yield return initializeFileSystemOp;
-            if (initializeFileSystemOp.Status != EOperationStatus.Succeed)
+            if (initializeFileSystemOp.Status != EOperationStatus.Succeeded)
             {
                 Debug.LogError($"初始化小游戏文件系统失败！{initializeFileSystemOp.Error}");
                 yield break;
@@ -24,9 +24,9 @@ namespace YooAsset
             Debug.Log("请求资源版本信息！");
             var requestPackageVersionOptions = new RequestVersionOptions(true, 60);
             var requestPackageVersionOp = fileSystem.RequestVersionAsync(requestPackageVersionOptions);
-            OperationSystem.StartOperation(packageName, requestPackageVersionOp);
+            AsyncOperationSystem.StartOperation(packageName, requestPackageVersionOp);
             yield return requestPackageVersionOp;
-            if (requestPackageVersionOp.Status != EOperationStatus.Succeed)
+            if (requestPackageVersionOp.Status != EOperationStatus.Succeeded)
             {
                 Debug.LogError($"请求资源版本信息失败！{requestPackageVersionOp.Error}");
                 yield break;
@@ -37,9 +37,9 @@ namespace YooAsset
             Debug.Log($"加载资源清单文件！{packageVersion}");
             var loadPackageManifestOptions = new LoadManifestOptions(packageVersion, 60);
             var loadPackageManifestOp = fileSystem.LoadManifestAsync(loadPackageManifestOptions);
-            OperationSystem.StartOperation(packageName, loadPackageManifestOp);
+            AsyncOperationSystem.StartOperation(packageName, loadPackageManifestOp);
             yield return loadPackageManifestOp;
-            if (loadPackageManifestOp.Status != EOperationStatus.Succeed)
+            if (loadPackageManifestOp.Status != EOperationStatus.Succeeded)
             {
                 Debug.LogError($"加载资源清单文件失败！{loadPackageManifestOp.Error}");
                 yield break;
@@ -52,9 +52,9 @@ namespace YooAsset
                 var packageBundle = GetPackageBundle(manifest, testLocation);
                 var options = new DownloadFileOptions(packageBundle, 1);
                 var downloadFileOp = fileSystem.DownloadFileAsync(options);
-                OperationSystem.StartOperation(packageName, downloadFileOp);
+                AsyncOperationSystem.StartOperation(packageName, downloadFileOp);
                 yield return downloadFileOp;
-                if (downloadFileOp.Status != EOperationStatus.Succeed)
+                if (downloadFileOp.Status != EOperationStatus.Succeeded)
                 {
                     Debug.LogError($"预下载资源包失败！{downloadFileOp.Error}");
                     yield break;
@@ -72,9 +72,9 @@ namespace YooAsset
                 var packageBundle = GetPackageBundle(manifest, testLocation);
                 var loadBundleFileOptions = new LoadBundleOptions(packageBundle);
                 var loadBundleFileOp = fileSystem.LoadBundleAsync(loadBundleFileOptions);
-                OperationSystem.StartOperation(packageName, loadBundleFileOp);
+                AsyncOperationSystem.StartOperation(packageName, loadBundleFileOp);
                 yield return loadBundleFileOp;
-                if (loadBundleFileOp.Status != EOperationStatus.Succeed)
+                if (loadBundleFileOp.Status != EOperationStatus.Succeeded)
                 {
                     Debug.LogError($"加载资源包失败！{loadBundleFileOp.Error}");
                     yield break;

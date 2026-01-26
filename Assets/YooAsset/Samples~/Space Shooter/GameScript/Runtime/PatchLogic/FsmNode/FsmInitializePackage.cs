@@ -95,7 +95,7 @@ internal class FsmInitializePackage : IStateNode
         yield return initializationOperation;
 
         // 如果初始化失败弹出提示界面
-        if (initializationOperation.Status != EOperationStatus.Succeed)
+        if (initializationOperation.Status != EOperationStatus.Succeeded)
         {
             Debug.LogWarning($"{initializationOperation.Error}");
             PatchEventDefine.InitializeFailed.SendEventMessage();

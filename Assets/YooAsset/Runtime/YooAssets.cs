@@ -52,11 +52,11 @@ namespace YooAsset
 
 #if DEBUG
             // 添加远程调试脚本
-            _driver.AddComponent<RemoteDebugBehaviour>();
+            _driver.AddComponent<DiagnosticBehaviour>();
 #endif
 
             // 初始化异步操作系统
-            OperationSystem.Initialize();
+            AsyncOperationSystem.Initialize();
         }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace YooAsset
                     GameObject.Destroy(_driver);
 
                 // 销毁异步操作系统
-                OperationSystem.DestroyAll();
+                AsyncOperationSystem.DestroyAll();
 
                 // 卸载所有AssetBundle
                 AssetBundle.UnloadAllAssetBundles(true);
@@ -89,7 +89,7 @@ namespace YooAsset
         {
             if (_isInitialized)
             {
-                OperationSystem.Update();
+                AsyncOperationSystem.Update();
             }
         }
 
@@ -100,7 +100,7 @@ namespace YooAsset
         /// <param name="packagePriority">包裹优先级（值越大越优先更新）</param>
         public static ResourcePackage CreatePackage(string packageName, uint packagePriority = 0)
         {
-            EnsureInitialized(packageName);
+            CheckInitialized(packageName);
             if (ContainsPackage(packageName))
                 throw new YooPackageException(packageName, $"Resource package {packageName} already existed. Cannot create duplicate packages.");
 
@@ -108,7 +108,7 @@ namespace YooAsset
             _packages.Add(packageName, package);
 
             // 注册包裹调度器
-            OperationSystem.CreatePackageScheduler(packageName, packagePriority);
+            AsyncOperationSystem.CreatePackageScheduler(packageName, packagePriority);
 
             return package;
         }
@@ -119,7 +119,7 @@ namespace YooAsset
         /// <param name="packageName">包裹名称</param>
         public static ResourcePackage GetPackage(string packageName)
         {
-            EnsureInitialized(packageName);
+            CheckInitialized(packageName);
             var package = GetPackageInternal(packageName);
             if (package == null)
                 YooLogger.Error($"Can not found resource package : {packageName}");
@@ -132,7 +132,7 @@ namespace YooAsset
         /// <param name="packageName">包裹名称</param>
         public static ResourcePackage TryGetPackage(string packageName)
         {
-            EnsureInitialized(packageName);
+            CheckInitialized(packageName);
             return GetPackageInternal(packageName);
         }
 
@@ -150,7 +150,7 @@ namespace YooAsset
         /// <param name="packageName">包裹名称</param>
         public static bool RemovePackage(string packageName)
         {
-            EnsureInitialized(packageName);
+            CheckInitialized(packageName);
             ResourcePackage package = GetPackageInternal(packageName);
             if (package == null)
             {
@@ -165,7 +165,7 @@ namespace YooAsset
             }
 
             // 先销毁调度器，再移除包裹
-            OperationSystem.DestroyPackageScheduler(packageName);
+            AsyncOperationSystem.DestroyPackageScheduler(packageName);
 
             return _packages.Remove(packageName);
         }
@@ -176,9 +176,17 @@ namespace YooAsset
         /// <param name="packageName">包裹名称</param>
         public static bool ContainsPackage(string packageName)
         {
-            EnsureInitialized(packageName);
+            CheckInitialized(packageName);
             var package = GetPackageInternal(packageName);
             return package != null;
+        }
+
+        /// <summary>
+        /// 设置异步系统参数，每帧执行消耗的最大时间切片（单位：毫秒）
+        /// </summary>
+        public static void SetAsyncOperationMaxTimeSlice(long milliseconds)
+        {
+            AsyncOperationSystem.MaxTimeSlice = milliseconds;
         }
 
         private static ResourcePackage GetPackageInternal(string packageName)
@@ -186,7 +194,9 @@ namespace YooAsset
             _packages.TryGetValue(packageName, out var package);
             return package;
         }
-        private static void EnsureInitialized(string packageName)
+
+        #region 调试方法
+        private static void CheckInitialized(string packageName)
         {
             if (_isInitialized == false)
                 throw new YooInitializeException($"YooAssets not initialized. Please call {nameof(YooAssets.Initialize)} first.");
@@ -194,23 +204,12 @@ namespace YooAsset
             if (string.IsNullOrEmpty(packageName))
                 throw new YooInitializeException("Package name cannot be null or empty.");
         }
-
-        #region 系统参数
-        /// <summary>
-        /// 设置异步系统参数，每帧执行消耗的最大时间切片（单位：毫秒）
-        /// </summary>
-        public static void SetOperationSystemMaxTimeSlice(long milliseconds)
-        {
-            OperationSystem.MaxTimeSlice = milliseconds;
-        }
         #endregion
 
         #region 调试信息
         internal static DiagnosticReport GetDebugReport()
         {
-            DiagnosticReport report = new DiagnosticReport();
-            report.FrameCount = Time.frameCount;
-
+            DiagnosticReport report = DiagnosticReport.Create();
             foreach (var kv in _packages)
             {
                 var packageData = kv.Value.GetDebugPackageData();

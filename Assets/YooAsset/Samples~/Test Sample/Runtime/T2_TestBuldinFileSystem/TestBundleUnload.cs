@@ -24,7 +24,7 @@ public class TestBundleUnload
         {
             assetHandle = package.LoadAssetAsync<GameObject>("enemy");
             yield return assetHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, assetHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, assetHandle.Status);
 
             DiagnosticPackageData debugData = package.GetDebugPackageData();
             var findItem = debugData.BundleInfos.Where(x => x.BundleName == targetBundleName);

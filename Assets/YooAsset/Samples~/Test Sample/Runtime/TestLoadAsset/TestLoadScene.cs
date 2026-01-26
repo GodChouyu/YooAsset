@@ -21,7 +21,7 @@ public class TestLoadScene
         {
             var sceneHandle = package.LoadSceneAsync("scene_a", LoadSceneMode.Single);
             yield return sceneHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, sceneHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, sceneHandle.Status);
 
             var scene = sceneHandle.SceneObject;
             Assert.IsNotNull(scene);
@@ -31,7 +31,7 @@ public class TestLoadScene
         yield return new WaitForSeconds(0.2f);
         {
             var sceneHandle = package.LoadSceneSync("scene_b", LoadSceneMode.Additive);
-            Assert.AreEqual(EOperationStatus.Succeed, sceneHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, sceneHandle.Status);
 
             var scene = sceneHandle.SceneObject;
             Assert.IsNotNull(scene);
@@ -43,7 +43,7 @@ public class TestLoadScene
         {
             cachedHandle = package.LoadSceneSync("scene_c", LoadSceneMode.Additive);
             yield return cachedHandle;
-            Assert.AreEqual(EOperationStatus.Succeed, cachedHandle.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, cachedHandle.Status);
 
             var scene = cachedHandle.SceneObject;
             Assert.IsNotNull(scene);
@@ -54,7 +54,7 @@ public class TestLoadScene
         {
             var unloadSceneOp = cachedHandle.UnloadSceneAsync();
             yield return unloadSceneOp;
-            Assert.AreEqual(EOperationStatus.Succeed, unloadSceneOp.Status);
+            Assert.AreEqual(EOperationStatus.Succeeded, unloadSceneOp.Status);
         }
     }
 }

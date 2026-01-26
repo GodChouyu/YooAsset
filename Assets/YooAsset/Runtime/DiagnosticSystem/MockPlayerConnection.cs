@@ -53,7 +53,7 @@ namespace YooAsset
         public void Register(Guid messageID, UnityAction<MessageEventArgs> callback)
         {
             if (messageID == Guid.Empty)
-                throw new ArgumentException("messageID is empty.");
+                throw new ArgumentException("Message ID cannot be empty.", nameof(messageID));
 
             if (_messageHandlers.ContainsKey(messageID) == false)
                 _messageHandlers.Add(messageID, callback);
@@ -77,7 +77,7 @@ namespace YooAsset
         public void Send(Guid messageID, byte[] data)
         {
             if (messageID == Guid.Empty)
-                throw new ArgumentException("messageID is empty.");
+                throw new ArgumentException("Message ID cannot be empty.", nameof(messageID));
 
             // 接收对方的消息
             MockEditorConnection.Instance.HandlePlayerMessage(messageID, data);
