@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载资源清单操作
+    /// </summary>
     public sealed class LoadManifestOperation : AsyncOperationBase
     {
         private enum ESteps

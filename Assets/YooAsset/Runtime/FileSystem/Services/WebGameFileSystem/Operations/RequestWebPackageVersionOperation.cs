@@ -1,4 +1,4 @@
-﻿using YooAsset;
+using YooAsset;
 
 internal class RequestWebPackageVersionOperation : AsyncOperationBase
 {
@@ -57,7 +57,7 @@ internal class RequestWebPackageVersionOperation : AsyncOperationBase
             if (_webTextRequestOp.IsDone == false)
                 return;
 
-            if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 PackageVersion = _webTextRequestOp.Result;
                 if (string.IsNullOrEmpty(PackageVersion))

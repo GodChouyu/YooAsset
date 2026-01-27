@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     /// <summary>
@@ -14,7 +14,7 @@ namespace YooAsset
         /// <summary>
         /// 失败后的重试次数
         /// </summary>
-        public int FailedTryAgain { get; set; }
+        public int RetryCount { get; set; }
 
         /// <summary>
         /// 下载资源对象所属资源包内所有资源对象依赖的资源包
@@ -27,19 +27,34 @@ namespace YooAsset
         /// </summary>
         public AssetInfo[] AssetInfos { get; set; }
 
-        public BundleDownloaderOptions(AssetInfo assetInfo, bool downloadDependencies, int maximumConcurrency, int failedTryAgain)
+        /// <summary>
+        /// 创建资源下载选项（单个资源）
+        /// </summary>
+        /// <param name="assetInfo">资源信息</param>
+        /// <param name="downloadDependencies">是否下载依赖资源包</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public BundleDownloaderOptions(AssetInfo assetInfo, bool downloadDependencies, int maximumConcurrency, int retryCount)
         {
             AssetInfos = new AssetInfo[] { assetInfo };
             DownloadBundleDependencies = downloadDependencies;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
-        public BundleDownloaderOptions(AssetInfo[] assetInfos, bool downloadDependencies, int maximumConcurrency, int failedTryAgain)
+
+        /// <summary>
+        /// 创建资源下载选项（多个资源）
+        /// </summary>
+        /// <param name="assetInfos">资源信息数组</param>
+        /// <param name="downloadDependencies">是否下载依赖资源包</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public BundleDownloaderOptions(AssetInfo[] assetInfos, bool downloadDependencies, int maximumConcurrency, int retryCount)
         {
             AssetInfos = assetInfos;
             DownloadBundleDependencies = downloadDependencies;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
     }
 
@@ -56,7 +71,7 @@ namespace YooAsset
         /// <summary>
         /// 失败后的重试次数
         /// </summary>
-        public int FailedTryAgain { get; set; }
+        public int RetryCount { get; set; }
 
         /// <summary>
         /// 资源标签列表
@@ -64,23 +79,42 @@ namespace YooAsset
         /// </summary>
         public string[] Tags { get; set; }
 
-        public ResourceDownloaderOptions(int maximumConcurrency, int failedTryAgain)
+        /// <summary>
+        /// 创建资源下载选项（下载所有资源）
+        /// </summary>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceDownloaderOptions(int maximumConcurrency, int retryCount)
         {
             Tags = null;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
-        public ResourceDownloaderOptions(string tag, int maximumConcurrency, int failedTryAgain)
+
+        /// <summary>
+        /// 创建资源下载选项（按标签下载）
+        /// </summary>
+        /// <param name="tag">资源标签</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceDownloaderOptions(string tag, int maximumConcurrency, int retryCount)
         {
             Tags = new string[] { tag };
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
-        public ResourceDownloaderOptions(string[] tags, int maximumConcurrency, int failedTryAgain)
+
+        /// <summary>
+        /// 创建资源下载选项（按多个标签下载）
+        /// </summary>
+        /// <param name="tags">资源标签数组</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceDownloaderOptions(string[] tags, int maximumConcurrency, int retryCount)
         {
             Tags = tags;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
     }
 
@@ -97,7 +131,7 @@ namespace YooAsset
         /// <summary>
         /// 失败后的重试次数
         /// </summary>
-        public int FailedTryAgain { get; set; }
+        public int RetryCount { get; set; }
 
         /// <summary>
         /// 资源标签列表
@@ -105,23 +139,42 @@ namespace YooAsset
         /// </summary>
         public string[] Tags { get; set; }
 
-        public ResourceUnpackerOptions(int maximumConcurrency, int failedTryAgain)
+        /// <summary>
+        /// 创建资源解压选项（解压所有资源）
+        /// </summary>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceUnpackerOptions(int maximumConcurrency, int retryCount)
         {
             Tags = null;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
-        public ResourceUnpackerOptions(string tag, int maximumConcurrency, int failedTryAgain)
+
+        /// <summary>
+        /// 创建资源解压选项（按标签解压）
+        /// </summary>
+        /// <param name="tag">资源标签</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceUnpackerOptions(string tag, int maximumConcurrency, int retryCount)
         {
             Tags = new string[] { tag };
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
-        public ResourceUnpackerOptions(string[] tags, int maximumConcurrency, int failedTryAgain)
+
+        /// <summary>
+        /// 创建资源解压选项（按多个标签解压）
+        /// </summary>
+        /// <param name="tags">资源标签数组</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public ResourceUnpackerOptions(string[] tags, int maximumConcurrency, int retryCount)
         {
             Tags = tags;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
     }
 
@@ -138,18 +191,24 @@ namespace YooAsset
         /// <summary>
         /// 失败后的重试次数
         /// </summary>
-        public int FailedTryAgain { get; set; }
+        public int RetryCount { get; set; }
 
         /// <summary>
         /// 资源包信息列表
         /// </summary>
         public ImportBundleInfo[] BundleInfos { get; set; }
 
-        public BundleImporterOptions(ImportBundleInfo[] bundleInfos, int maximumConcurrency, int failedTryAgain)
+        /// <summary>
+        /// 创建资源导入选项
+        /// </summary>
+        /// <param name="bundleInfos">资源包信息数组</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败后的重试次数</param>
+        public BundleImporterOptions(ImportBundleInfo[] bundleInfos, int maximumConcurrency, int retryCount)
         {
             BundleInfos = bundleInfos;
             MaximumConcurrency = maximumConcurrency;
-            FailedTryAgain = failedTryAgain;
+            RetryCount = retryCount;
         }
     }
 

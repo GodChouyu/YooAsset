@@ -10,51 +10,23 @@ namespace YooAsset
     /// </summary>
     internal class WebServerFileSystem : IFileSystem
     {
-        public class FileWrapper
-        {
-            public string FileName { private set; get; }
-
-            public FileWrapper(string fileName)
-            {
-                FileName = fileName;
-            }
-        }
-
-        protected readonly Dictionary<string, FileWrapper> _wrappers = new Dictionary<string, FileWrapper>(10000);
         protected readonly Dictionary<string, string> _webFilePathMapping = new Dictionary<string, string>(10000);
-        protected string _webPackageRoot = string.Empty;
+        protected string _packageRoot = string.Empty;
+
+        /// <summary>
+        /// Web文件缓存系统
+        /// </summary>
+        public IFileCache FileCache { get; private set; }
 
         /// <summary>
         /// 下载后台接口
         /// </summary>
-        public IDownloadBackend DownloadBackend { private set; get; }
+        public IDownloadBackend DownloadBackend { get; private set; }
 
         /// <summary>
         /// 包裹名称
         /// </summary>
-        public string PackageName { private set; get; }
-
-        /// <summary>
-        /// 文件根目录
-        /// </summary>
-        public string FileRoot
-        {
-            get
-            {
-                return _webPackageRoot;
-            }
-        }
-
-        /// <summary>
-        /// 文件数量
-        /// </summary>
-        public int FileCount
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        public string PackageName { get; private set; }
 
         #region 自定义参数
         /// <summary>
@@ -71,11 +43,6 @@ namespace YooAsset
         /// 自定义参数：下载任务的看门狗机制超时时间
         /// </summary>
         public int DownloadWatchDogTimeout { private set; get; } = 0;
-
-        /// <summary>
-        /// 自定义参数：加载 AssetBundle 的工厂委托
-        /// </summary>
-        public LoadWebAssetBundleOperationFactory LoadAssetBundleFactory { private set; get; }
 
         /// <summary>
         /// 自定义参数：资源清单服务类
@@ -113,18 +80,8 @@ namespace YooAsset
         }
         public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
         {
-            PackageBundle bundle = options.Bundle;
-            if (bundle.BundleType == (int)EBundleType.AssetBundle)
-            {
-                var operation = new WSFSLoadAssetBundleOperation(this, bundle);
-                return operation;
-            }
-            else
-            {
-                string error = $"{nameof(WebServerFileSystem)} not support load bundle type : {bundle.BundleType}";
-                var operation = new FSLoadBundleCompleteOperation(error);
-                return operation;
-            }
+            var operation = new WSFSLoadAssetBundleOperation(this, options);
+            return operation;
         }
 
         public virtual void SetParameter(string name, object value)
@@ -146,10 +103,6 @@ namespace YooAsset
                 int convertValue = Convert.ToInt32(value);
                 DownloadWatchDogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
             }
-            else if (name == FileSystemParametersDefine.LOAD_ASSETBUNDLE_OPERATION_FACTORY)
-            {
-                LoadAssetBundleFactory = (LoadWebAssetBundleOperationFactory)value;
-            }
             else if (name == FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES)
             {
                 ManifestRestoreServices = (IManifestRestoreServices)value;
@@ -164,20 +117,30 @@ namespace YooAsset
             PackageName = packageName;
 
             if (string.IsNullOrEmpty(packageRoot))
-                _webPackageRoot = GetDefaultWebPackageRoot(packageName);
+                _packageRoot = GetDefaultWebPackageRoot(packageName);
             else
-                _webPackageRoot = packageRoot;
+                _packageRoot = packageRoot;
 
             // 创建默认的下载后台接口
             if (DownloadBackend == null)
                 DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
 
-            // 创建默认的 AssetBundle 加载工厂
-            if (LoadAssetBundleFactory == null)
-                LoadAssetBundleFactory = DefaultLoadAssetBundleOperationFactory;
+            // 创建Web文件缓存系统
+            var cacheConfig = new WebServerFileCache.CacheConfig();
+            cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
+            cacheConfig.DownloadBackend = DownloadBackend;
+            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
+            cacheConfig.RetryCount = int.MaxValue;
+            FileCache = new WebServerFileCache(packageName, _packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()
         {
+            if (FileCache != null)
+            {
+                FileCache.Dispose();
+                FileCache = null;
+            }
+
             if (DownloadBackend != null)
             {
                 DownloadBackend.Dispose();
@@ -187,11 +150,7 @@ namespace YooAsset
 
         public virtual bool Belong(PackageBundle bundle)
         {
-            return _wrappers.ContainsKey(bundle.BundleGUID);
-        }
-        public virtual bool Exists(PackageBundle bundle)
-        {
-            return _wrappers.ContainsKey(bundle.BundleGUID);
+            return FileCache.IsCached(bundle.BundleGUID);
         }
         public virtual bool NeedDownload(PackageBundle bundle)
         {
@@ -205,71 +164,27 @@ namespace YooAsset
         {
             return false;
         }
-        public virtual string GetBundleFilePath(PackageBundle bundle)
-        {
-            throw new System.NotImplementedException();
-        }
 
         #region 内部方法
-        private LoadWebAssetBundleOperation DefaultLoadAssetBundleOperationFactory(bool bundleEncrypted, LoadWebAssetBundleOptions options)
-        {
-            if (bundleEncrypted)
-            {
-                string error = $"{nameof(DefaultLoadWebAssetBundleOperation)} cannot load encrypted bundle. Please provide a custom {nameof(LoadWebAssetBundleOperationFactory)}.";
-                return new LoadWebAssetBundleCompleteOperation(error, options);
-            }
-            else
-            {
-                return new DefaultLoadWebAssetBundleOperation(options);
-            }
-        }
         protected string GetDefaultWebPackageRoot(string packageName)
         {
             string rootDirectory = YooAssetSettingsData.GetYooDefaultBuildinRoot();
             return PathUtility.Combine(rootDirectory, packageName);
         }
-        public string GetWebFileLoadPath(PackageBundle bundle)
-        {
-            if (_webFilePathMapping.TryGetValue(bundle.BundleGUID, out string filePath) == false)
-            {
-                filePath = PathUtility.Combine(_webPackageRoot, bundle.FileName);
-                _webFilePathMapping.Add(bundle.BundleGUID, filePath);
-            }
-            return filePath;
-        }
         public string GetWebPackageVersionFilePath()
         {
             string fileName = YooAssetSettingsData.GetPackageVersionFileName(PackageName);
-            return PathUtility.Combine(FileRoot, fileName);
+            return PathUtility.Combine(_packageRoot, fileName);
         }
         public string GetWebPackageHashFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetPackageHashFileName(PackageName, packageVersion);
-            return PathUtility.Combine(FileRoot, fileName);
+            return PathUtility.Combine(_packageRoot, fileName);
         }
         public string GetWebPackageManifestFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetManifestBinaryFileName(PackageName, packageVersion);
-            return PathUtility.Combine(FileRoot, fileName);
-        }
-        public string GetCatalogBinaryFileLoadPath()
-        {
-            return PathUtility.Combine(_webPackageRoot, BuiltinFileSystemConstants.BuiltinCatalogBinaryFileName);
-        }
-
-        /// <summary>
-        /// 记录内置文件信息
-        /// </summary>
-        public bool RecordCatalogFile(string bundleGUID, FileWrapper wrapper)
-        {
-            if (_wrappers.ContainsKey(bundleGUID))
-            {
-                YooLogger.Error($"{nameof(WebServerFileSystem)} has element : {bundleGUID}");
-                return false;
-            }
-
-            _wrappers.Add(bundleGUID, wrapper);
-            return true;
+            return PathUtility.Combine(_packageRoot, fileName);
         }
         #endregion
     }

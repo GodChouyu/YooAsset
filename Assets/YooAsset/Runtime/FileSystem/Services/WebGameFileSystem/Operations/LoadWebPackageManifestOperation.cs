@@ -1,4 +1,4 @@
-﻿using YooAsset;
+using YooAsset;
 
 internal class LoadWebPackageManifestOperation : AsyncOperationBase
 {
@@ -65,7 +65,7 @@ internal class LoadWebPackageManifestOperation : AsyncOperationBase
             if (_webDataRequestOp.IsDone == false)
                 return;
 
-            if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.VerifyFileData;
             }

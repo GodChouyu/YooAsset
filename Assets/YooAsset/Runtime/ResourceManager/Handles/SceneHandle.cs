@@ -1,13 +1,20 @@
-﻿using UnityEngine.SceneManagement;
+using UnityEngine.SceneManagement;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 场景句柄，用于管理场景的加载、激活和卸载
+    /// </summary>
     public class SceneHandle : HandleBase
     {
         private System.Action<SceneHandle> _callback;
+
+        /// <summary>
+        /// 所属资源包名称
+        /// </summary>
         internal string PackageName { set; get; }
 
-        internal SceneHandle(ProviderOperation provider) : base(provider)
+        internal SceneHandle(ProviderBase provider) : base(provider)
         {
         }
         internal override void InvokeCallback()
@@ -87,7 +94,7 @@ namespace YooAsset
             }
             else
             {
-                YooLogger.Warning($"Scene is invalid or not loaded : {SceneObject.name}");
+                YooLogger.Warning($"Scene is invalid or not loaded: {SceneObject.name}");
                 return false;
             }
         }

@@ -1,12 +1,22 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 文件系统宿主，管理多个文件系统
+    /// </summary>
     internal class FileSystemHost
     {
+        /// <summary>
+        /// 所属包裹名称
+        /// </summary>
         public readonly string PackageName;
+
+        /// <summary>
+        /// 文件系统列表
+        /// </summary>
         public readonly List<IFileSystem> FileSystems = new List<IFileSystem>(10);
 
         /// <summary>
@@ -15,14 +25,20 @@ namespace YooAsset
         public PackageManifest ActiveManifest { get; private set; }
 
 
+        /// <summary>
+        /// 创建文件系统宿主
+        /// </summary>
+        /// <param name="packageName">所属包裹名称</param>
         public FileSystemHost(string packageName)
         {
             PackageName = packageName;
         }
 
         /// <summary>
-        /// 异步初始化
+        /// 异步初始化文件系统
         /// </summary>
+        /// <param name="fileSystemParameter">文件系统初始化参数</param>
+        /// <returns>返回文件系统初始化操作对象</returns>
         public InitializeFileSystemOperation InitializeAsync(FileSystemParameters fileSystemParameter)
         {
             var fileSystemParamList = new List<FileSystemParameters>();
@@ -32,8 +48,11 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 异步初始化
+        /// 异步初始化文件系统（双文件系统）
         /// </summary>
+        /// <param name="fileSystemParameterA">第一个文件系统初始化参数</param>
+        /// <param name="fileSystemParameterB">第二个文件系统初始化参数</param>
+        /// <returns>返回文件系统初始化操作对象</returns>
         public InitializeFileSystemOperation InitializeAsync(FileSystemParameters fileSystemParameterA, FileSystemParameters fileSystemParameterB)
         {
             var fileSystemParamList = new List<FileSystemParameters>();
@@ -45,8 +64,10 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 异步初始化
+        /// 异步初始化文件系统（多文件系统）
         /// </summary>
+        /// <param name="fileSystemParameterList">文件系统初始化参数列表</param>
+        /// <returns>返回文件系统初始化操作对象</returns>
         public InitializeFileSystemOperation InitializeAsync(List<FileSystemParameters> fileSystemParameterList)
         {
             var operation = new InitializeFileSystemOperation(this, fileSystemParameterList);
@@ -68,6 +89,7 @@ namespace YooAsset
         /// <summary>
         /// 设置当前激活的资源清单
         /// </summary>
+        /// <param name="manifest">资源清单对象</param>
         public void SetActiveManifest(PackageManifest manifest)
         {
             ActiveManifest = manifest;
@@ -76,9 +98,8 @@ namespace YooAsset
         /// <summary>
         /// 获取主文件系统
         /// </summary>
-        /// <remarks>
-        ///  文件系统列表里，最后一个属于主文件系统
-        /// </remarks>
+        /// <returns>返回主文件系统，如果没有文件系统则返回null</returns>
+        /// <remarks>文件系统列表里，最后一个属于主文件系统</remarks>
         public IFileSystem GetMainFileSystem()
         {
             int count = FileSystems.Count;
@@ -88,8 +109,10 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取资源包所属文件系统
+        /// 获取资源包所属的文件系统
         /// </summary>
+        /// <param name="packageBundle">资源包对象</param>
+        /// <returns>返回资源包所属的文件系统，如果未找到则返回null</returns>
         private IFileSystem GetBelongFileSystem(PackageBundle packageBundle)
         {
             for (int i = 0; i < FileSystems.Count; i++)
@@ -101,11 +124,16 @@ namespace YooAsset
                 }
             }
 
-            YooLogger.Error($"Can not found belong file system : {packageBundle.BundleName}");
+            YooLogger.Error($"Cannot find the file system for bundle: {packageBundle.BundleName}");
             return null;
         }
 
         #region 资源包相关
+        /// <summary>
+        /// 创建资源包信息对象
+        /// </summary>
+        /// <param name="packageBundle">资源包对象</param>
+        /// <returns>返回资源包信息对象</returns>
         private BundleInfo CreateBundleInfo(PackageBundle packageBundle)
         {
             if (packageBundle == null)
@@ -118,8 +146,14 @@ namespace YooAsset
                 return bundleInfo;
             }
 
-            throw new YooFileSystemException($"Can not found belong file system : {packageBundle.BundleName}");
+            throw new YooFileSystemException($"Cannot find the file system for bundle: {packageBundle.BundleName}");
         }
+
+        /// <summary>
+        /// 获取资源对象的主资源包信息
+        /// </summary>
+        /// <param name="assetInfo">资源信息对象</param>
+        /// <returns>返回主资源包信息对象</returns>
         public BundleInfo GetMainBundleInfo(AssetInfo assetInfo)
         {
             if (assetInfo == null || assetInfo.IsInvalid)
@@ -129,12 +163,24 @@ namespace YooAsset
             var packageBundle = ActiveManifest.GetMainPackageBundle(assetInfo.Asset);
             return CreateBundleInfo(packageBundle);
         }
+
+        /// <summary>
+        /// 获取主资源包名称
+        /// </summary>
+        /// <param name="bundleID">资源包ID</param>
+        /// <returns>返回资源包名称</returns>
         public string GetMainBundleName(int bundleID)
         {
             // 注意：如果清单里未找到资源包会抛出异常！
             var packageBundle = ActiveManifest.GetMainPackageBundle(bundleID);
             return packageBundle.BundleName;
         }
+
+        /// <summary>
+        /// 获取资源对象的依赖资源包信息列表
+        /// </summary>
+        /// <param name="assetInfo">资源信息对象</param>
+        /// <returns>返回依赖的资源包信息列表</returns>
         public List<BundleInfo> GetDependBundleInfos(AssetInfo assetInfo)
         {
             if (assetInfo == null || assetInfo.IsInvalid)
@@ -165,6 +211,11 @@ namespace YooAsset
         #region 下载器相关
         private const int DefaultBundleInfoCapacity = 1000;
 
+        /// <summary>
+        /// 检查资源是否需要从远端下载（内部方法）
+        /// </summary>
+        /// <param name="assetInfo">资源信息对象</param>
+        /// <returns>如果需要下载返回true，否则返回false</returns>
         public bool IsNeedDownloadFromRemoteInternal(AssetInfo assetInfo)
         {
             if (assetInfo.IsInvalid)
@@ -201,66 +252,114 @@ namespace YooAsset
             return fileSystem.NeedImport(bundle);
         }
 
+        /// <summary>
+        /// 创建资源下载器
+        /// </summary>
+        /// <param name="options">资源下载选项</param>
+        /// <returns>返回资源下载操作对象</returns>
         public ResourceDownloaderOperation CreateResourceDownloader(ResourceDownloaderOptions options)
         {
             return CreateResourceDownloader(ActiveManifest, options);
         }
+
+        /// <summary>
+        /// 创建资源下载器
+        /// </summary>
+        /// <param name="manifest">资源清单对象</param>
+        /// <param name="options">资源下载选项</param>
+        /// <returns>返回资源下载操作对象</returns>
         public ResourceDownloaderOperation CreateResourceDownloader(PackageManifest manifest, ResourceDownloaderOptions options)
         {
             List<BundleInfo> downloadList;
             if (options.Tags == null)
-                downloadList = GetBundleInfoListByAll(manifest, NeedDownload);
+                downloadList = GetAllBundleInfos(manifest, NeedDownload);
             else
-                downloadList = GetBundleInfoListByTags(manifest, options.Tags, NeedDownload);
+                downloadList = GetBundleInfosByTags(manifest, options.Tags, NeedDownload);
 
-            var operation = new ResourceDownloaderOperation(PackageName, downloadList, options.MaximumConcurrency, options.FailedTryAgain);
+            var operation = new ResourceDownloaderOperation(PackageName, downloadList, options.MaximumConcurrency, options.RetryCount);
             return operation;
         }
 
+        /// <summary>
+        /// 创建资源下载器（按资源信息）
+        /// </summary>
+        /// <param name="options">Bundle下载选项</param>
+        /// <returns>返回资源下载操作对象</returns>
         public ResourceDownloaderOperation CreateResourceDownloader(BundleDownloaderOptions options)
         {
             return CreateResourceDownloader(ActiveManifest, options);
         }
+
+        /// <summary>
+        /// 创建资源下载器（按资源信息）
+        /// </summary>
+        /// <param name="manifest">资源清单对象</param>
+        /// <param name="options">Bundle下载选项</param>
+        /// <returns>返回资源下载操作对象</returns>
         public ResourceDownloaderOperation CreateResourceDownloader(PackageManifest manifest, BundleDownloaderOptions options)
         {
             List<BundleInfo> downloadList;
             if (options.AssetInfos == null)
-                downloadList = GetBundleInfoListByAll(manifest, NeedDownload);
+                downloadList = GetAllBundleInfos(manifest, NeedDownload);
             else
-                downloadList = GetBundleInfoListByAssetInfos(manifest, options.AssetInfos, options.DownloadBundleDependencies, NeedDownload);
+                downloadList = GetBundleInfosByAssetInfos(manifest, options.AssetInfos, options.DownloadBundleDependencies, NeedDownload);
 
-            var operation = new ResourceDownloaderOperation(PackageName, downloadList, options.MaximumConcurrency, options.FailedTryAgain);
+            var operation = new ResourceDownloaderOperation(PackageName, downloadList, options.MaximumConcurrency, options.RetryCount);
             return operation;
         }
 
+        /// <summary>
+        /// 创建资源解压器
+        /// </summary>
+        /// <param name="options">资源解压选项</param>
+        /// <returns>返回资源解压操作对象</returns>
         public ResourceUnpackerOperation CreateResourceUnpacker(ResourceUnpackerOptions options)
         {
             return CreateResourceUnpacker(ActiveManifest, options);
         }
+
+        /// <summary>
+        /// 创建资源解压器
+        /// </summary>
+        /// <param name="manifest">资源清单对象</param>
+        /// <param name="options">资源解压选项</param>
+        /// <returns>返回资源解压操作对象</returns>
         public ResourceUnpackerOperation CreateResourceUnpacker(PackageManifest manifest, ResourceUnpackerOptions options)
         {
             List<BundleInfo> unpackList;
             if (options.Tags == null)
-                unpackList = GetBundleInfoListByAll(manifest, NeedUnpack);
+                unpackList = GetAllBundleInfos(manifest, NeedUnpack);
             else
-                unpackList = GetBundleInfoListByTags(manifest, options.Tags, NeedUnpack);
+                unpackList = GetBundleInfosByTags(manifest, options.Tags, NeedUnpack);
 
-            var operation = new ResourceUnpackerOperation(PackageName, unpackList, options.MaximumConcurrency, options.FailedTryAgain);
+            var operation = new ResourceUnpackerOperation(PackageName, unpackList, options.MaximumConcurrency, options.RetryCount);
             return operation;
         }
 
+        /// <summary>
+        /// 创建资源导入器
+        /// </summary>
+        /// <param name="options">资源导入选项</param>
+        /// <returns>返回资源导入操作对象</returns>
         public ResourceImporterOperation CreateResourceImporter(BundleImporterOptions options)
         {
             return CreateResourceImporter(ActiveManifest, options);
         }
+
+        /// <summary>
+        /// 创建资源导入器
+        /// </summary>
+        /// <param name="manifest">资源清单对象</param>
+        /// <param name="options">资源导入选项</param>
+        /// <returns>返回资源导入操作对象</returns>
         public ResourceImporterOperation CreateResourceImporter(PackageManifest manifest, BundleImporterOptions options)
         {
-            List<BundleInfo> importerList = GetBundleInfoListByBundleInfos(manifest, options.BundleInfos, NeedImport);
-            var operation = new ResourceImporterOperation(PackageName, importerList, options.MaximumConcurrency, options.FailedTryAgain);
+            List<BundleInfo> importerList = GetBundleInfosByImportInfos(manifest, options.BundleInfos, NeedImport);
+            var operation = new ResourceImporterOperation(PackageName, importerList, options.MaximumConcurrency, options.RetryCount);
             return operation;
         }
 
-        private List<BundleInfo> GetBundleInfoListByAll(PackageManifest manifest, Func<IFileSystem, PackageBundle, bool> predicate)
+        private List<BundleInfo> GetAllBundleInfos(PackageManifest manifest, Func<IFileSystem, PackageBundle, bool> predicate)
         {
             if (manifest == null)
                 return new List<BundleInfo>();
@@ -280,7 +379,7 @@ namespace YooAsset
             }
             return result;
         }
-        private List<BundleInfo> GetBundleInfoListByTags(PackageManifest manifest, string[] tags, Func<IFileSystem, PackageBundle, bool> predicate)
+        private List<BundleInfo> GetBundleInfosByTags(PackageManifest manifest, string[] tags, Func<IFileSystem, PackageBundle, bool> predicate)
         {
             if (manifest == null)
                 return new List<BundleInfo>();
@@ -295,7 +394,7 @@ namespace YooAsset
                 if (predicate(fileSystem, packageBundle))
                 {
                     // 注意：如果未带任何标记，则统一处理
-                    if (packageBundle.HasAnyTags() == false)
+                    if (packageBundle.HasTags() == false)
                     {
                         var bundleInfo = new BundleInfo(fileSystem, packageBundle);
                         result.Add(bundleInfo);
@@ -312,7 +411,7 @@ namespace YooAsset
             }
             return result;
         }
-        private List<BundleInfo> GetBundleInfoListByAssetInfos(PackageManifest manifest, AssetInfo[] assetInfos, bool recursiveDepend, Func<IFileSystem, PackageBundle, bool> predicate)
+        private List<BundleInfo> GetBundleInfosByAssetInfos(PackageManifest manifest, AssetInfo[] assetInfos, bool recursiveDepend, Func<IFileSystem, PackageBundle, bool> predicate)
         {
             if (manifest == null)
                 return new List<BundleInfo>();
@@ -387,7 +486,7 @@ namespace YooAsset
             }
             return result;
         }
-        private List<BundleInfo> GetBundleInfoListByBundleInfos(PackageManifest manifest, ImportBundleInfo[] fileInfos, Func<IFileSystem, PackageBundle, bool> predicate)
+        private List<BundleInfo> GetBundleInfosByImportInfos(PackageManifest manifest, ImportBundleInfo[] fileInfos, Func<IFileSystem, PackageBundle, bool> predicate)
         {
             if (manifest == null)
                 return new List<BundleInfo>();
@@ -404,7 +503,7 @@ namespace YooAsset
                 {
                     if (manifest.TryGetPackageBundleByBundleName(fileInfo.BundleName, out packageBundle) == false)
                     {
-                        YooLogger.Warning($"Not found package bundle, bundle name : {fileInfo.BundleName}");
+                        YooLogger.Warning($"Package bundle not found, bundle name: {fileInfo.BundleName}");
                         continue;
                     }
                 }
@@ -412,7 +511,7 @@ namespace YooAsset
                 {
                     if (manifest.TryGetPackageBundleByBundleGUID(fileInfo.BundleGUID, out packageBundle) == false)
                     {
-                        YooLogger.Warning($"Not found package bundle, bundle guid : {fileInfo.BundleGUID}");
+                        YooLogger.Warning($"Package bundle not found, bundle GUID: {fileInfo.BundleGUID}");
                         continue;
                     }
                 }
@@ -421,7 +520,7 @@ namespace YooAsset
                     string fileName = System.IO.Path.GetFileName(filePath);
                     if (manifest.TryGetPackageBundleByFileName(fileName, out packageBundle) == false)
                     {
-                        YooLogger.Warning($"Not found package bundle, file name : {fileName}");
+                        YooLogger.Warning($"Package bundle not found, file name: {fileName}");
                         continue;
                     }
                 }

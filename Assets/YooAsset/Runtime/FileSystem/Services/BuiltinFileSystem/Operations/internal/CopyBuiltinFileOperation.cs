@@ -1,4 +1,4 @@
-锘縰sing System;
+using System;
 using System.IO;
 
 namespace YooAsset
@@ -77,7 +77,8 @@ namespace YooAsset
             {
                 if (_webFileRequestOp == null)
                 {
-                    string url = DownloadSystemTools.ToLocalURL(_sourceFilePath);
+                    //TODO 团结引擎，在某些安卓机型（红米），通过UnityWebRequest拷贝包内文件会小概率失败！需要借助其它方式来拷贝包内文件。
+                    string url = DownloadSystemTools.ToLocalUrl(_sourceFilePath);
                     var args = new DownloadFileRequestArgs(url, _destFilePath, 60, 0);
                     _webFileRequestOp = _fileSystem.DownloadBackend.CreateFileRequest(args);
                     _webFileRequestOp.SendRequest();
@@ -86,7 +87,7 @@ namespace YooAsset
                 if (_webFileRequestOp.IsDone == false)
                     return;
 
-                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -98,6 +99,11 @@ namespace YooAsset
                     Error = _webFileRequestOp.Error;
                 }
             }
+        }
+        internal override void InternalWaitForCompletion()
+        {
+            //TODO 等待解压本地文件完毕，该操作会挂起主线程！
+            ExecuteUntilComplete();
         }
     }
 }

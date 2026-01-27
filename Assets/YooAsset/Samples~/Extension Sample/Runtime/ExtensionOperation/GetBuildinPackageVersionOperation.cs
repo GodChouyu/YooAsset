@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -45,7 +45,7 @@ public class GetBuildinPackageVersionOperation : AsyncOperationBase
             if (_versionFileRequestOp == null)
             {
                 string filePath = GetBuildinPackageVersionFilePath();
-                string url = DownloadSystemTools.ToLocalURL(filePath);
+                string url = DownloadSystemTools.ToLocalUrl(filePath);
                 var args = new DownloadDataRequestArgs(url, 60, 0);
                 _versionFileRequestOp = _backend.CreateTextRequest(args);
                 _versionFileRequestOp.SendRequest();
@@ -54,7 +54,7 @@ public class GetBuildinPackageVersionOperation : AsyncOperationBase
             if (_versionFileRequestOp.IsDone == false)
                 return;
 
-            if (_versionFileRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_versionFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeeded;

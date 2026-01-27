@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 卸载所有资源的异步操作
+    /// </summary>
     public sealed class UnloadAllAssetsOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -16,13 +19,13 @@ namespace YooAsset
             Done,
         }
 
-        private readonly ResourceManager _resManager;
+        private readonly ResourceManager _resourceManager;
         private readonly UnloadAllAssetsOptions _options;
         private ESteps _steps = ESteps.None;
 
         internal UnloadAllAssetsOperation(ResourceManager resourceManager, UnloadAllAssetsOptions options)
         {
-            _resManager = resourceManager;
+            _resourceManager = resourceManager;
             _options = options;
         }
         internal override void InternalStart()
@@ -38,7 +41,7 @@ namespace YooAsset
             {
                 // 设置锁定状态
                 if (_options.LockLoadOperation)
-                    _resManager.LockLoadOperation = true;
+                    _resourceManager.LockLoadOperation = true;
 
                 _steps = ESteps.ReleaseAll;
             }
@@ -46,12 +49,12 @@ namespace YooAsset
             if (_steps == ESteps.ReleaseAll)
             {
                 // 清空所有场景句柄
-                _resManager.SceneHandles.Clear();
+                _resourceManager.SceneHandles.Clear();
 
                 // 释放所有资源句柄
                 if (_options.ReleaseAllHandles)
                 {
-                    foreach (var provider in _resManager.ProviderDic.Values)
+                    foreach (var provider in _resourceManager.ProviderDict.Values)
                     {
                         provider.ReleaseAllHandles();
                     }
@@ -64,7 +67,7 @@ namespace YooAsset
             {
                 // 尝试终止所有加载任务
                 // 注意：正在加载AssetBundle的任务无法终止
-                foreach (var loader in _resManager.LoaderDic.Values)
+                foreach (var loader in _resourceManager.BundleLoaderDict.Values)
                 {
                     loader.TryAbortLoader();
                 }
@@ -74,7 +77,7 @@ namespace YooAsset
             if (_steps == ESteps.CheckLoading)
             {
                 // 注意：等待所有任务完成
-                foreach (var provider in _resManager.ProviderDic.Values)
+                foreach (var provider in _resourceManager.ProviderDict.Values)
                 {
                     if (provider.IsDone == false)
                         return;
@@ -85,21 +88,21 @@ namespace YooAsset
             if (_steps == ESteps.DestroyAll)
             {
                 // 强制销毁资源提供者
-                foreach (var provider in _resManager.ProviderDic.Values)
+                foreach (var provider in _resourceManager.ProviderDict.Values)
                 {
                     provider.DestroyProvider();
                 }
 
                 // 强制销毁文件加载器
-                foreach (var loader in _resManager.LoaderDic.Values)
+                foreach (var loader in _resourceManager.BundleLoaderDict.Values)
                 {
                     loader.DestroyLoader();
                 }
 
                 // 清空数据
-                _resManager.ProviderDic.Clear();
-                _resManager.LoaderDic.Clear();
-                _resManager.LockLoadOperation = false;
+                _resourceManager.ProviderDict.Clear();
+                _resourceManager.BundleLoaderDict.Clear();
+                _resourceManager.LockLoadOperation = false;
 
                 // 注意：调用底层接口释放所有资源
                 Resources.UnloadUnusedAssets();

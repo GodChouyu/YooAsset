@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
@@ -91,31 +91,31 @@ namespace YooAsset
         /// 资源路径映射集合（提供Location获取AssetPath）
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, string> AssetPathMapping1;
+        public Dictionary<string, string> AssetPathByLocation;
 
         /// <summary>
         /// 资源路径映射集合（提供AssetGUID获取AssetPath）
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, string> AssetPathMapping2;
+        public Dictionary<string, string> AssetPathByAssetGUID;
 
         /// <summary>
         /// 资源包集合（提供BundleName获取PackageBundle）
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, PackageBundle> BundleDic1;
+        public Dictionary<string, PackageBundle> BundleByBundleName;
 
         /// <summary>
         /// 资源包集合（提供FileName获取PackageBundle）
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, PackageBundle> BundleDic2;
+        public Dictionary<string, PackageBundle> BundleByFileName;
 
         /// <summary>
         /// 资源包集合（提供BundleGUID获取PackageBundle）
         /// </summary>
         [NonSerialized]
-        public Dictionary<string, PackageBundle> BundleDic3;
+        public Dictionary<string, PackageBundle> BundleByBundleGUID;
 
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace YooAsset
             for (int index = 0; index < BundleList.Count; index++)
             {
                 var sourceBundle = BundleList[index];
-                foreach (int dependIndex in sourceBundle.DependBundleIDs)
+                foreach (int dependIndex in sourceBundle.DependentBundleIDs)
                 {
                     var dependBundle = BundleList[dependIndex];
                     dependBundle.AddReferenceBundleID(index);
@@ -153,6 +153,7 @@ namespace YooAsset
         /// <summary>
         /// 获取包裹的详细信息
         /// </summary>
+        /// <returns>返回包含包裹配置信息的详细信息对象</returns>
         public PackageDetails GetPackageDetails()
         {
             PackageDetails details = new PackageDetails();
@@ -174,14 +175,16 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 尝试映射为资源路径
+        /// 尝试将定位地址映射为资源路径
         /// </summary>
+        /// <param name="location">资源定位地址</param>
+        /// <returns>如果映射成功返回资源路径，否则返回空字符串</returns>
         public string TryMappingToAssetPath(string location)
         {
             if (string.IsNullOrEmpty(location))
                 return string.Empty;
 
-            if (AssetPathMapping1.TryGetValue(location, out string assetPath))
+            if (AssetPathByLocation.TryGetValue(location, out string assetPath))
                 return assetPath;
             else
                 return string.Empty;
@@ -189,8 +192,10 @@ namespace YooAsset
 
         /// <summary>
         /// 获取主资源包
-        /// 注意：传入的资源包ID一定合法有效！
         /// </summary>
+        /// <param name="bundleID">资源包ID</param>
+        /// <returns>返回对应的资源包对象</returns>
+        /// <remarks>传入的资源包ID必须合法有效，否则会抛出异常</remarks>
         public PackageBundle GetMainPackageBundle(int bundleID)
         {
             if (bundleID >= 0 && bundleID < BundleList.Count)
@@ -208,21 +213,25 @@ namespace YooAsset
 
         /// <summary>
         /// 获取主资源包
-        /// 注意：传入的资源对象一定合法有效！
         /// </summary>
+        /// <param name="packageAsset">资源对象</param>
+        /// <returns>返回资源对象所属的资源包</returns>
+        /// <remarks>传入的资源对象必须合法有效，否则会抛出异常</remarks>
         public PackageBundle GetMainPackageBundle(PackageAsset packageAsset)
         {
             return GetMainPackageBundle(packageAsset.BundleID);
         }
 
         /// <summary>
-        /// 获取资源对象的依赖列表（框架层查询结果）
-        /// 注意：传入的资源对象一定合法有效！
+        /// 获取资源对象的所有依赖资源包列表
         /// </summary>
+        /// <param name="packageAsset">资源对象</param>
+        /// <returns>返回依赖的资源包列表</returns>
+        /// <remarks>框架层查询结果，传入的资源对象必须合法有效</remarks>
         public List<PackageBundle> GetAssetAllDependencies(PackageAsset packageAsset)
         {
-            List<PackageBundle> result = new List<PackageBundle>(packageAsset.DependBundleIDs.Length);
-            foreach (var dependID in packageAsset.DependBundleIDs)
+            List<PackageBundle> result = new List<PackageBundle>(packageAsset.DependentBundleIDs.Length);
+            foreach (var dependID in packageAsset.DependentBundleIDs)
             {
                 var dependBundle = GetMainPackageBundle(dependID);
                 result.Add(dependBundle);
@@ -231,13 +240,15 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取资源包的依赖列表（引擎层查询结果）
-        /// 注意：传入的资源包对象一定合法有效！
+        /// 获取资源包的所有依赖资源包列表
         /// </summary>
+        /// <param name="packageBundle">资源包对象</param>
+        /// <returns>返回依赖的资源包列表</returns>
+        /// <remarks>引擎层查询结果，传入的资源包对象必须合法有效</remarks>
         public List<PackageBundle> GetBundleAllDependencies(PackageBundle packageBundle)
         {
-            List<PackageBundle> result = new List<PackageBundle>(packageBundle.DependBundleIDs.Length);
-            foreach (var dependID in packageBundle.DependBundleIDs)
+            List<PackageBundle> result = new List<PackageBundle>(packageBundle.DependentBundleIDs.Length);
+            foreach (var dependID in packageBundle.DependentBundleIDs)
             {
                 var dependBundle = GetMainPackageBundle(dependID);
                 result.Add(dependBundle);
@@ -248,46 +259,61 @@ namespace YooAsset
         /// <summary>
         /// 尝试获取包裹的资源
         /// </summary>
+        /// <param name="assetPath">资源路径</param>
+        /// <param name="result">输出的资源对象</param>
+        /// <returns>如果找到返回true，否则返回false</returns>
         public bool TryGetPackageAsset(string assetPath, out PackageAsset result)
         {
             return AssetDic.TryGetValue(assetPath, out result);
         }
 
         /// <summary>
-        /// 尝试获取包裹的资源包
+        /// 尝试通过文件名获取包裹的资源包
         /// </summary>
+        /// <param name="fileName">文件名称</param>
+        /// <param name="result">输出的资源包对象</param>
+        /// <returns>如果找到返回true，否则返回false</returns>
         public bool TryGetPackageBundleByFileName(string fileName, out PackageBundle result)
         {
-            return BundleDic2.TryGetValue(fileName, out result);
+            return BundleByFileName.TryGetValue(fileName, out result);
         }
 
         /// <summary>
-        /// 尝试获取包裹的资源包
+        /// 尝试通过资源包名称获取包裹的资源包
         /// </summary>
+        /// <param name="bundleName">资源包名称</param>
+        /// <param name="result">输出的资源包对象</param>
+        /// <returns>如果找到返回true，否则返回false</returns>
         public bool TryGetPackageBundleByBundleName(string bundleName, out PackageBundle result)
         {
-            return BundleDic1.TryGetValue(bundleName, out result);
+            return BundleByBundleName.TryGetValue(bundleName, out result);
         }
 
         /// <summary>
-        /// 尝试获取包裹的资源包
+        /// 尝试通过资源包GUID获取包裹的资源包
         /// </summary>
+        /// <param name="bundleGUID">资源包GUID</param>
+        /// <param name="result">输出的资源包对象</param>
+        /// <returns>如果找到返回true，否则返回false</returns>
         public bool TryGetPackageBundleByBundleGUID(string bundleGUID, out PackageBundle result)
         {
-            return BundleDic3.TryGetValue(bundleGUID, out result);
+            return BundleByBundleGUID.TryGetValue(bundleGUID, out result);
         }
 
         /// <summary>
-        /// 是否包含资源文件
+        /// 是否包含指定的资源文件
         /// </summary>
+        /// <param name="bundleGUID">资源包GUID</param>
+        /// <returns>如果包含返回true，否则返回false</returns>
         public bool IsIncludeBundleFile(string bundleGUID)
         {
-            return BundleDic3.ContainsKey(bundleGUID);
+            return BundleByBundleGUID.ContainsKey(bundleGUID);
         }
 
         /// <summary>
         /// 获取所有的资源信息
         /// </summary>
+        /// <returns>返回包含所有资源信息的数组</returns>
         public AssetInfo[] GetAllAssetInfos()
         {
             AssetInfo[] result = new AssetInfo[AssetList.Count];
@@ -301,8 +327,10 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取资源信息列表
+        /// 根据标签获取资源信息列表
         /// </summary>
+        /// <param name="tags">资源标签数组</param>
+        /// <returns>返回包含指定标签的资源信息数组</returns>
         public AssetInfo[] GetAssetInfosByTags(string[] tags)
         {
             List<AssetInfo> result = new List<AssetInfo>(AssetList.Count);
@@ -318,9 +346,11 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 资源定位地址转换为资源信息。
+        /// 将资源定位地址转换为资源信息
         /// </summary>
-        /// <returns>如果转换失败会返回一个无效的资源信息类</returns>
+        /// <param name="location">资源定位地址</param>
+        /// <param name="assetType">资源类型</param>
+        /// <returns>返回资源信息对象，如果转换失败会返回一个无效的资源信息</returns>
         public AssetInfo ConvertLocationToAssetInfo(string location, System.Type assetType)
         {
             DebugCheckLocation(location);
@@ -346,30 +376,32 @@ namespace YooAsset
         {
             if (string.IsNullOrEmpty(location))
             {
-                YooLogger.Error("Failed to mapping location to asset path, The location is null or empty.");
+                YooLogger.Error("Failed to map location to asset path, the location is null or empty.");
                 return string.Empty;
             }
 
-            if (AssetPathMapping1.TryGetValue(location, out string assetPath))
+            if (AssetPathByLocation.TryGetValue(location, out string assetPath))
             {
                 return assetPath;
             }
             else
             {
-                YooLogger.Warning($"Failed to mapping location to asset path : {location}");
+                YooLogger.Warning($"Failed to map location to asset path: {location}");
                 return string.Empty;
             }
         }
 
         /// <summary>
-        /// 资源GUID转换为资源信息。
+        /// 将资源GUID转换为资源信息
         /// </summary>
-        /// <returns>如果转换失败会返回一个无效的资源信息类</returns>
+        /// <param name="assetGUID">资源GUID</param>
+        /// <param name="assetType">资源类型</param>
+        /// <returns>返回资源信息对象，如果转换失败会返回一个无效的资源信息</returns>
         public AssetInfo ConvertAssetGUIDToAssetInfo(string assetGUID, System.Type assetType)
         {
             if (IncludeAssetGUID == false)
             {
-                YooLogger.Warning("Package manifest not include asset guid. Please check asset bundle collector settings.");
+                YooLogger.Warning("Package manifest does not include asset GUID. Please check asset bundle collector settings.");
                 AssetInfo assetInfo = new AssetInfo(PackageName, "AssetGUID data is empty.");
                 return assetInfo;
             }
@@ -395,17 +427,17 @@ namespace YooAsset
         {
             if (string.IsNullOrEmpty(assetGUID))
             {
-                YooLogger.Error("Failed to mapping assetGUID to asset path, The assetGUID is null or empty.");
+                YooLogger.Error("Failed to map asset GUID to asset path, the asset GUID is null or empty.");
                 return string.Empty;
             }
 
-            if (AssetPathMapping2.TryGetValue(assetGUID, out string assetPath))
+            if (AssetPathByAssetGUID.TryGetValue(assetGUID, out string assetPath))
             {
                 return assetPath;
             }
             else
             {
-                YooLogger.Warning($"Failed to mapping assetGUID to asset path : {assetGUID}");
+                YooLogger.Warning($"Failed to map asset GUID to asset path: {assetGUID}");
                 return string.Empty;
             }
         }

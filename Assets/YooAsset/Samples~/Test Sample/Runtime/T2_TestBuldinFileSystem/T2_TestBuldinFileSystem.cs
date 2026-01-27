@@ -62,7 +62,6 @@ public class T2_TestBuldinFileSystem : IPrebuildSetup, IPostBuildCleanup
             var initParams = new OfflinePlayModeOptions();
             var manifestServices = new TestRestoreManifest();
             initParams.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(packageRoot);
-            initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.DISABLE_CATALOG_FILE, true);
             initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES, manifestServices);
             var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
@@ -100,8 +99,6 @@ public class T2_TestBuldinFileSystem : IPrebuildSetup, IPostBuildCleanup
             // 初始化资源包
             var initParams = new OfflinePlayModeOptions();
             initParams.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(packageRoot);
-            initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.APPEND_FILE_EXTENSION, true);
-            initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.DISABLE_CATALOG_FILE, true);
             var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeeded)

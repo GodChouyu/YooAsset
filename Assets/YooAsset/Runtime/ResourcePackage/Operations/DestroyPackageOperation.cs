@@ -1,6 +1,9 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 销毁资源包裹操作
+    /// </summary>
     public class DestroyPackageOperation : AsyncOperationBase
     {
         private enum ESteps

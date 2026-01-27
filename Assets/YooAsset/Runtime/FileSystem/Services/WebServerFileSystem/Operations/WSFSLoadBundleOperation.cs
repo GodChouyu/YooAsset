@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     internal class WSFSLoadAssetBundleOperation : FSLoadBundleOperation
@@ -6,77 +6,66 @@ namespace YooAsset
         private enum ESteps
         {
             None,
-            LoadWebAssetBundle,
+            LoadWebBundle,
             Done,
         }
 
         private readonly WebServerFileSystem _fileSystem;
-        private readonly PackageBundle _bundle;
-        private LoadWebAssetBundleOperation _loadWebAssetBundleOp;
+        private readonly LoadBundleOptions _options;
+        private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
 
-        internal WSFSLoadAssetBundleOperation(WebServerFileSystem fileSystem, PackageBundle bundle)
+        internal WSFSLoadAssetBundleOperation(WebServerFileSystem fileSystem, LoadBundleOptions options)
         {
             _fileSystem = fileSystem;
-            _bundle = bundle;
+            _options = options;
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadWebAssetBundle;
+            _steps = ESteps.LoadWebBundle;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadWebAssetBundle)
+            if (_steps == ESteps.LoadWebBundle)
             {
-                if (_loadWebAssetBundleOp == null)
+                if (_loadBundleOp == null)
                 {
-                    string fileLoadPath = _fileSystem.GetWebFileLoadPath(_bundle);
-                    string mainURL = DownloadSystemTools.ToLocalURL(fileLoadPath);
-
-                    var options = new LoadWebAssetBundleOptions();
-                    options.Bundle = _bundle;
-                    options.FailedTryAgain = int.MaxValue;
-                    options.WatchdogTimeout = _fileSystem.DownloadWatchDogTimeout;
-                    options.DownloadBackend = _fileSystem.DownloadBackend;
-                    options.DisableUnityWebCache = _fileSystem.DisableUnityWebCache;
-                    options.MainURL = mainURL;
-                    options.FallbackURL = mainURL;
-                    _loadWebAssetBundleOp = _fileSystem.LoadAssetBundleFactory.Invoke(_bundle.Encrypted, options);
-                    _loadWebAssetBundleOp.StartOperation();
-                    AddChildOperation(_loadWebAssetBundleOp);
+                    _loadBundleOp = _fileSystem.FileCache.LoadBundleAsync(_options);
+                    _loadBundleOp.StartOperation();
+                    AddChildOperation(_loadBundleOp);
                 }
 
-                _loadWebAssetBundleOp.UpdateOperation();
-                DownloadProgress = _loadWebAssetBundleOp.DownloadProgress;
-                DownloadedBytes = _loadWebAssetBundleOp.DownloadedBytes;
-                Progress = _loadWebAssetBundleOp.Progress;
-                if (_loadWebAssetBundleOp.IsDone == false)
+                _loadBundleOp.UpdateOperation();
+                Progress = _loadBundleOp.Progress;
+                DownloadProgress = Progress;
+                DownloadedBytes = 0;
+                if (_loadBundleOp.IsDone == false)
                     return;
 
-                if (_loadWebAssetBundleOp.Status == EOperationStatus.Succeeded)
+                if (_loadBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadWebAssetBundleOp.Result == null)
+                    if (_loadBundleOp.BundleResult == null)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Loaded asset bundle object is null.";
+                        Error = $"Loaded bundle result is null.";
                     }
                     else
                     {
                         _steps = ESteps.Done;
-                        Result = new AssetBundleResult(_fileSystem, _bundle, _loadWebAssetBundleOp.Result, null);
                         Status = EOperationStatus.Succeeded;
+                        Result = _loadBundleOp.BundleResult;
                     }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadWebAssetBundleOp.Error;
+                    Error = _loadBundleOp.Error;
                 }
             }
         }

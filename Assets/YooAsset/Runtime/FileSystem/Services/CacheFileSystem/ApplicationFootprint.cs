@@ -8,13 +8,12 @@ namespace YooAsset
     /// </summary>
     internal class ApplicationFootprint
     {
-        private readonly CacheFileSystem _fileSystem;
-        private string _footPrint;
+        private readonly string _filePath;
+        private string _footprint;
 
-
-        public ApplicationFootprint(CacheFileSystem fileSystem)
+        public ApplicationFootprint(string filePath)
         {
-            _fileSystem = fileSystem;
+            _filePath = filePath;
         }
 
         /// <summary>
@@ -22,10 +21,9 @@ namespace YooAsset
         /// </summary>
         public void Load(string packageName)
         {
-            string footPrintFilePath = _fileSystem.GetSandboxAppFootPrintFilePath();
-            if (File.Exists(footPrintFilePath))
+            if (File.Exists(_filePath))
             {
-                _footPrint = FileUtility.ReadAllText(footPrintFilePath);
+                _footprint = FileUtility.ReadAllText(_filePath);
             }
             else
             {
@@ -39,9 +37,9 @@ namespace YooAsset
         public bool IsDirty()
         {
 #if UNITY_EDITOR
-            return _footPrint != Application.version;
+            return _footprint != Application.version;
 #else
-		    return _footPrint != Application.buildGUID;
+		    return _footprint != Application.buildGUID;
 #endif
         }
 
@@ -51,13 +49,12 @@ namespace YooAsset
         public void Coverage(string packageName)
         {
 #if UNITY_EDITOR
-            _footPrint = Application.version;
+            _footprint = Application.version;
 #else
-			_footPrint = Application.buildGUID;
+			_footprint = Application.buildGUID;
 #endif
-            string footPrintFilePath = _fileSystem.GetSandboxAppFootPrintFilePath();
-            FileUtility.WriteAllText(footPrintFilePath, _footPrint);
-            YooLogger.Log($"Save application foot print : {_footPrint}");
+            FileUtility.WriteAllText(_filePath, _footprint);
+            YooLogger.Log($"Save application footprint : {_footprint}");
         }
     }
 }

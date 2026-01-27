@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace YooAsset
@@ -5,10 +6,8 @@ namespace YooAsset
     /// <summary>
     /// 文件缓存系统接口
     /// </summary>
-    /// <typeparam name="TEntry">缓存记录类型</typeparam>
-    internal interface IFileCache<TEntry> where TEntry : ICacheEntry
+    internal interface IFileCache : IDisposable
     {
-        #region 状态属性
         /// <summary>
         /// 包裹名称
         /// </summary>
@@ -25,43 +24,44 @@ namespace YooAsset
         bool IsReadOnly { get; }
 
         /// <summary>
+        /// 缓存文件数量
+        /// </summary>
+        int FileCount { get; }
+
+        /// <summary>
         /// 已占用空间（字节）
         /// </summary>
         long SpaceOccupied { get; }
-        #endregion
 
-        #region 异步操作
-        /// <summary>
-        /// 初始化缓存
-        /// </summary>
-        FCInitializeOperation InitializeAsync(FCInitializeOptions options);
 
         /// <summary>
-        /// 存储缓存文件
+        /// 初始化文件缓存系统
         /// </summary>
-        FCStoreCacheOperation StoreCacheAsync(FCStoreCacheOptions options);
+        FCInitializeOperation InitializeAsync();
+
+        /// <summary>
+        /// 写入缓存文件
+        /// </summary>
+        FCWriteCacheOperation WriteCacheAsync(WriteCacheOptions options);
 
         /// <summary>
         /// 清理缓存文件
         /// </summary>
-        FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options);
-        #endregion
+        FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options);
 
-        #region 查询方法
+        /// <summary>
+        /// 验证缓存文件
+        /// </summary>
+        FCVerifyCacheOperation VerifyCacheAsync(VerifyCacheOptions options);
+
+        /// <summary>
+        /// 加载资源包
+        /// </summary>
+        FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options);
+
         /// <summary>
         /// 是否已缓存指定 Bundle
         /// </summary>
         bool IsCached(string bundleGUID);
-
-        /// <summary>
-        /// 获取缓存记录
-        /// </summary>
-        TEntry GetEntry(string bundleGUID);
-
-        /// <summary>
-        /// 获取所有的缓存记录
-        /// </summary>
-        IReadOnlyCollection<TEntry> GetAllEntries();
-        #endregion
     }
 }

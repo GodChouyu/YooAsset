@@ -1,21 +1,42 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace YooAsset
 {
     /// <summary>
-    /// 自定义日志处理
+    /// 自定义日志处理接口
     /// </summary>
     public interface ILogger
     {
+        /// <summary>
+        /// 输出普通日志
+        /// </summary>
         void Log(string message);
+
+        /// <summary>
+        /// 输出警告日志
+        /// </summary>
         void Warning(string message);
+
+        /// <summary>
+        /// 输出错误日志
+        /// </summary>
         void Error(string message);
+
+        /// <summary>
+        /// 输出异常日志
+        /// </summary>
         void Exception(System.Exception exception);
     }
 
+    /// <summary>
+    /// YooAsset内部日志系统
+    /// </summary>
     internal static class YooLogger
     {
-        public static ILogger Logger = null;
+        /// <summary>
+        /// 自定义日志处理器实例
+        /// </summary>
+        public static ILogger LoggerInstance = null;
 
         /// <summary>
         /// 日志
@@ -23,9 +44,9 @@ namespace YooAsset
         [Conditional("DEBUG")]
         public static void Log(string info)
         {
-            if (Logger != null)
+            if (LoggerInstance != null)
             {
-                Logger.Log(info);
+                LoggerInstance.Log(info);
             }
             else
             {
@@ -38,9 +59,9 @@ namespace YooAsset
         /// </summary>
         public static void Warning(string info)
         {
-            if (Logger != null)
+            if (LoggerInstance != null)
             {
-                Logger.Warning(info);
+                LoggerInstance.Warning(info);
             }
             else
             {
@@ -53,9 +74,9 @@ namespace YooAsset
         /// </summary>
         public static void Error(string info)
         {
-            if (Logger != null)
+            if (LoggerInstance != null)
             {
-                Logger.Error(info);
+                LoggerInstance.Error(info);
             }
             else
             {
@@ -68,9 +89,9 @@ namespace YooAsset
         /// </summary>
         public static void Exception(System.Exception exception)
         {
-            if (Logger != null)
+            if (LoggerInstance != null)
             {
-                Logger.Exception(exception);
+                LoggerInstance.Exception(exception);
             }
             else
             {

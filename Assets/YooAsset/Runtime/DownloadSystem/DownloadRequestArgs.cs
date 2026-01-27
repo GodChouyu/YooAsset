@@ -14,7 +14,7 @@ namespace YooAsset
         /// <summary>
         /// 请求地址
         /// </summary>
-        public readonly string URL;
+        public readonly string Url;
 
         /// <summary>
         /// 响应的超时时间（单位：秒）
@@ -91,7 +91,7 @@ namespace YooAsset
             bool removeFileOnAbort = true,
             long resumeOffset = 0)
         {
-            URL = url;
+            Url = url;
             SavePath = savePath;
             Timeout = timeout;
             WatchdogTimeout = watchdogTimeout;
@@ -104,6 +104,8 @@ namespace YooAsset
         /// <summary>
         /// 添加请求头数据
         /// </summary>
+        /// <param name="name">请求头名称（如 "Authorization"、"User-Agent"）</param>
+        /// <param name="value">请求头值</param>
         public void AddRequestHeader(string name, string value)
         {
             if (Headers == null)
@@ -124,7 +126,7 @@ namespace YooAsset
         /// <summary>
         /// 请求地址
         /// </summary>
-        public readonly string URL;
+        public readonly string Url;
 
         /// <summary>
         /// 响应的超时时间（单位：秒）
@@ -164,7 +166,7 @@ namespace YooAsset
         /// <param name="watchdogTimeout">看门狗超时时间（秒），0 表示禁用</param>
         public DownloadDataRequestArgs(string url, int timeout, int watchdogTimeout)
         {
-            URL = url;
+            Url = url;
             Timeout = timeout;
             WatchdogTimeout = watchdogTimeout;
             Headers = null;
@@ -173,6 +175,8 @@ namespace YooAsset
         /// <summary>
         /// 添加请求头数据
         /// </summary>
+        /// <param name="name">请求头名称（如 "Authorization"、"User-Agent"）</param>
+        /// <param name="value">请求头值</param>
         public void AddRequestHeader(string name, string value)
         {
             if (Headers == null)
@@ -193,7 +197,7 @@ namespace YooAsset
         /// <summary>
         /// 请求地址
         /// </summary>
-        public readonly string URL;
+        public readonly string Url;
 
         /// <summary>
         /// 响应的超时时间（单位：秒）
@@ -232,7 +236,7 @@ namespace YooAsset
         /// <summary>
         /// Unity CRC 校验值
         /// </summary>
-        public readonly uint UnityCRC;
+        public readonly uint UnityCrc;
 
         /// <summary>
         /// 自定义请求头（可选）
@@ -260,18 +264,20 @@ namespace YooAsset
             string fileHash = null,
             uint unityCrc = 0)
         {
-            URL = url;
+            Url = url;
             Timeout = timeout;
             WatchdogTimeout = watchdogTimeout;
             DisableUnityWebCache = disableUnityWebCache;
             FileHash = fileHash;
-            UnityCRC = unityCrc;
+            UnityCrc = unityCrc;
             Headers = null;
         }
 
         /// <summary>
         /// 添加请求头数据
         /// </summary>
+        /// <param name="name">请求头名称（如 "Authorization"、"User-Agent"）</param>
+        /// <param name="value">请求头值</param>
         public void AddRequestHeader(string name, string value)
         {
             if (Headers == null)
@@ -286,12 +292,12 @@ namespace YooAsset
     /// <remarks>
     /// 用于编辑器模式下模拟下载进度，不进行实际网络请求。
     /// </remarks>
-    internal struct DownloadSimulateRequestArgs
+    internal struct SimulateDownloadRequestArgs
     {
         /// <summary>
         /// 请求地址（仅用于标识）
         /// </summary>
-        public readonly string URL;
+        public readonly string Url;
 
         /// <summary>
         /// 模拟的文件大小（字节）
@@ -312,9 +318,9 @@ namespace YooAsset
         /// <param name="url">请求地址（仅用于标识）</param>
         /// <param name="fileSize">模拟的文件大小（字节）</param>
         /// <param name="downloadSpeed">模拟的下载速度（字节/秒），默认 1MB/s</param>
-        public DownloadSimulateRequestArgs(string url, long fileSize, long downloadSpeed = 1024 * 1024)
+        public SimulateDownloadRequestArgs(string url, long fileSize, long downloadSpeed = 1024 * 1024)
         {
-            URL = url;
+            Url = url;
             FileSize = fileSize;
             DownloadSpeed = downloadSpeed > 0 ? downloadSpeed : 1024 * 1024;
         }

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
@@ -62,7 +62,7 @@ namespace YooAsset
                 if (_webDataRequestOp == null)
                 {
                     string filePath = _fileSystem.GetBuiltinPackageManifestFilePath(_packageVersion);
-                    string url = DownloadSystemTools.ToLocalURL(filePath);
+                    string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, 60, 0);
                     _webDataRequestOp = _fileSystem.DownloadBackend.CreateBytesRequest(args);
                     _webDataRequestOp.SendRequest();
@@ -71,7 +71,7 @@ namespace YooAsset
                 if (_webDataRequestOp.IsDone == false)
                     return;
 
-                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _fileData = _webDataRequestOp.Result;
                     _steps = ESteps.VerifyFileData;

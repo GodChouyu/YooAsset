@@ -14,7 +14,7 @@ namespace YooAsset
         /// </summary>
         /// <param name="path">本地文件路径</param>
         /// <returns>可用于 UnityWebRequest 的文件协议 URL</returns>
-        public static string ToLocalURL(string path)
+        public static string ToLocalUrl(string path)
         {
             string url;
 
@@ -23,6 +23,8 @@ namespace YooAsset
             // 说明：iPhone和iPod对应的是iOS系统。
             // 说明：iPad对应的是iPadOS系统。
             // 说明：AppleTV对应的是tvOS系统。
+            // TODO 安卓平台未考虑外部存储器
+            // TODO Linux平台确认路径正确
 #if UNITY_EDITOR_OSX
             url = StringUtility.Format("file://{0}", path);
 #elif UNITY_EDITOR_WIN
@@ -75,7 +77,7 @@ namespace YooAsset
         /// </summary>
         /// <param name="url">要判断的 URL</param>
         /// <returns>如果是本地文件 URL 返回 true，否则返回 false</returns>
-        public static bool IsLocalFileURL(string url)
+        public static bool IsLocalFileUrl(string url)
         {
             //TODO UNITY_STANDALONE_OSX平台目前无法确定
 

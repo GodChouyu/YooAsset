@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     internal class RequestWebServerPackageHashOperation : AsyncOperationBase
@@ -42,7 +42,7 @@ namespace YooAsset
                 if (_webTextRequestOp == null)
                 {
                     string filePath = _fileSystem.GetWebPackageHashFilePath(_packageVersion);
-                    string url = DownloadSystemTools.ToLocalURL(filePath);
+                    string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, _timeout, 0);
                     _webTextRequestOp = _fileSystem.DownloadBackend.CreateTextRequest(args);
                     _webTextRequestOp.SendRequest();
@@ -52,7 +52,7 @@ namespace YooAsset
                 if (_webTextRequestOp.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     PackageHash = _webTextRequestOp.Result;
                     if (string.IsNullOrEmpty(PackageHash))

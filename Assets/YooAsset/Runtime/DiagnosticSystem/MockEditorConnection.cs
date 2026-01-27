@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine.Networking.PlayerConnection;
@@ -63,7 +63,8 @@ namespace YooAsset
         /// 注销消息处理回调
         /// </summary>
         /// <param name="messageID">消息标识符</param>
-        public void Unregister(Guid messageID)
+        /// <param name="callback">要注销的回调函数</param>
+        public void Unregister(Guid messageID, UnityAction<MessageEventArgs> callback)
         {
             if (_messageHandlers.ContainsKey(messageID))
                 _messageHandlers.Remove(messageID);

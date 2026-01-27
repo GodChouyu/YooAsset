@@ -1,14 +1,21 @@
-﻿using System;
+using System;
 using System.Collections;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源句柄基类，提供资源加载状态查询和释放功能
+    /// </summary>
     public abstract class HandleBase : IEnumerator, IDisposable
     {
         private readonly AssetInfo _assetInfo;
-        internal ProviderOperation Provider { private set; get; }
 
-        internal HandleBase(ProviderOperation provider)
+        /// <summary>
+        /// 关联的资源提供者
+        /// </summary>
+        internal ProviderBase Provider { private set; get; }
+
+        internal HandleBase(ProviderBase provider)
         {
             Provider = provider;
             _assetInfo = provider.MainAssetInfo;
@@ -53,7 +60,7 @@ namespace YooAsset
         public DownloadStatus GetDownloadStatus()
         {
             if (IsValidWithWarning == false)
-                return DownloadStatus.CreateDefaultStatus();
+                return DownloadStatus.CreateDefault();
             return Provider.GetDownloadStatus();
         }
 
@@ -71,9 +78,9 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 最近的错误信息
+        /// 错误信息
         /// </summary>
-        public string LastError
+        public string Error
         {
             get
             {
@@ -137,9 +144,9 @@ namespace YooAsset
                 else
                 {
                     if (Provider == null)
-                        YooLogger.Warning($"Operation handle is released : {_assetInfo.AssetPath}");
+                        YooLogger.Warning($"Operation handle is released: {_assetInfo.AssetPath}");
                     else if (Provider.IsDestroyed)
-                        YooLogger.Warning($"Provider is destroyed : {_assetInfo.AssetPath}");
+                        YooLogger.Warning($"Provider is destroyed: {_assetInfo.AssetPath}");
                     return false;
                 }
             }

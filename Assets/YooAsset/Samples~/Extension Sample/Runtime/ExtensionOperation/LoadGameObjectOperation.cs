@@ -70,7 +70,7 @@ public class LoadGameObjectOperation : AsyncOperationBase
 
             if (_handle.Status != EOperationStatus.Succeeded)
             {
-                Error = _handle.LastError;
+                Error = _handle.Error;
                 Status = EOperationStatus.Failed;
                 _steps = ESteps.Done;
             }

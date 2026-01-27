@@ -6,12 +6,12 @@ namespace YooAsset
         private enum ESteps
         {
             None,
-            LoadCatalogFile,
+            InitializeFileCache,
             Done,
         }
 
         private readonly WebServerFileSystem _fileSystem;
-        private LoadWebServerCatalogFileOperation _loadCatalogFileOp;
+        private FCInitializeOperation _initializeFileCacheOp;
         private ESteps _steps = ESteps.None;
 
 
@@ -21,27 +21,28 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadCatalogFile;
+            _steps = ESteps.InitializeFileCache;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadCatalogFile)
+            if (_steps == ESteps.InitializeFileCache)
             {
-                if (_loadCatalogFileOp == null)
+                if (_initializeFileCacheOp == null)
                 {
-                    _loadCatalogFileOp = new LoadWebServerCatalogFileOperation(_fileSystem, 60);
-                    _loadCatalogFileOp.StartOperation();
-                    AddChildOperation(_loadCatalogFileOp);
+                    _initializeFileCacheOp = _fileSystem.FileCache.InitializeAsync();
+                    _initializeFileCacheOp.StartOperation();
+                    AddChildOperation(_initializeFileCacheOp);
                 }
 
-                _loadCatalogFileOp.UpdateOperation();
-                if (_loadCatalogFileOp.IsDone == false)
+                _initializeFileCacheOp.UpdateOperation();
+                Progress = _initializeFileCacheOp.Progress;
+                if (_initializeFileCacheOp.IsDone == false)
                     return;
 
-                if (_loadCatalogFileOp.Status == EOperationStatus.Succeeded)
+                if (_initializeFileCacheOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -50,7 +51,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadCatalogFileOp.Error;
+                    Error = _initializeFileCacheOp.Error;
                 }
             }
         }

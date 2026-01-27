@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace YooAsset
 {
@@ -28,6 +28,9 @@ namespace YooAsset
     /// </summary>
     public class EditorSimulateModeOptions : InitializePackageOptions
     {
+        /// <summary>
+        /// 编辑器文件系统初始化参数
+        /// </summary>
         public FileSystemParameters EditorFileSystemParameters;
     }
 
@@ -36,6 +39,9 @@ namespace YooAsset
     /// </summary>
     public class OfflinePlayModeOptions : InitializePackageOptions
     {
+        /// <summary>
+        /// 内置文件系统初始化参数
+        /// </summary>
         public FileSystemParameters BuildinFileSystemParameters;
     }
 
@@ -44,7 +50,14 @@ namespace YooAsset
     /// </summary>
     public class HostPlayModeOptions : InitializePackageOptions
     {
+        /// <summary>
+        /// 内置文件系统初始化参数
+        /// </summary>
         public FileSystemParameters BuildinFileSystemParameters;
+
+        /// <summary>
+        /// 缓存文件系统初始化参数
+        /// </summary>
         public FileSystemParameters CacheFileSystemParameters;
     }
 
@@ -53,7 +66,14 @@ namespace YooAsset
     /// </summary>
     public class WebPlayModeOptions : InitializePackageOptions
     {
+        /// <summary>
+        /// Web服务器文件系统初始化参数
+        /// </summary>
         public FileSystemParameters WebServerFileSystemParameters;
+
+        /// <summary>
+        /// Web远程文件系统初始化参数
+        /// </summary>
         public FileSystemParameters WebRemoteFileSystemParameters;
     }
 

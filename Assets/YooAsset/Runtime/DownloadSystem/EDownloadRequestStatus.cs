@@ -19,7 +19,7 @@ namespace YooAsset
         /// <summary>
         /// 已成功
         /// </summary>
-        Succeed,
+        Succeeded,
 
         /// <summary>
         /// 已失败

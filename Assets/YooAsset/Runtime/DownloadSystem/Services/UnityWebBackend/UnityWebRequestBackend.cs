@@ -12,6 +12,9 @@ namespace YooAsset
     /// </remarks>
     internal sealed class UnityWebRequestBackend : IDownloadBackend
     {
+        /// <summary>
+        /// 自定义 UnityWebRequest 创建器（可为 null）
+        /// </summary>
         private readonly UnityWebRequestCreator _webRequestCreator;
 
         /// <summary>
@@ -102,9 +105,9 @@ namespace YooAsset
         /// <summary>
         /// 创建模拟下载请求
         /// </summary>
-        public IDownloadFileRequest CreateSimulateRequest(DownloadSimulateRequestArgs args)
+        public IDownloadFileRequest CreateSimulateRequest(SimulateDownloadRequestArgs args)
         {
-            return new SimulateRequestFile(args);
+            return new SimulatedFileRequest(args);
         }
     }
 }

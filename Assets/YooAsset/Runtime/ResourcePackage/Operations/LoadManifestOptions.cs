@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载清单选项
+    /// </summary>
     public struct LoadManifestOptions
     {
         /// <summary>
@@ -13,6 +16,11 @@ namespace YooAsset
         /// </summary>
         public int Timeout { get; set; }
 
+        /// <summary>
+        /// 创建加载清单选项
+        /// </summary>
+        /// <param name="packageVersion">包裹版本</param>
+        /// <param name="timeout">超时时间（秒）</param>
         public LoadManifestOptions(string packageVersion, int timeout)
         {
             PackageVersion = packageVersion;

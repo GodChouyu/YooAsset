@@ -1,12 +1,15 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源句柄，用于管理单个资源对象的加载和访问
+    /// </summary>
     public sealed class AssetHandle : HandleBase
     {
         private System.Action<AssetHandle> _callback;
 
-        internal AssetHandle(ProviderOperation provider) : base(provider)
+        internal AssetHandle(ProviderBase provider) : base(provider)
         {
         }
         internal override void InvokeCallback()

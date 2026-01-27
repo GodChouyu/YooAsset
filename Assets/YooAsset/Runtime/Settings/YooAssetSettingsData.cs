@@ -114,14 +114,14 @@ namespace YooAsset
             if (string.IsNullOrEmpty(Setting.DefaultYooFolderName))
             {
                 string projectPath = Path.GetDirectoryName(Application.dataPath);
-                projectPath = PathUtility.RegularPath(projectPath);
+                projectPath = PathUtility.NormalizePath(projectPath);
                 return projectPath;
             }
             else
             {
                 // 注意：为了方便调试查看，编辑器下把存储目录放到项目根目录下。
                 string projectPath = Path.GetDirectoryName(Application.dataPath);
-                projectPath = PathUtility.RegularPath(projectPath);
+                projectPath = PathUtility.NormalizePath(projectPath);
                 return PathUtility.Combine(projectPath, Setting.DefaultYooFolderName);
             }
         }

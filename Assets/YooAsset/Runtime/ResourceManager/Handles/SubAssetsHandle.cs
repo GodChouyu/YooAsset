@@ -1,12 +1,15 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 子资源句柄，用于管理资源包内子资源对象的加载和访问
+    /// </summary>
     public sealed class SubAssetsHandle : HandleBase
     {
         private System.Action<SubAssetsHandle> _callback;
 
-        internal SubAssetsHandle(ProviderOperation provider) : base(provider)
+        internal SubAssetsHandle(ProviderBase provider) : base(provider)
         {
         }
         internal override void InvokeCallback()
@@ -76,7 +79,7 @@ namespace YooAsset
                     return assetObject as TObject;
             }
 
-            YooLogger.Warning($"Not found sub asset object : {assetName}");
+            YooLogger.Warning($"Sub asset object not found: {assetName}");
             return null;
         }
 

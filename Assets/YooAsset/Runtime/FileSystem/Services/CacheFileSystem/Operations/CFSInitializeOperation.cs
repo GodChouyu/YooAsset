@@ -6,14 +6,14 @@ namespace YooAsset
         private enum ESteps
         {
             None,
-            CheckAppFootPrint,
-            CacheInitialize,
-            CreateDownloadScheduler,
+            CheckAppFootprint,
+            InitializeFileCache,
+            CreateScheduler,
             Done,
         }
 
         private readonly CacheFileSystem _fileSystem;
-        private FCInitializeOperation _initializeCacheOp;
+        private FCInitializeOperation _initializeFileCacheOp;
         private ESteps _steps = ESteps.None;
 
 
@@ -28,7 +28,7 @@ namespace YooAsset
             Status = EOperationStatus.Failed;
             Error = $"{nameof(DefaultCacheFileSystem)} is not support WEBGL platform.";
 #else
-            _steps = ESteps.CheckAppFootPrint;
+            _steps = ESteps.CheckAppFootprint;
 #endif
         }
         internal override void InternalUpdate()
@@ -36,30 +36,31 @@ namespace YooAsset
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.CheckAppFootPrint)
+            if (_steps == ESteps.CheckAppFootprint)
             {
-                var appFootPrint = new ApplicationFootprint(_fileSystem);
-                appFootPrint.Load(_fileSystem.PackageName);
+                string footprintFilePath = _fileSystem.GetSandboxAppFootPrintFilePath();
+                var appFootprint = new ApplicationFootprint(footprintFilePath);
+                appFootprint.Load(_fileSystem.PackageName);
 
                 // 如果水印发生变化，则说明覆盖安装后首次打开游戏
-                if (appFootPrint.IsDirty())
+                if (appFootprint.IsDirty())
                 {
-                    if (_fileSystem.InstallClearMode == EOverwriteInstallClearMode.None)
+                    if (_fileSystem.InstallClearMode == EInstallCleanupMode.None)
                     {
                         YooLogger.Warning("Do nothing when overwrite install application.");
                     }
-                    else if (_fileSystem.InstallClearMode == EOverwriteInstallClearMode.ClearAllCacheFiles)
+                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllCacheFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
                         _fileSystem.DeleteAllManifestFiles();
                         YooLogger.Warning("Delete all cache files when overwrite install application.");
                     }
-                    else if (_fileSystem.InstallClearMode == EOverwriteInstallClearMode.ClearAllBundleFiles)
+                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllBundleFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
                         YooLogger.Warning("Delete all bundle files when overwrite install application.");
                     }
-                    else if (_fileSystem.InstallClearMode == EOverwriteInstallClearMode.ClearAllManifestFiles)
+                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllManifestFiles)
                     {
                         _fileSystem.DeleteAllManifestFiles();
                         YooLogger.Warning("Delete all manifest files when overwrite install application.");
@@ -69,47 +70,50 @@ namespace YooAsset
                         throw new System.NotImplementedException(_fileSystem.InstallClearMode.ToString());
                     }
 
-                    appFootPrint.Coverage(_fileSystem.PackageName);
+                    appFootprint.Coverage(_fileSystem.PackageName);
                 }
 
-                _steps = ESteps.CacheInitialize;
+                _steps = ESteps.InitializeFileCache;
             }
 
-            if (_steps == ESteps.CacheInitialize)
+            if (_steps == ESteps.InitializeFileCache)
             {
-                if (_initializeCacheOp == null)
+                if (_initializeFileCacheOp == null)
                 {
-                    var options = new FCInitializeOptions();
-                    options.FileVerifyLevel = _fileSystem.FileVerifyLevel;
-                    options.FileVerifyMaxConcurrency = _fileSystem.FileVerifyMaxConcurrency;
-                    _initializeCacheOp = _fileSystem.Cache.InitializeAsync(options);
-                    _initializeCacheOp.StartOperation();
-                    AddChildOperation(_initializeCacheOp);
+                    _initializeFileCacheOp = _fileSystem.FileCache.InitializeAsync();
+                    _initializeFileCacheOp.StartOperation();
+                    AddChildOperation(_initializeFileCacheOp);
                 }
 
-                _initializeCacheOp.UpdateOperation();
-                Progress = _initializeCacheOp.Progress;
-                if (_initializeCacheOp.IsDone == false)
+                _initializeFileCacheOp.UpdateOperation();
+                Progress = _initializeFileCacheOp.Progress;
+                if (_initializeFileCacheOp.IsDone == false)
                     return;
 
-                if (_initializeCacheOp.Status != EOperationStatus.Succeeded)
+                if (_initializeFileCacheOp.Status == EOperationStatus.Succeeded)
                 {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Failed;
-                    Error = _initializeCacheOp.Error;
+                    _steps = ESteps.CreateScheduler;
                 }
                 else
                 {
-                    _steps = ESteps.CreateDownloadScheduler;
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = _initializeFileCacheOp.Error;
                 }
             }
 
-            if (_steps == ESteps.CreateDownloadScheduler)
+            if (_steps == ESteps.CreateScheduler)
             {
-                // 注意：下载中心作为独立任务运行！
+                // 注意: 下载调度中心在最后一步创建，防止初始化失败后残留任务。
+                // 注意: 下载调度中心作为独立任务运行！
                 if (_fileSystem.DownloadScheduler == null)
                 {
-                    _fileSystem.DownloadScheduler = new DownloadSchedulerOperation(_fileSystem);
+                    var schedulerConfig = new DownloadSchedulerOperation.SchedulerConfig();
+                    schedulerConfig.SchedulerName = _fileSystem.GetType().Name;
+                    schedulerConfig.DownloadBackend = _fileSystem.DownloadBackend;
+                    schedulerConfig.MaxConcurrency = _fileSystem.DownloadMaxConcurrency;
+                    schedulerConfig.MaxRequestPerFrame = _fileSystem.DownloadMaxRequestPerFrame;
+                    _fileSystem.DownloadScheduler = new DownloadSchedulerOperation(schedulerConfig);
                     AsyncOperationSystem.StartOperation(_fileSystem.PackageName, _fileSystem.DownloadScheduler);
                 }
 

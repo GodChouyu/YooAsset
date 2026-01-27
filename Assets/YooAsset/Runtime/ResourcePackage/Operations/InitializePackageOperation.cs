@@ -1,7 +1,10 @@
-﻿using System;
+using System;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 初始化资源包裹操作
+    /// </summary>
     public class InitializePackageOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -89,7 +92,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"{_playMode} can not support WebGL plateform.";
+                        Error = $"{_playMode} does not support WebGL platform.";
                         YooLogger.Error(Error);
                         return;
                     }
@@ -103,7 +106,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"{nameof(EPlayMode.WebPlayMode)} only support WebGL plateform.";
+                        Error = $"{nameof(EPlayMode.WebPlayMode)} only supports WebGL platform.";
                         YooLogger.Error(Error);
                         return;
                     }

@@ -1,12 +1,15 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 全资源句柄，用于加载资源包内所有资源对象
+    /// </summary>
     public sealed class AllAssetsHandle : HandleBase
     {
         private System.Action<AllAssetsHandle> _callback;
 
-        internal AllAssetsHandle(ProviderOperation provider) : base(provider)
+        internal AllAssetsHandle(ProviderBase provider) : base(provider)
         {
         }
         internal override void InvokeCallback()

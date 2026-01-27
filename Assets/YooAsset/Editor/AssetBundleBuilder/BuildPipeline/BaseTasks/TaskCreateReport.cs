@@ -106,7 +106,7 @@ namespace YooAsset.Editor
                 reportBundleInfo.FileHash = packageBundle.FileHash;
                 reportBundleInfo.FileCRC = packageBundle.FileCRC;
                 reportBundleInfo.FileSize = packageBundle.FileSize;
-                reportBundleInfo.Encrypted = packageBundle.Encrypted;
+                reportBundleInfo.Encrypted = packageBundle.IsEncrypted;
                 reportBundleInfo.Tags = packageBundle.Tags;
                 reportBundleInfo.DependBundles = GetBundleDependBundles(manifest, packageBundle);
                 reportBundleInfo.ReferenceBundles = GetBundleReferenceBundles(manifest, packageBundle);
@@ -145,8 +145,8 @@ namespace YooAsset.Editor
         /// </summary>
         private List<string> GetAssetDependBundles(PackageManifest manifest, PackageAsset packageAsset)
         {
-            List<string> dependBundles = new List<string>(packageAsset.DependBundleIDs.Length);
-            foreach (int index in packageAsset.DependBundleIDs)
+            List<string> dependBundles = new List<string>(packageAsset.DependentBundleIDs.Length);
+            foreach (int index in packageAsset.DependentBundleIDs)
             {
                 string dependBundleName = manifest.BundleList[index].BundleName;
                 dependBundles.Add(dependBundleName);
@@ -160,8 +160,8 @@ namespace YooAsset.Editor
         /// </summary>
         private List<string> GetBundleDependBundles(PackageManifest manifest, PackageBundle packageBundle)
         {
-            List<string> dependBundles = new List<string>(packageBundle.DependBundleIDs.Length);
-            foreach (int index in packageBundle.DependBundleIDs)
+            List<string> dependBundles = new List<string>(packageBundle.DependentBundleIDs.Length);
+            foreach (int index in packageBundle.DependentBundleIDs)
             {
                 string dependBundleName = manifest.BundleList[index].BundleName;
                 dependBundles.Add(dependBundleName);
@@ -218,7 +218,7 @@ namespace YooAsset.Editor
             int fileCount = 0;
             foreach (var packageBundle in manifest.BundleList)
             {
-                if (packageBundle.Encrypted)
+                if (packageBundle.IsEncrypted)
                     fileCount++;
             }
             return fileCount;
@@ -228,7 +228,7 @@ namespace YooAsset.Editor
             long fileBytes = 0;
             foreach (var packageBundle in manifest.BundleList)
             {
-                if (packageBundle.Encrypted)
+                if (packageBundle.IsEncrypted)
                     fileBytes += packageBundle.FileSize;
             }
             return fileBytes;

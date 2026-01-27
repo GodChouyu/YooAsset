@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 卸载所有资源的选项配置
+    /// </summary>
     public struct UnloadAllAssetsOptions
     {
         /// <summary>
@@ -13,6 +16,11 @@ namespace YooAsset
         /// </summary>
         public bool LockLoadOperation { set; get; }
 
+        /// <summary>
+        /// 创建卸载所有资源的选项
+        /// </summary>
+        /// <param name="releaseAllHandles">是否释放所有句柄</param>
+        /// <param name="lockLoadOperation">是否锁定加载操作</param>
         public UnloadAllAssetsOptions(bool releaseAllHandles, bool lockLoadOperation)
         {
             ReleaseAllHandles = releaseAllHandles;

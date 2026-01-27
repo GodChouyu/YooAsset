@@ -47,7 +47,7 @@ namespace YooAsset
 
         /// <summary>
         /// 子任务列表
-        /// TODO : Serialization depth limit 10 exceeded
+        /// TODO：序列化深度限制为10层
         /// </summary>
         public List<DiagnosticOperationInfo> Children;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -6,11 +6,17 @@ using System.Diagnostics;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 二进制缓冲区读取器，数据以小端字节序存储
+    /// </summary>
     internal class BufferReader
     {
         private readonly byte[] _buffer;
         private int _index = 0;
 
+        /// <summary>
+        /// 使用指定的字节数组创建缓冲区读取器
+        /// </summary>
         public BufferReader(byte[] data)
         {
             _buffer = data;
@@ -38,6 +44,9 @@ namespace YooAsset
             get { return _buffer.Length; }
         }
 
+        /// <summary>
+        /// 读取指定数量的字节
+        /// </summary>
         public byte[] ReadBytes(int count)
         {
             CheckReaderIndex(count);
@@ -46,17 +55,28 @@ namespace YooAsset
             _index += count;
             return data;
         }
+
+        /// <summary>
+        /// 读取单个字节
+        /// </summary>
         public byte ReadByte()
         {
             CheckReaderIndex(1);
             return _buffer[_index++];
         }
 
+        /// <summary>
+        /// 读取布尔值
+        /// </summary>
         public bool ReadBool()
         {
             CheckReaderIndex(1);
             return _buffer[_index++] == 1;
         }
+
+        /// <summary>
+        /// 读取16位有符号整数
+        /// </summary>
         public short ReadInt16()
         {
             CheckReaderIndex(2);
@@ -73,10 +93,17 @@ namespace YooAsset
                 return value;
             }
         }
+        /// <summary>
+        /// 读取16位无符号整数
+        /// </summary>
         public ushort ReadUInt16()
         {
             return (ushort)ReadInt16();
         }
+
+        /// <summary>
+        /// 读取32位有符号整数
+        /// </summary>
         public int ReadInt32()
         {
             CheckReaderIndex(4);
@@ -93,10 +120,17 @@ namespace YooAsset
                 return value;
             }
         }
+        /// <summary>
+        /// 读取32位无符号整数
+        /// </summary>
         public uint ReadUInt32()
         {
             return (uint)ReadInt32();
         }
+
+        /// <summary>
+        /// 读取64位有符号整数
+        /// </summary>
         public long ReadInt64()
         {
             CheckReaderIndex(8);
@@ -115,11 +149,17 @@ namespace YooAsset
                 return (uint)i2 | ((long)i1 << 32);
             }
         }
+        /// <summary>
+        /// 读取64位无符号整数
+        /// </summary>
         public ulong ReadUInt64()
         {
             return (ulong)ReadInt64();
         }
 
+        /// <summary>
+        /// 跳过一个UTF8编码的字符串
+        /// </summary>
         public void SkipUTF8()
         {
             ushort count = ReadUInt16();
@@ -129,6 +169,10 @@ namespace YooAsset
             CheckReaderIndex(count);
             _index += count;
         }
+
+        /// <summary>
+        /// 读取UTF8编码的字符串
+        /// </summary>
         public string ReadUTF8()
         {
             ushort count = ReadUInt16();
@@ -140,6 +184,10 @@ namespace YooAsset
             _index += count;
             return value;
         }
+
+        /// <summary>
+        /// 读取32位有符号整数数组
+        /// </summary>
         public int[] ReadInt32Array()
         {
             ushort count = ReadUInt16();
@@ -150,6 +198,10 @@ namespace YooAsset
             }
             return values;
         }
+
+        /// <summary>
+        /// 读取64位有符号整数数组
+        /// </summary>
         public long[] ReadInt64Array()
         {
             ushort count = ReadUInt16();
@@ -160,6 +212,10 @@ namespace YooAsset
             }
             return values;
         }
+
+        /// <summary>
+        /// 读取UTF8编码的字符串数组
+        /// </summary>
         public string[] ReadUTF8Array()
         {
             ushort count = ReadUInt16();

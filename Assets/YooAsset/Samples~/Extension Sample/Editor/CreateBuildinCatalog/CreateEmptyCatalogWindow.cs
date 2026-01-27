@@ -47,7 +47,7 @@ namespace YooAsset.Editor
         {
             try
             {
-                bool result = CatalogFileTools.CreateEmptyFile(_packageName, string.Empty, outputPath);
+                bool result = BuiltinFileCatalogTools.CreateEmptyFile(_packageName, string.Empty, outputPath);
                 if (result == false)
                 {
                     Debug.LogError($"Create package {_packageName} catalog file failed ! See the detail error in console !");

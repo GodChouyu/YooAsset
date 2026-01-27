@@ -6,6 +6,9 @@ using UnityEngine.SceneManagement;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源包裹类
+    /// </summary>
     public class ResourcePackage
     {
         private InitializePackageOperation _initializeOp;
@@ -84,6 +87,8 @@ namespace YooAsset
         /// <summary>
         /// 异步初始化包裹
         /// </summary>
+        /// <param name="options">初始化参数</param>
+        /// <returns>返回初始化操作对象</returns>
         public InitializePackageOperation InitializePackageAsync(InitializePackageOptions options)
         {
             // 注意：联机平台因为网络原因可能会初始化失败！
@@ -131,6 +136,8 @@ namespace YooAsset
         /// <summary>
         /// 请求最新的资源版本
         /// </summary>
+        /// <param name="options">请求版本选项</param>
+        /// <returns>返回请求版本操作对象</returns>
         public RequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
         {
             CheckInitialized(false);
@@ -142,6 +149,8 @@ namespace YooAsset
         /// <summary>
         /// 加载指定版本的资源清单
         /// </summary>
+        /// <param name="options">加载清单选项</param>
+        /// <returns>返回加载清单操作对象</returns>
         public LoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
         {
             CheckInitialized(false);
@@ -149,7 +158,7 @@ namespace YooAsset
             // 注意：强烈建议在更新之前保持加载器为空！
             if (_resourceManager.HasAnyLoader())
             {
-                YooLogger.Warning($"Found loaded bundle before update manifest. Recommended to call the {nameof(UnloadAllAssetsAsync)} method to release loaded bundle.");
+                YooLogger.Warning($"Found loaded bundles before updating the manifest. It is recommended to call the {nameof(UnloadAllAssetsAsync)} method to release loaded bundles.");
             }
 
             var operation = new LoadManifestOperation(_fileSystemHost, options);
@@ -160,6 +169,8 @@ namespace YooAsset
         /// <summary>
         /// 预下载指定版本的包裹资源
         /// </summary>
+        /// <param name="options">预下载选项</param>
+        /// <returns>返回预下载操作对象</returns>
         public PreDownloaderOperation PreDownloaderAsync(PreDownloaderOptions options)
         {
             CheckInitialized(false);
@@ -171,6 +182,8 @@ namespace YooAsset
         /// <summary>
         /// 清理缓存文件
         /// </summary>
+        /// <param name="options">清理缓存选项</param>
+        /// <returns>返回清理缓存操作对象</returns>
         public ClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
         {
             CheckInitialized(false);

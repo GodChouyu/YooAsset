@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 预下载操作，用于提前下载指定版本的资源
+    /// </summary>
     public sealed class PreDownloaderOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -102,7 +105,7 @@ namespace YooAsset
         {
             if (Status != EOperationStatus.Succeeded)
             {
-                YooLogger.Error($"{nameof(PreDownloaderOperation)} status is not succeed.");
+                YooLogger.Error($"{nameof(PreDownloaderOperation)} did not succeed.");
                 return ResourceDownloaderOperation.CreateEmptyDownloader(_host.PackageName);
             }
 
@@ -116,7 +119,7 @@ namespace YooAsset
         {
             if (Status != EOperationStatus.Succeeded)
             {
-                YooLogger.Error($"{nameof(PreDownloaderOperation)} status is not succeed.");
+                YooLogger.Error($"{nameof(PreDownloaderOperation)} did not succeed.");
                 return ResourceDownloaderOperation.CreateEmptyDownloader(_host.PackageName);
             }
 

@@ -204,7 +204,7 @@ namespace YooAsset.Editor
             packageBundle.FileHash = PackageFileHash;
             packageBundle.FileCRC = PackageFileCRC;
             packageBundle.FileSize = PackageFileSize;
-            packageBundle.Encrypted = Encrypted;
+            packageBundle.IsEncrypted = Encrypted;
             return packageBundle;
         }
     }

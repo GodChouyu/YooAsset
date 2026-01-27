@@ -33,7 +33,7 @@ public class SpriteAtlasLoader : MonoBehaviour
             var loadHandle = package.LoadAssetSync<SpriteAtlas>(atlasName);
             if (loadHandle.Status != EOperationStatus.Succeeded)
             {
-                Debug.LogWarning($"Failed to load sprite atlas : {atlasName} ! {loadHandle.LastError}");
+                Debug.LogWarning($"Failed to load sprite atlas : {atlasName} ! {loadHandle.Error}");
                 return;
             }
 

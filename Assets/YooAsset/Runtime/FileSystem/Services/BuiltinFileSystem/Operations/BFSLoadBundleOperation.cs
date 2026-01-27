@@ -1,170 +1,167 @@
-using System.IO;
-using UnityEngine;
 
 namespace YooAsset
 {
-    /// <summary>
-    /// 加载 AssetBundle 文件
-    /// </summary>
-    internal class BFSLoadAssetBundleOperation : FSLoadBundleOperation
+    internal class BFSLoadBundleOperation : FSLoadBundleOperation
     {
         private enum ESteps
         {
             None,
-            LoadBuiltinAssetBundle,
+            Prepare,
+            UnpackFile,
+            AbortUnpack,
+            LoadUnpackBundle,
+            LoadBuiltinBundle,
             CheckResult,
             Done,
         }
 
         private readonly BuiltinFileSystem _fileSystem;
-        private readonly PackageBundle _bundle;
-        private LoadAssetBundleOperation _loadAssetBundleOp;
+        private readonly LoadBundleOptions _options;
+        private FSDownloadFileOperation _unpackFileOp;
+        private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-
-        internal BFSLoadAssetBundleOperation(BuiltinFileSystem fileSystem, PackageBundle bundle)
+        internal BFSLoadBundleOperation(BuiltinFileSystem fileSystem, LoadBundleOptions options)
         {
             _fileSystem = fileSystem;
-            _bundle = bundle;
+            _options = options;
         }
         internal override void InternalStart()
         {
-            DownloadProgress = 1f;
-            DownloadedBytes = _bundle.FileSize;
-            _steps = ESteps.LoadBuiltinAssetBundle;
+            _steps = ESteps.Prepare;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadBuiltinAssetBundle)
+            if (_steps == ESteps.Prepare)
             {
-                var options = new LoadAssetBundleOptions();
-                options.FileLoadPath = _fileSystem.GetBuiltinFileLoadPath(_bundle);
-                options.Bundle = _bundle;
-                _loadAssetBundleOp = _fileSystem.LoadAssetBundleFactory.Invoke(_bundle.Encrypted, options);
-                _loadAssetBundleOp.StartOperation();
-                AddChildOperation(_loadAssetBundleOp);
+                if (_fileSystem.IsUnpackBundleFile(_options.Bundle))
+                {
+                    if (_fileSystem.UnpackFileCache.IsCached(_options.Bundle.BundleGUID))
+                    {
+                        DownloadProgress = 1f;
+                        DownloadedBytes = _options.Bundle.FileSize;
+                        _steps = ESteps.LoadUnpackBundle;
+                    }
+                    else
+                    {
+                        _steps = ESteps.UnpackFile;
+                    }
+                }
+                else
+                {
+                    DownloadProgress = 1f;
+                    DownloadedBytes = _options.Bundle.FileSize;
+                    _steps = ESteps.LoadBuiltinBundle;
+                }
+            }
+
+            if (_steps == ESteps.UnpackFile)
+            {
+                // 中断解压
+                if (AbortDownloadFile)
+                {
+                    if (_unpackFileOp != null)
+                        _unpackFileOp.AbortOperation();
+                    _steps = ESteps.AbortUnpack;
+                }
+            }
+
+            if (_steps == ESteps.UnpackFile)
+            {
+                if (_unpackFileOp == null)
+                {
+                    var options = new DownloadFileOptions(_options.Bundle, int.MaxValue);
+                    _unpackFileOp = _fileSystem.DownloadFileAsync(options); // 注意：异步任务的开启由调度器统一控制
+                    AddChildOperation(_unpackFileOp);
+                }
+
+                if (IsWaitForCompletion)
+                    _unpackFileOp.WaitForCompletion();
+
+                _unpackFileOp.UpdateOperation();
+                DownloadProgress = _unpackFileOp.DownloadProgress;
+                DownloadedBytes = _unpackFileOp.DownloadedBytes;
+                if (_unpackFileOp.IsDone == false)
+                    return;
+
+                if (_unpackFileOp.Status == EOperationStatus.Succeeded)
+                {
+                    _steps = ESteps.LoadUnpackBundle;
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = _unpackFileOp.Error;
+                }
+            }
+
+            if (_steps == ESteps.AbortUnpack)
+            {
+                if (_unpackFileOp != null)
+                {
+                    if (IsWaitForCompletion)
+                        _unpackFileOp.WaitForCompletion();
+
+                    _unpackFileOp.UpdateOperation();
+                    if (_unpackFileOp.IsDone == false)
+                        return;
+                }
+
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = "Abort download file.";
+            }
+
+            if (_steps == ESteps.LoadUnpackBundle)
+            {
+                _loadBundleOp = _fileSystem.UnpackFileCache.LoadBundleAsync(_options);
+                _loadBundleOp.StartOperation();
+                AddChildOperation(_loadBundleOp);
+                _steps = ESteps.CheckResult;
+            }
+
+            if (_steps == ESteps.LoadBuiltinBundle)
+            {
+                _loadBundleOp = _fileSystem.BuiltinFileCache.LoadBundleAsync(_options);
+                _loadBundleOp.StartOperation();
+                AddChildOperation(_loadBundleOp);
                 _steps = ESteps.CheckResult;
             }
 
             if (_steps == ESteps.CheckResult)
             {
                 if (IsWaitForCompletion)
-                    _loadAssetBundleOp.WaitForCompletion();
+                    _loadBundleOp.WaitForCompletion();
 
-                _loadAssetBundleOp.UpdateOperation();
-                if (_loadAssetBundleOp.IsDone == false)
+                _loadBundleOp.UpdateOperation();
+                if (_loadBundleOp.IsDone == false)
                     return;
 
-                if (_loadAssetBundleOp.Status == EOperationStatus.Succeeded)
+                if (_loadBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadAssetBundleOp.Result == null)
+                    if (_loadBundleOp.BundleResult == null)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = "Loaded builtin asset bundle is null.";
+                        Error = "Loaded bundle result is null.";
                         YooLogger.Error(Error);
                     }
                     else
                     {
                         _steps = ESteps.Done;
-                        Result = new AssetBundleResult(_fileSystem, _bundle, _loadAssetBundleOp.Result, _loadAssetBundleOp.ManagedStream);
                         Status = EOperationStatus.Succeeded;
+                        Result = _loadBundleOp.BundleResult;
                     }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadAssetBundleOp.Error;
-                    YooLogger.Error(Error);
-                }
-            }
-        }
-        internal override void InternalWaitForCompletion()
-        {
-            ExecuteBatch();
-        }
-    }
-
-    /// <summary>
-    /// 加载 RawBundle 文件
-    /// </summary>
-    internal class BFSLoadRawBundleOperation : FSLoadBundleOperation
-    {
-        private enum ESteps
-        {
-            None,
-            LoadBuiltinRawBundle,
-            CheckResult,
-            Done,
-        }
-
-        private readonly BuiltinFileSystem _fileSystem;
-        private readonly PackageBundle _bundle;
-        private LoadRawBundleOperation _loadRawBundleOp;
-        private ESteps _steps = ESteps.None;
-
-
-        internal BFSLoadRawBundleOperation(BuiltinFileSystem fileSystem, PackageBundle bundle)
-        {
-            _fileSystem = fileSystem;
-            _bundle = bundle;
-        }
-        internal override void InternalStart()
-        {
-            DownloadProgress = 1f;
-            DownloadedBytes = _bundle.FileSize;
-            _steps = ESteps.LoadBuiltinRawBundle;
-        }
-        internal override void InternalUpdate()
-        {
-            if (_steps == ESteps.None || _steps == ESteps.Done)
-                return;
-
-            if (_steps == ESteps.LoadBuiltinRawBundle)
-            {
-                var options = new LoadRawBundleOptions();
-                options.FileLoadPath = _fileSystem.GetBuiltinFileLoadPath(_bundle);
-                options.Bundle = _bundle;
-                _loadRawBundleOp = _fileSystem.LoadRawBundleFactory.Invoke(_bundle.Encrypted, options);
-                _loadRawBundleOp.StartOperation();
-                AddChildOperation(_loadRawBundleOp);
-                _steps = ESteps.CheckResult;
-            }
-
-            if (_steps == ESteps.CheckResult)
-            {
-                if (IsWaitForCompletion)
-                    _loadRawBundleOp.WaitForCompletion();
-
-                _loadRawBundleOp.UpdateOperation();
-                if (_loadRawBundleOp.IsDone == false)
-                    return;
-
-                if (_loadRawBundleOp.Status == EOperationStatus.Succeeded)
-                {
-                    if (_loadRawBundleOp.Result == null)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = "Loaded builtin raw bundle is null.";
-                        YooLogger.Error(Error);
-                    }
-                    else
-                    {
-                        _steps = ESteps.Done;
-                        Result = new RawBundleResult(_fileSystem, _bundle, _loadRawBundleOp.Result);
-                        Status = EOperationStatus.Succeeded;
-                    }
-                }
-                else
-                {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Failed;
-                    Error = _loadRawBundleOp.Error;
+                    Error = _loadBundleOp.Error;
                     YooLogger.Error(Error);
                 }
             }
@@ -179,7 +176,7 @@ namespace YooAsset
     /// <summary>
     /// 加载团结文件
     /// </summary>
-    internal class BFSLoadInstantBundleOperation : FSLoadBundleOperation
+    internal class BFSLoadInstantBundleOperation
     {
         private enum ESteps
         {

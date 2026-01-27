@@ -48,7 +48,7 @@ namespace YooAsset.Editor
                         if (File.Exists(_logFilePath))
                             File.Delete(_logFilePath);
 
-                        FileUtility.CreateFileDirectory(_logFilePath);
+                        FileUtility.EnsureFileDirectory(_logFilePath);
                         File.WriteAllText(_logFilePath, _logBuilder.ToString(), Encoding.UTF8);
                         _logBuilder.Clear();
                     }

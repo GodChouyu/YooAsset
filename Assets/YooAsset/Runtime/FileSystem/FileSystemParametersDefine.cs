@@ -14,7 +14,7 @@ namespace YooAsset
         public const string FILE_VERIFY_MAX_CONCURRENCY = "FILE_VERIFY_MAX_CONCURRENCY";
 
         /// <summary>
-        /// 覆盖安装缓存清理模式 <see cref=EOverwriteInstallClearMode>
+        /// 覆盖安装缓存清理模式 <see cref=EInstallCleanupMode>
         /// </summary>
         public const string INSTALL_CLEAR_MODE = "INSTALL_CLEAR_MODE";
 
@@ -24,29 +24,9 @@ namespace YooAsset
         public const string REMOTE_SERVICES = "REMOTE_SERVICES";
 
         /// <summary>
-        /// 加载 AssetBundle 的 Operation 工厂委托
-        /// </summary>
-        public const string LOAD_ASSETBUNDLE_OPERATION_FACTORY = "LOAD_ASSETBUNDLE_OPERATION_FACTORY";
-
-        /// <summary>
-        /// 加载 RawBundle 的 Operation 工厂委托
-        /// </summary>
-        public const string LOAD_RAWBUNDLE_OPERATION_FACTORY = "LOAD_RAWBUNDLE_OPERATION_FACTORY";
-
-        /// <summary>
         /// 资源清单服务类 <see cref=IManifestRestoreServices>
         /// </summary>
         public const string MANIFEST_RESTORE_SERVICES = "MANIFEST_RESTORE_SERVICES";
-
-        /// <summary>
-        /// 数据文件追加文件格式 <see cref=bool>
-        /// </summary>
-        public const string APPEND_FILE_EXTENSION = "APPEND_FILE_EXTENSION";
-
-        /// <summary>
-        /// 禁用Catalog目录查询文件 <see cref=bool>
-        /// </summary>
-        public const string DISABLE_CATALOG_FILE = "DISABLE_CATALOG_FILE";
 
         /// <summary>
         /// 禁用Unity的网络缓存 <see cref=bool>
@@ -127,11 +107,6 @@ namespace YooAsset
         /// 拷贝内置清单的目标目录 <see cref=string>
         /// </summary>
         public const string COPY_BUILDIN_PACKAGE_MANIFEST_DEST_ROOT = "COPY_BUILDIN_PACKAGE_MANIFEST_DEST_ROOT";
-
-        /// <summary>
-        /// 拷贝内置文件接口的实例类 <see cref=ILocalFileCopyServices>
-        /// </summary>
-        public const string COPY_LOCAL_FILE_SERVICES = "COPY_LOCAL_FILE_SERVICES";
 
         /// <summary>
         /// 解压文件系统的根目录 <see cref=string>

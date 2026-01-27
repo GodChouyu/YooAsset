@@ -1,8 +1,11 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 下载操作基类，提供资源下载、暂停、恢复和取消功能
+    /// </summary>
     public abstract class DownloaderOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -16,8 +19,8 @@ namespace YooAsset
 
         private const int MAX_LOADER_COUNT = 64;
         private readonly string _packageName;
-        private readonly int _maximumConcurrency;
-        private readonly int _failedTryAgain;
+        private readonly int _maxConcurrency;
+        private readonly int _retryCount;
         private readonly List<BundleInfo> _bundleInfoList;
         private readonly List<FSDownloadFileOperation> _downloaders = new List<FSDownloadFileOperation>(MAX_LOADER_COUNT);
         private readonly List<FSDownloadFileOperation> _removeList = new List<FSDownloadFileOperation>(MAX_LOADER_COUNT);
@@ -27,8 +30,8 @@ namespace YooAsset
         private bool _isPause = false;
         private long _lastDownloadBytes = 0;
         private int _lastDownloadCount = 0;
-        private long _cachedDownloadBytes = 0;
-        private int _cachedDownloadCount = 0;
+        private long _completedDownloadBytes = 0;
+        private int _completedDownloadCount = 0;
         private ESteps _steps = ESteps.None;
 
 
@@ -79,15 +82,22 @@ namespace YooAsset
         public DownloadFileStartedEventHandler DownloadFileStartedHandler { get; set; }
 
 
-        internal DownloaderOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int failedTryAgain)
+        /// <summary>
+        /// 创建下载操作实例
+        /// </summary>
+        /// <param name="packageName">所属包裹名称</param>
+        /// <param name="downloadList">下载列表</param>
+        /// <param name="maximumConcurrency">最大并发数量</param>
+        /// <param name="retryCount">失败重试次数</param>
+        internal DownloaderOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int retryCount)
         {
             _packageName = packageName;
             _bundleInfoList = downloadList;
-            _maximumConcurrency = UnityEngine.Mathf.Clamp(maximumConcurrency, 1, MAX_LOADER_COUNT);
-            _failedTryAgain = failedTryAgain;
+            _maxConcurrency = UnityEngine.Mathf.Clamp(maximumConcurrency, 1, MAX_LOADER_COUNT);
+            _retryCount = retryCount;
 
             // 统计下载信息
-            CalculateDownloaderInfo();
+            CalculateStatistics();
         }
         internal override void InternalStart()
         {
@@ -135,7 +145,7 @@ namespace YooAsset
             {
                 // 检测下载器结果
                 _removeList.Clear();
-                long downloadBytes = _cachedDownloadBytes;
+                long downloadBytes = _completedDownloadBytes;
                 foreach (var downloader in _downloaders)
                 {
                     downloader.UpdateOperation();
@@ -153,8 +163,8 @@ namespace YooAsset
 
                     // 下载成功
                     _removeList.Add(downloader);
-                    _cachedDownloadCount++;
-                    _cachedDownloadBytes += downloader.DownloadedBytes;
+                    _completedDownloadCount++;
+                    _completedDownloadBytes += downloader.DownloadedBytes;
                 }
 
                 // 移除已经完成的下载器（无论成功或失败）
@@ -164,10 +174,10 @@ namespace YooAsset
                 }
 
                 // 如果下载进度发生变化
-                if (_lastDownloadBytes != downloadBytes || _lastDownloadCount != _cachedDownloadCount)
+                if (_lastDownloadBytes != downloadBytes || _lastDownloadCount != _completedDownloadCount)
                 {
                     _lastDownloadBytes = downloadBytes;
-                    _lastDownloadCount = _cachedDownloadCount;
+                    _lastDownloadCount = _completedDownloadCount;
                     Progress = CalculateProgress();
 
                     if (DownloadProgressChangedHandler != null)
@@ -190,11 +200,11 @@ namespace YooAsset
                     if (_isPause)
                         return;
 
-                    if (_downloaders.Count < _maximumConcurrency)
+                    if (_downloaders.Count < _maxConcurrency)
                     {
                         int index = _bundleInfoList.Count - 1;
                         var bundleInfo = _bundleInfoList[index];
-                        var downloader = bundleInfo.CreateBundleDownloader(_failedTryAgain);
+                        var downloader = bundleInfo.CreateBundleDownloader(_retryCount);
                         downloader.StartOperation();
                         this.AddChildOperation(downloader);
 
@@ -259,7 +269,11 @@ namespace YooAsset
                 }
             }
         }
-        private void CalculateDownloaderInfo()
+
+        /// <summary>
+        /// 计算下载统计信息
+        /// </summary>
+        private void CalculateStatistics()
         {
             if (_bundleInfoList != null)
             {
@@ -277,6 +291,10 @@ namespace YooAsset
             }
         }
 
+        /// <summary>
+        /// 计算下载进度
+        /// </summary>
+        /// <returns>返回下载进度值（0-1）</returns>
         private float CalculateProgress()
         {
             if (TotalDownloadBytes == 0)
@@ -299,7 +317,7 @@ namespace YooAsset
 
             if (Status != EOperationStatus.None)
             {
-                YooLogger.Error("The downloader is running, can not combine with other downloader.");
+                YooLogger.Error("The downloader is running and cannot combine with another downloader.");
                 return;
             }
 
@@ -324,7 +342,7 @@ namespace YooAsset
             }
 
             // 重新统计下载信息
-            CalculateDownloaderInfo();
+            CalculateStatistics();
         }
 
         /// <summary>
@@ -373,10 +391,13 @@ namespace YooAsset
         }
     }
 
+    /// <summary>
+    /// 资源下载操作类
+    /// </summary>
     public sealed class ResourceDownloaderOperation : DownloaderOperation
     {
-        internal ResourceDownloaderOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int failedTryAgain)
-            : base(packageName, downloadList, maximumConcurrency, failedTryAgain)
+        internal ResourceDownloaderOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int retryCount)
+            : base(packageName, downloadList, maximumConcurrency, retryCount)
         {
         }
 
@@ -390,10 +411,13 @@ namespace YooAsset
             return operation;
         }
     }
+    /// <summary>
+    /// 资源解压操作类
+    /// </summary>
     public sealed class ResourceUnpackerOperation : DownloaderOperation
     {
-        internal ResourceUnpackerOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int failedTryAgain)
-            : base(packageName, downloadList, maximumConcurrency, failedTryAgain)
+        internal ResourceUnpackerOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int retryCount)
+            : base(packageName, downloadList, maximumConcurrency, retryCount)
         {
         }
 
@@ -407,10 +431,13 @@ namespace YooAsset
             return operation;
         }
     }
+    /// <summary>
+    /// 资源导入操作类
+    /// </summary>
     public sealed class ResourceImporterOperation : DownloaderOperation
     {
-        internal ResourceImporterOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int failedTryAgain)
-            : base(packageName, downloadList, maximumConcurrency, failedTryAgain)
+        internal ResourceImporterOperation(string packageName, List<BundleInfo> downloadList, int maximumConcurrency, int retryCount)
+            : base(packageName, downloadList, maximumConcurrency, retryCount)
         {
         }
 

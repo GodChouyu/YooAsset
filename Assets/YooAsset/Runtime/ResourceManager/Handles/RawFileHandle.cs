@@ -1,11 +1,14 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 原生文件句柄，用于访问未经 Unity 处理的原始文件
+    /// </summary>
     public class RawFileHandle : HandleBase
     {
         private System.Action<RawFileHandle> _callback;
 
-        internal RawFileHandle(ProviderOperation provider) : base(provider)
+        internal RawFileHandle(ProviderBase provider) : base(provider)
         {
         }
         internal override void InvokeCallback()

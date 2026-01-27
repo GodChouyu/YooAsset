@@ -3,45 +3,44 @@ namespace YooAsset
 {
     internal class EFSLoadBundleOperation : FSLoadBundleOperation
     {
-        protected enum ESteps
+        private enum ESteps
         {
             None,
-            CheckExist,
+            Prepare,
             DownloadFile,
             AbortDownload,
-            LoadAssetBundle,
+            LoadVirtualBundle,
             CheckResult,
             Done,
         }
 
         private readonly EditorFileSystem _fileSystem;
-        private readonly PackageBundle _bundle;
-        protected FSDownloadFileOperation _downloadFileOp;
-        private int _asyncSimulateFrame;
+        private readonly LoadBundleOptions _options;
+        private FSDownloadFileOperation _downloadFileOp;
+        private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-        internal EFSLoadBundleOperation(EditorFileSystem fileSystem, PackageBundle bundle)
+        internal EFSLoadBundleOperation(EditorFileSystem fileSystem, LoadBundleOptions options)
         {
             _fileSystem = fileSystem;
-            _bundle = bundle;
+            _options = options;
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.CheckExist;
-            _asyncSimulateFrame = _fileSystem.GetAsyncSimulateFrame();
+            _steps = ESteps.Prepare;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.CheckExist)
+            if (_steps == ESteps.Prepare)
             {
-                if (_fileSystem.Exists(_bundle))
+                if (_fileSystem.FileCache.IsCached(_options.Bundle.BundleGUID))
                 {
                     DownloadProgress = 1f;
-                    DownloadedBytes = _bundle.FileSize;
-                    _steps = ESteps.LoadAssetBundle;
+                    DownloadedBytes = _options.Bundle.FileSize;
+                    _steps = ESteps.LoadVirtualBundle;
                 }
                 else
                 {
@@ -64,7 +63,7 @@ namespace YooAsset
             {
                 if (_downloadFileOp == null)
                 {
-                    DownloadFileOptions options = new DownloadFileOptions(_bundle, int.MaxValue);
+                    DownloadFileOptions options = new DownloadFileOptions(_options.Bundle, int.MaxValue);
                     _downloadFileOp = _fileSystem.DownloadFileAsync(options);
                     _downloadFileOp.StartOperation();
                     AddChildOperation(_downloadFileOp);
@@ -81,7 +80,7 @@ namespace YooAsset
 
                 if (_downloadFileOp.Status == EOperationStatus.Succeeded)
                 {
-                    _steps = ESteps.LoadAssetBundle;
+                    _steps = ESteps.LoadVirtualBundle;
                 }
                 else
                 {
@@ -108,36 +107,46 @@ namespace YooAsset
                 Error = "Abort download file.";
             }
 
-            if (_steps == ESteps.LoadAssetBundle)
+            if (_steps == ESteps.LoadVirtualBundle)
             {
-                if (IsWaitForCompletion)
-                {
-                    if (_fileSystem.VirtualWebGLMode)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = "Virtual WebGL Mode only support asyn load method.";
-                        YooLogger.Error(Error);
-                    }
-                    else
-                    {
-                        _steps = ESteps.CheckResult;
-                    }
-                }
-                else
-                {
-                    if (_asyncSimulateFrame <= 0)
-                        _steps = ESteps.CheckResult;
-                    else
-                        _asyncSimulateFrame--;
-                }
+                _loadBundleOp = _fileSystem.FileCache.LoadBundleAsync(_options);
+                _loadBundleOp.StartOperation();
+                AddChildOperation(_loadBundleOp);
+                _steps = ESteps.CheckResult;
             }
 
             if (_steps == ESteps.CheckResult)
             {
-                _steps = ESteps.Done;
-                Result = new VirtualBundleResult(_fileSystem, _bundle);
-                Status = EOperationStatus.Succeeded;
+                if (IsWaitForCompletion)
+                    _loadBundleOp.WaitForCompletion();
+
+                _loadBundleOp.UpdateOperation();
+                if (_loadBundleOp.IsDone == false)
+                    return;
+
+                if (_loadBundleOp.Status == EOperationStatus.Succeeded)
+                {
+                    if (_loadBundleOp.BundleResult == null)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = "Loaded bundle result is null.";
+                        YooLogger.Error(Error);
+                    }
+                    else
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Succeeded;
+                        Result = _loadBundleOp.BundleResult;
+                    }
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = _loadBundleOp.Error;
+                    YooLogger.Error(Error);
+                }
             }
         }
         internal override void InternalWaitForCompletion()

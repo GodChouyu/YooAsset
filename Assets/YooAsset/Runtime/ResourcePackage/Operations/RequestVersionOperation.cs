@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 请求包裹版本操作
+    /// </summary>
     public sealed class RequestVersionOperation : AsyncOperationBase
     {
         private enum ESteps

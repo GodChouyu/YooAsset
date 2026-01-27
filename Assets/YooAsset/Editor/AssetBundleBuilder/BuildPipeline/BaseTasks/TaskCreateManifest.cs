@@ -71,7 +71,7 @@ namespace YooAsset.Editor
             {
                 string fileName = YooAssetSettingsData.GetManifestJsonFileName(buildParameters.PackageName, buildParameters.PackageVersion);
                 string filePath = $"{packageOutputDirectory}/{fileName}";
-                PackageManifestTools.SerializeToJson(filePath, manifest);
+                PackageManifestTools.SerializeManifestToJson(filePath, manifest);
                 BuildLogger.Log($"Create package manifest file: {filePath}");
             }
 
@@ -81,8 +81,8 @@ namespace YooAsset.Editor
             {
                 string fileName = YooAssetSettingsData.GetManifestBinaryFileName(buildParameters.PackageName, buildParameters.PackageVersion);
                 packagePath = $"{packageOutputDirectory}/{fileName}";
-                PackageManifestTools.SerializeToBinary(packagePath, manifest, buildParameters.ManifestProcessServices);
-                packageHash = HashUtility.FileCRC32(packagePath);
+                PackageManifestTools.SerializeManifestToBinary(packagePath, manifest, buildParameters.ManifestProcessServices);
+                packageHash = HashUtility.ComputeFileCRC32(packagePath);
                 BuildLogger.Log($"Create package manifest file: {packagePath}");
             }
 
@@ -106,7 +106,7 @@ namespace YooAsset.Editor
             {
                 ManifestContext manifestContext = new ManifestContext();
                 byte[] bytesData = FileUtility.ReadAllBytes(packagePath);
-                manifestContext.Manifest = PackageManifestTools.DeserializeFromBinary(bytesData, buildParameters.ManifestRestoreServices);
+                manifestContext.Manifest = PackageManifestTools.DeserializeManifestFromBinary(bytesData, buildParameters.ManifestRestoreServices);
                 context.SetContextObject(manifestContext);
             }
         }
@@ -205,7 +205,7 @@ namespace YooAsset.Editor
             foreach (var packageAsset in manifest.AssetList)
             {
                 var mainAssetInfo = packageAsset.TempDataInEditor as BuildAssetInfo;
-                packageAsset.DependBundleIDs = GetAssetDependBundleIDs(mainAssetInfo);
+                packageAsset.DependentBundleIDs = GetAssetDependBundleIDs(mainAssetInfo);
             }
         }
 
@@ -229,7 +229,7 @@ namespace YooAsset.Editor
 
                 // 排序并填充数据
                 dependIDs.Sort();
-                packageBundle.DependBundleIDs = dependIDs.ToArray();
+                packageBundle.DependentBundleIDs = dependIDs.ToArray();
             }
         }
 
@@ -249,9 +249,9 @@ namespace YooAsset.Editor
                 var assetTags = packageAsset.AssetTags;
                 int bundleID = packageAsset.BundleID;
                 CacheBundleTags(bundleID, assetTags);
-                if (packageAsset.DependBundleIDs != null)
+                if (packageAsset.DependentBundleIDs != null)
                 {
-                    foreach (var dependBundleID in packageAsset.DependBundleIDs)
+                    foreach (var dependBundleID in packageAsset.DependentBundleIDs)
                     {
                         CacheBundleTags(dependBundleID, assetTags);
                     }
@@ -359,11 +359,11 @@ namespace YooAsset.Editor
             {
                 if (cacheBundleIDs.Contains(packageAsset.BundleID))
                 {
-                    if (packageAsset.DependBundleIDs.Contains(builtinBundleID) == false)
+                    if (packageAsset.DependentBundleIDs.Contains(builtinBundleID) == false)
                     {
-                        var tempBundleIDs = new List<int>(packageAsset.DependBundleIDs);
+                        var tempBundleIDs = new List<int>(packageAsset.DependentBundleIDs);
                         tempBundleIDs.Add(builtinBundleID);
-                        packageAsset.DependBundleIDs = tempBundleIDs.ToArray();
+                        packageAsset.DependentBundleIDs = tempBundleIDs.ToArray();
                     }
 
                     foreach (var tag in packageAsset.AssetTags)

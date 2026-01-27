@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源包类型枚举
+    /// </summary>
     public enum EBundleType
     {
         /// <summary>

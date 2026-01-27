@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     internal class LoadWebServerPackageManifestOperation : AsyncOperationBase
@@ -47,7 +47,7 @@ namespace YooAsset
                 if (_webDataRequestOp == null)
                 {
                     string filePath = _fileSystem.GetWebPackageManifestFilePath(_packageVersion);
-                    string url = DownloadSystemTools.ToLocalURL(filePath);
+                    string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, _timeout, 0);
                     _webDataRequestOp = _fileSystem.DownloadBackend.CreateBytesRequest(args);
                     _webDataRequestOp.SendRequest();
@@ -56,7 +56,7 @@ namespace YooAsset
                 if (_webDataRequestOp.IsDone == false)
                     return;
 
-                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.VerifyFileData;
                 }

@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 下载状态信息结构体
+    /// </summary>
     public struct DownloadStatus
     {
         /// <summary>
@@ -23,7 +26,10 @@ namespace YooAsset
         /// </summary>
         public long DownloadedBytes { get; set; }
 
-        public static DownloadStatus CreateDefaultStatus()
+        /// <summary>
+        /// 创建默认的下载状态实例
+        /// </summary>
+        public static DownloadStatus CreateDefault()
         {
             DownloadStatus status = new DownloadStatus();
             return status;

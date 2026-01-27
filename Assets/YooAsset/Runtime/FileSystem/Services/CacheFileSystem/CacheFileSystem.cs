@@ -13,16 +13,15 @@ namespace YooAsset
     internal class CacheFileSystem : IFileSystem
     {
         protected readonly Dictionary<string, string> _tempFilePathMapping = new Dictionary<string, string>(10000);
-
         protected string _packageRoot;
         protected string _tempFilesRoot;
-        protected string _cacheBundleFilesRoot;
         protected string _cacheManifestFilesRoot;
+        protected string _cacheBundleFilesRoot;
 
         /// <summary>
-        /// 文件缓存系统
+        /// 沙盒文件缓存系统
         /// </summary>
-        public BundleCache Cache { get; private set; }
+        public IFileCache FileCache { get; private set; }
 
         /// <summary>
         /// 下载调度器
@@ -39,28 +38,6 @@ namespace YooAsset
         /// </summary>
         public string PackageName { get; private set; }
 
-        /// <summary>
-        /// 文件根目录
-        /// </summary>
-        public string FileRoot
-        {
-            get
-            {
-                return _packageRoot;
-            }
-        }
-
-        /// <summary>
-        /// 文件数量
-        /// </summary>
-        public int FileCount
-        {
-            get
-            {
-                return Cache.FileCount;
-            }
-        }
-
         #region 自定义参数
         /// <summary>
         /// 自定义参数：UnityWebRequest 创建委托
@@ -75,7 +52,7 @@ namespace YooAsset
         /// <summary>
         /// 自定义参数：覆盖安装缓存清理模式
         /// </summary>
-        public EOverwriteInstallClearMode InstallClearMode { private set; get; } = EOverwriteInstallClearMode.ClearAllManifestFiles;
+        public EInstallCleanupMode InstallClearMode { private set; get; } = EInstallCleanupMode.ClearAllManifestFiles;
 
         /// <summary>
         /// 自定义参数：初始化的时候缓存文件校验级别
@@ -88,11 +65,6 @@ namespace YooAsset
         /// 说明：过大的值可能导致线程池任务过多，影响系统稳定性 
         /// </summary>
         public int FileVerifyMaxConcurrency { private set; get; } = 8;
-
-        /// <summary>
-        /// 自定义参数：数据文件追加文件格式
-        /// </summary>
-        public bool AppendFileExtension { private set; get; } = false;
 
         /// <summary>
         /// 自定义参数：禁用边玩边下机制
@@ -129,26 +101,10 @@ namespace YooAsset
         public List<long> ResumeDownloadResponseCodes { private set; get; } = null;
 
         /// <summary>
-        /// 自定义参数：加载 AssetBundle 的工厂委托
-        /// </summary>
-        public LoadAssetBundleOperationFactory LoadAssetBundleFactory { private set; get; }
-
-        /// <summary>
-        /// 自定义参数：加载 RawBundle 的工厂委托
-        /// </summary>
-        public LoadRawBundleOperationFactory LoadRawBundleFactory { private set; get; }
-
-        /// <summary>
         /// 自定义参数：资源清单服务类
         /// </summary>
         public IManifestRestoreServices ManifestRestoreServices { private set; get; }
-
-        /// <summary>
-        /// 自定义参数：拷贝内置文件接口的实例类
-        /// </summary>
-        public ILocalFileCopyServices CopyLocalFileServices { private set; get; }
         #endregion
-
 
         public CacheFileSystem()
         {
@@ -170,83 +126,31 @@ namespace YooAsset
         }
         public virtual FSClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
         {
-            if (options.ClearMode == EFileClearMode.ClearAllBundleFiles.ToString())
+            if (options.ClearMode == EManifestClearMode.ClearAllManifestFiles.ToString())
             {
-                var operation = new ClearAllCacheBundleFilesOperation(this);
+                var operation = new CFSClearAllCacheManifestOperation(this);
                 return operation;
             }
-            else if (options.ClearMode == EFileClearMode.ClearUnusedBundleFiles.ToString())
+            else if (options.ClearMode == EManifestClearMode.ClearUnusedManifestFiles.ToString())
             {
-                var operation = new ClearUnusedCacheBundleFilesOperation(this, options.Manifest);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearBundleFilesByLocations.ToString())
-            {
-                var operation = new ClearCacheBundleFilesByLocationsOperation(this, options.Manifest, options.ClearParam);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearBundleFilesByTags.ToString())
-            {
-                var operation = new ClearCacheBundleFilesByTagsOperation(this, options.Manifest, options.ClearParam);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearAllManifestFiles.ToString())
-            {
-                var operation = new ClearAllCacheManifestFilesOperation(this);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearUnusedManifestFiles.ToString())
-            {
-                var operation = new ClearUnusedCacheManifestFilesOperation(this, options.Manifest);
+                var operation = new CFSClearUnusedCacheManifestOperation(this, options.Manifest);
                 return operation;
             }
             else
             {
-                string error = $"Invalid clear mode : {options.ClearMode}";
-                var operation = new FSClearCacheCompleteOperation(error);
+                var operation = new CFSClearCacheOperation(this, options);
                 return operation;
             }
         }
         public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
         {
-            // 获取下载地址
-            PackageBundle bundle = options.Bundle;
-            if (string.IsNullOrEmpty(options.ImportFilePath))
-            {
-                // 注意：如果是解压文件系统类，这里会返回本地内置文件的下载路径
-                string mainURL = RemoteServices.GetRemoteMainURL(bundle.FileName);
-                string fallbackURL = RemoteServices.GetRemoteFallbackURL(bundle.FileName);
-                options.SetURL(mainURL, fallbackURL);
-            }
-            else
-            {
-                // 注意：把本地导入文件路径转换为下载器请求地址
-                string mainURL = DownloadSystemTools.ToLocalURL(options.ImportFilePath);
-                options.SetURL(mainURL, mainURL);
-            }
-
-            var downloader = new DownloadPackageBundleOperation(this, options);
+            var downloader = new CFSDownloadFileOperation(this, options);
             return downloader;
         }
         public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
         {
-            PackageBundle bundle = options.Bundle;
-            if (bundle.BundleType == (int)EBundleType.AssetBundle)
-            {
-                var operation = new CFSLoadAssetBundleOperation(this, bundle);
-                return operation;
-            }
-            else if (bundle.BundleType == (int)EBundleType.RawBundle)
-            {
-                var operation = new CFSLoadRawBundleOperation(this, bundle);
-                return operation;
-            }
-            else
-            {
-                string error = $"{nameof(CacheFileSystem)} not support load bundle type : {bundle.BundleType}";
-                var operation = new FSLoadBundleCompleteOperation(error);
-                return operation;
-            }
+            var operation = new CFSLoadBundleOperation(this, options);
+            return operation;
         }
 
         public virtual void SetParameter(string name, object value)
@@ -265,7 +169,7 @@ namespace YooAsset
             }
             else if (name == FileSystemParametersDefine.INSTALL_CLEAR_MODE)
             {
-                InstallClearMode = (EOverwriteInstallClearMode)value;
+                InstallClearMode = (EInstallCleanupMode)value;
             }
             else if (name == FileSystemParametersDefine.FILE_VERIFY_LEVEL)
             {
@@ -281,10 +185,6 @@ namespace YooAsset
 
                 // 限制在合理范围内：1-32                                                                            
                 FileVerifyMaxConcurrency = Mathf.Clamp(convertValue, 1, 32);
-            }
-            else if (name == FileSystemParametersDefine.APPEND_FILE_EXTENSION)
-            {
-                AppendFileExtension = Convert.ToBoolean(value);
             }
             else if (name == FileSystemParametersDefine.DISABLE_ONDEMAND_DOWNLOAD)
             {
@@ -325,21 +225,9 @@ namespace YooAsset
             {
                 ResumeDownloadResponseCodes = (List<long>)value;
             }
-            else if (name == FileSystemParametersDefine.LOAD_ASSETBUNDLE_OPERATION_FACTORY)
-            {
-                LoadAssetBundleFactory = (LoadAssetBundleOperationFactory)value;
-            }
-            else if (name == FileSystemParametersDefine.LOAD_RAWBUNDLE_OPERATION_FACTORY)
-            {
-                LoadRawBundleFactory = (LoadRawBundleOperationFactory)value;
-            }
             else if (name == FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES)
             {
                 ManifestRestoreServices = (IManifestRestoreServices)value;
-            }
-            else if (name == FileSystemParametersDefine.COPY_LOCAL_FILE_SERVICES)
-            {
-                CopyLocalFileServices = (ILocalFileCopyServices)value;
             }
             else
             {
@@ -360,22 +248,25 @@ namespace YooAsset
             _tempFilesRoot = PathUtility.Combine(_packageRoot, DefaultCacheFileSystemDefine.TempFilesFolderName);
 
             // 创建文件缓存系统
-            Cache = new BundleCache(PackageName, _cacheBundleFilesRoot, AppendFileExtension);
+            {
+                var cacheConfig = new SandboxFileCache.CacheConfig();
+                cacheConfig.FileVerifyLevel = FileVerifyLevel;
+                cacheConfig.FileVerifyMaxConcurrency = FileVerifyMaxConcurrency;
+                FileCache = new SandboxFileCache(PackageName, _cacheBundleFilesRoot, cacheConfig);
+            }
 
             // 创建默认的下载后台接口
             if (DownloadBackend == null)
                 DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
-
-            // 创建默认的 AssetBundle 加载工厂
-            if (LoadAssetBundleFactory == null)
-                LoadAssetBundleFactory = DefaultLoadAssetBundleOperationFactory;
-
-            // 创建默认的 RawBundle 加载工厂
-            if (LoadRawBundleFactory == null)
-                LoadRawBundleFactory = DefaultLoadRawBundleOperationFactory;
         }
         public virtual void OnDestroy()
         {
+            if (FileCache != null)
+            {
+                FileCache.Dispose();
+                FileCache = null;
+            }
+
             if (DownloadScheduler != null)
             {
                 DownloadScheduler.Dispose();
@@ -391,19 +282,15 @@ namespace YooAsset
 
         public virtual bool Belong(PackageBundle bundle)
         {
-            // 注意：缓存文件系统保底加载！
+            // 注意：沙盒文件系统保底加载！
             return true;
-        }
-        public virtual bool Exists(PackageBundle bundle)
-        {
-            return Cache.IsCached(bundle.BundleGUID);
         }
         public virtual bool NeedDownload(PackageBundle bundle)
         {
             if (Belong(bundle) == false)
                 return false;
 
-            return Exists(bundle) == false;
+            return FileCache.IsCached(bundle.BundleGUID) == false;
         }
         public virtual bool NeedUnpack(PackageBundle bundle)
         {
@@ -414,50 +301,18 @@ namespace YooAsset
             if (Belong(bundle) == false)
                 return false;
 
-            return Exists(bundle) == false;
-        }
-        public virtual string GetBundleFilePath(PackageBundle bundle)
-        {
-            return GetCacheBundleFileLoadPath(bundle);
+            return FileCache.IsCached(bundle.BundleGUID) == false;
         }
 
         #region 内部方法
-        private LoadAssetBundleOperation DefaultLoadAssetBundleOperationFactory(bool bundleEncrypted, LoadAssetBundleOptions options)
-        {
-            if (bundleEncrypted)
-            {
-                string error = $"{nameof(DefaultLoadAssetBundleOperation)} cannot load encrypted bundle. Please provide a custom {nameof(LoadAssetBundleOperationFactory)}.";
-                return new LoadAssetBundleCompleteOperation(error, options);
-            }
-            else
-            {
-                return new DefaultLoadAssetBundleOperation(options);
-            }
-        }
-        private LoadRawBundleOperation DefaultLoadRawBundleOperationFactory(bool bundleEncrypted, LoadRawBundleOptions options)
-        {
-            if (bundleEncrypted)
-            {
-                string error = $"{nameof(DefaultLoadRawBundleOperation)} cannot load encrypted bundle. Please provide a custom {nameof(LoadRawBundleOperationFactory)}.";
-                return new LoadRawBundleCompleteOperation(error, options);
-            }
-            else
-            {
-                return new DefaultLoadRawBundleOperation(options);
-            }
-        }
         public string GetDefaultCachePackageRoot(string packageName)
         {
             string rootDirectory = YooAssetSettingsData.GetYooDefaultCacheRoot();
             return PathUtility.Combine(rootDirectory, packageName);
         }
-        public string GetCacheBundleFileLoadPath(PackageBundle bundle)
+        public string GetCacheManifestFilesRoot()
         {
-            var entry = Cache.GetEntry(bundle.BundleGUID);
-            if (entry == null)
-                throw new YooInternalException();
-
-            return entry.DataFilePath;
+            return _cacheManifestFilesRoot;
         }
         public string GetCachePackageHashFilePath(string packageVersion)
         {
@@ -472,14 +327,6 @@ namespace YooAsset
         public string GetSandboxAppFootPrintFilePath()
         {
             return PathUtility.Combine(_cacheManifestFilesRoot, DefaultCacheFileSystemDefine.AppFootPrintFileName);
-        }
-        public string GetCacheBundleFilesRoot()
-        {
-            return _cacheBundleFilesRoot;
-        }
-        public string GetCacheManifestFilesRoot()
-        {
-            return _cacheManifestFilesRoot;
         }
         public string GetTempFilePath(PackageBundle bundle)
         {

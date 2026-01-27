@@ -1,4 +1,4 @@
-﻿using YooAsset;
+using YooAsset;
 
 internal class RequestWebPackageHashOperation : AsyncOperationBase
 {
@@ -57,7 +57,7 @@ internal class RequestWebPackageHashOperation : AsyncOperationBase
             if (_webTextRequestOp.IsDone == false)
                 return;
 
-            if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 PackageHash = _webTextRequestOp.Result;
                 if (string.IsNullOrEmpty(PackageHash))

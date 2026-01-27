@@ -1,8 +1,11 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 卸载未使用资源的异步操作
+    /// </summary>
     public sealed class UnloadUnusedAssetsOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -12,14 +15,14 @@ namespace YooAsset
             Done,
         }
 
-        private readonly ResourceManager _resManager;
+        private readonly ResourceManager _resourceManager;
         private readonly UnloadUnusedAssetsOptions _options;
         private int _loopCounter = 0;
         private ESteps _steps = ESteps.None;
 
         internal UnloadUnusedAssetsOperation(ResourceManager resourceManager, UnloadUnusedAssetsOptions options)
         {
-            _resManager = resourceManager;
+            _resourceManager = resourceManager;
             _options = options;
         }
         internal override void InternalStart()
@@ -64,16 +67,16 @@ namespace YooAsset
         /// </summary>
         private void LoopUnloadUnused()
         {
-            var removeList = new List<LoadBundleOperation>(_resManager.LoaderDic.Count);
+            var removeList = new List<LoadBundleOperation>(_resourceManager.BundleLoaderDict.Count);
 
             // 注意：优先销毁资源提供者
-            foreach (var loader in _resManager.LoaderDic.Values)
+            foreach (var loader in _resourceManager.BundleLoaderDict.Values)
             {
                 loader.TryDestroyProviders();
             }
 
             // 获取销毁列表
-            foreach (var loader in _resManager.LoaderDic.Values)
+            foreach (var loader in _resourceManager.BundleLoaderDict.Values)
             {
                 if (loader.CanDestroyLoader())
                 {
@@ -86,7 +89,7 @@ namespace YooAsset
             {
                 string bundleName = loader.LoadBundleInfo.Bundle.BundleName;
                 loader.DestroyLoader();
-                _resManager.LoaderDic.Remove(bundleName);
+                _resourceManager.BundleLoaderDict.Remove(bundleName);
             }
         }
     }

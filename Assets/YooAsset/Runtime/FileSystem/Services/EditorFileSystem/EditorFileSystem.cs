@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using UnityEngine;
 
 namespace YooAsset
 {
@@ -8,8 +8,17 @@ namespace YooAsset
     /// </summary>
     internal class EditorFileSystem : IFileSystem
     {
-        protected readonly Dictionary<string, string> _records = new Dictionary<string, string>(10000);
         protected string _packageRoot;
+
+        /// <summary>
+        /// 虚拟文件缓存系统
+        /// </summary>
+        public IFileCache FileCache { private set; get; }
+
+        /// <summary>
+        /// 解压调度器
+        /// </summary>
+        public DownloadSchedulerOperation DownloadScheduler { get; set; }
 
         /// <summary>
         /// 下载后台接口
@@ -21,28 +30,6 @@ namespace YooAsset
         /// </summary>
         public string PackageName { private set; get; }
 
-        /// <summary>
-        /// 文件根目录
-        /// </summary>
-        public string FileRoot
-        {
-            get
-            {
-                return _packageRoot;
-            }
-        }
-
-        /// <summary>
-        /// 文件数量
-        /// </summary>
-        public int FileCount
-        {
-            get
-            {
-                return 0;
-            }
-        }
-
         #region 自定义参数
         /// <summary>
         /// 自定义参数：UnityWebRequest 创建委托
@@ -50,27 +37,41 @@ namespace YooAsset
         public UnityWebRequestCreator WebRequestCreator { private set; get; }
 
         /// <summary>
-        /// 模拟WebGL平台模式
+        /// 自定义参数：模拟WebGL平台模式
         /// </summary>
         public bool VirtualWebGLMode { private set; get; } = false;
 
         /// <summary>
-        /// 模拟虚拟下载模式
+        /// 自定义参数：模拟虚拟下载模式
         /// </summary>
         public bool VirtualDownloadMode { private set; get; } = false;
 
         /// <summary>
-        /// 模拟虚拟下载的网速（单位：字节）
+        /// 自定义参数：模拟虚拟下载的网速（单位：字节）
         /// </summary>
         public int VirtualDownloadSpeed { private set; get; } = 1024;
 
         /// <summary>
-        /// 异步模拟加载最小帧数
+        /// 自定义参数：最大并发连接数
+        /// 默认值：8（推荐范围 1-32）
+        /// 说明：过大的并发数可能被服务器限流，也会增加本地资源消耗 
+        /// </summary>
+        public int DownloadMaxConcurrency { private set; get; } = 8;
+
+        /// <summary>
+        /// 自定义参数：每帧发起的最大请求数
+        /// 默认值：8（推荐范围 1-32） 
+        /// 说明：避免单帧发起过多请求导致卡顿 
+        /// </summary>
+        public int DownloadMaxRequestPerFrame { private set; get; } = 8;
+
+        /// <summary>
+        /// 自定义参数：异步模拟加载最小帧数
         /// </summary>
         public int AsyncSimulateMinFrame { private set; get; } = 1;
 
         /// <summary>
-        /// 异步模拟加载最大帧数
+        /// 自定义参数：异步模拟加载最大帧数
         /// </summary>
         public int AsyncSimulateMaxFrame { private set; get; } = 1;
         #endregion
@@ -100,25 +101,13 @@ namespace YooAsset
         }
         public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
         {
-            string mainURL = options.Bundle.BundleName;
-            options.SetURL(mainURL, mainURL);
-            var downloader = new DownloadVirtualBundleOperation(this, options);
+            var downloader = new EFSDownloadFileOperation(this, options);
             return downloader;
         }
         public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
         {
-            PackageBundle bundle = options.Bundle;
-            if (bundle.BundleType == (int)EBundleType.VirtualBundle)
-            {
-                var operation = new EFSLoadBundleOperation(this, bundle);
-                return operation;
-            }
-            else
-            {
-                string error = $"{nameof(EditorFileSystem)} not support load bundle type : {bundle.BundleType}";
-                var operation = new FSLoadBundleCompleteOperation(error);
-                return operation;
-            }
+            var operation = new EFSLoadBundleOperation(this, options);
+            return operation;
         }
 
         public virtual void SetParameter(string name, object value)
@@ -142,6 +131,28 @@ namespace YooAsset
             else if (name == FileSystemParametersDefine.VIRTUAL_DOWNLOAD_SPEED)
             {
                 VirtualDownloadSpeed = Convert.ToInt32(value);
+            }
+            else if (name == FileSystemParametersDefine.DOWNLOAD_MAX_CONCURRENCY)
+            {
+                int convertValue = Convert.ToInt32(value);
+                if (convertValue > 32)
+                {
+                    YooLogger.Warning($"DOWNLOAD_MAX_CONCURRENCY value {convertValue} is too large, clamped to 32. Recommended range: 1 - 32.");
+                }
+
+                // 限制在合理范围内：1-32          
+                DownloadMaxConcurrency = Mathf.Clamp(convertValue, 1, 32);
+            }
+            else if (name == FileSystemParametersDefine.DOWNLOAD_MAX_REQUEST_PER_FRAME)
+            {
+                int convertValue = Convert.ToInt32(value);
+                if (convertValue > 32)
+                {
+                    YooLogger.Warning($"DOWNLOAD_MAX_REQUEST_PER_FRAME value {convertValue} is too large, clamped to 32. Recommended range: 1 - 32.");
+                }
+
+                // 限制在合理范围内：1-32          
+                DownloadMaxRequestPerFrame = Mathf.Clamp(convertValue, 1, 32);
             }
             else if (name == FileSystemParametersDefine.ASYNC_SIMULATE_MIN_FRAME)
             {
@@ -168,9 +179,31 @@ namespace YooAsset
             // 创建默认的下载后台接口
             if (DownloadBackend == null)
                 DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
+
+            // 创建编辑器文件缓存系统
+            if (AsyncSimulateMinFrame > AsyncSimulateMaxFrame)
+                AsyncSimulateMinFrame = AsyncSimulateMaxFrame;
+            var cacheConfig = new EditorFileCache.CacheConfig();
+            cacheConfig.VirtualDownloadMode = VirtualDownloadMode;
+            cacheConfig.VirtualWebGLMode = VirtualWebGLMode;
+            cacheConfig.AsyncSimulateMinFrame = AsyncSimulateMinFrame;
+            cacheConfig.AsyncSimulateMaxFrame = AsyncSimulateMaxFrame;
+            FileCache = new EditorFileCache(packageName, _packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()
         {
+            if (FileCache != null)
+            {
+                FileCache.Dispose();
+                FileCache = null;
+            }
+
+            if (DownloadScheduler != null)
+            {
+                DownloadScheduler.Dispose();
+                DownloadScheduler = null;
+            }
+
             if (DownloadBackend != null)
             {
                 DownloadBackend.Dispose();
@@ -182,23 +215,12 @@ namespace YooAsset
         {
             return true;
         }
-        public virtual bool Exists(PackageBundle bundle)
-        {
-            if (VirtualDownloadMode)
-            {
-                return _records.ContainsKey(bundle.BundleGUID);
-            }
-            else
-            {
-                return true;
-            }
-        }
         public virtual bool NeedDownload(PackageBundle bundle)
         {
             if (Belong(bundle) == false)
                 return false;
 
-            return Exists(bundle) == false;
+            return FileCache.IsCached(bundle.BundleGUID) == false;
         }
         public virtual bool NeedUnpack(PackageBundle bundle)
         {
@@ -208,20 +230,15 @@ namespace YooAsset
         {
             return false;
         }
-        public virtual string GetBundleFilePath(PackageBundle bundle)
+
+        #region 内部方法
+        public string GetBundleFilePath(PackageBundle bundle)
         {
             if (bundle.IncludeMainAssets.Count == 0)
                 return string.Empty;
 
             var pacakgeAsset = bundle.IncludeMainAssets[0];
             return pacakgeAsset.AssetPath;
-        }
-
-        #region 内部方法
-        public void RecordDownloadFile(PackageBundle bundle)
-        {
-            if (_records.ContainsKey(bundle.BundleGUID) == false)
-                _records.Add(bundle.BundleGUID, bundle.BundleName);
         }
         public string GetEditorPackageVersionFilePath()
         {
@@ -237,15 +254,6 @@ namespace YooAsset
         {
             string fileName = YooAssetSettingsData.GetManifestBinaryFileName(PackageName, packageVersion);
             return PathUtility.Combine(_packageRoot, fileName);
-        }
-        public int GetAsyncSimulateFrame()
-        {
-            if (AsyncSimulateMinFrame > AsyncSimulateMaxFrame)
-            {
-                AsyncSimulateMinFrame = AsyncSimulateMaxFrame;
-            }
-
-            return UnityEngine.Random.Range(AsyncSimulateMinFrame, AsyncSimulateMaxFrame + 1);
         }
         #endregion
     }

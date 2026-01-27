@@ -11,6 +11,9 @@ namespace YooAsset
     /// </remarks>
     internal sealed class UnityWebRequestBytes : UnityWebRequestBase, IDownloadBytesRequest
     {
+        /// <summary>
+        /// 数据下载参数
+        /// </summary>
         private readonly DownloadDataRequestArgs _args;
 
         /// <summary>
@@ -24,7 +27,7 @@ namespace YooAsset
         /// <param name="args">数据下载参数</param>
         /// <param name="webRequestCreator">UnityWebRequest 创建器（可选）</param>
         public UnityWebRequestBytes(DownloadDataRequestArgs args, UnityWebRequestCreator webRequestCreator)
-            : base(args.URL, webRequestCreator)
+            : base(args.Url, webRequestCreator)
         {
             _args = args;
         }
@@ -35,7 +38,7 @@ namespace YooAsset
         protected override void CreateWebRequest()
         {
             var handler = new DownloadHandlerBuffer();
-            _webRequest = CreateGetRequest(URL);
+            _webRequest = CreateGetWebRequest(Url);
             _webRequest.downloadHandler = handler;
             _webRequest.disposeDownloadHandlerOnDispose = true;
             ConfigureRequest(_args.Timeout, _args.WatchdogTimeout, _args.Headers);
@@ -44,7 +47,7 @@ namespace YooAsset
         /// <summary>
         /// 请求成功时的回调
         /// </summary>
-        protected override void OnRequestSucceed()
+        protected override void OnRequestSucceeded()
         {
             Result = _webRequest.downloadHandler.data;
         }

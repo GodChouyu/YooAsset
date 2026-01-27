@@ -73,6 +73,6 @@ namespace YooAsset
         /// </remarks>
         /// <param name="args">模拟下载参数</param>
         /// <returns>模拟下载请求实例</returns>
-        IDownloadFileRequest CreateSimulateRequest(DownloadSimulateRequestArgs args);
+        IDownloadFileRequest CreateSimulateRequest(SimulateDownloadRequestArgs args);
     }
 }

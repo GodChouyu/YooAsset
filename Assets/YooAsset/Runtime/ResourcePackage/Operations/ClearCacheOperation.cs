@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 清理缓存操作
+    /// </summary>
     public sealed class ClearCacheOperation : AsyncOperationBase
     {
         private enum ESteps

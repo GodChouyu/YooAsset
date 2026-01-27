@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 资源包加载操作
+    /// </summary>
     internal class LoadBundleOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -14,9 +17,9 @@ namespace YooAsset
             Done,
         }
 
-        private readonly ResourceManager _resManager;
-        private readonly List<ProviderOperation> _providers = new List<ProviderOperation>(100);
-        private readonly List<ProviderOperation> _removeList = new List<ProviderOperation>(100);
+        private readonly ResourceManager _resourceManager;
+        private readonly List<ProviderBase> _providers = new List<ProviderBase>(100);
+        private readonly List<ProviderBase> _removeList = new List<ProviderBase>(100);
         private FSLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
@@ -48,12 +51,12 @@ namespace YooAsset
         /// <summary>
         /// 加载结果
         /// </summary>
-        public BundleResult Result { set; get; }
+        public IBundleResult Result { set; get; }
 
 
         internal LoadBundleOperation(ResourceManager resourceManager, BundleInfo bundleInfo)
         {
-            _resManager = resourceManager;
+            _resourceManager = resourceManager;
             LoadBundleInfo = bundleInfo;
         }
         internal override void InternalStart()
@@ -73,7 +76,7 @@ namespace YooAsset
                 }
                 else
                 {
-                    if (_resManager.BundleLoadingIsBusy())
+                    if (_resourceManager.IsBundleLoadingBusy())
                         return;
                     _steps = ESteps.LoadBundleFile;
                 }
@@ -84,7 +87,7 @@ namespace YooAsset
                 if (_loadBundleOp == null)
                 {
                     // 统计计数增加
-                    _resManager.IncrementBundleLoadingCounter();
+                    _resourceManager.IncrementBundleLoadingCounter();
                     _loadBundleOp = LoadBundleInfo.CreateBundleLoader();
                     _loadBundleOp.StartOperation();
                     AddChildOperation(_loadBundleOp);
@@ -122,7 +125,7 @@ namespace YooAsset
                 }
 
                 // 统计计数减少
-                _resManager.DecrementBundleLoadingCounter();
+                _resourceManager.DecrementBundleLoadingCounter();
             }
         }
         internal override void InternalWaitForCompletion()
@@ -159,10 +162,10 @@ namespace YooAsset
 
             // 注意：正在加载中的任务不可以销毁
             if (_steps == ESteps.LoadBundleFile)
-                throw new YooInternalException($"Cannot destroy loader while loading bundle : {LoadBundleInfo.Bundle.BundleName}");
+                throw new YooInternalException($"Cannot destroy loader while loading bundle: {LoadBundleInfo.Bundle.BundleName}");
 
             if (RefCount > 0)
-                throw new YooInternalException($"Cannot destroy loader with non-zero ref count {RefCount} : {LoadBundleInfo.Bundle.BundleName}");
+                throw new YooInternalException($"Cannot destroy loader with non-zero ref count {RefCount}: {LoadBundleInfo.Bundle.BundleName}");
 
             if (Result != null)
                 Result.UnloadBundleFile();
@@ -180,7 +183,7 @@ namespace YooAsset
         /// </summary>
         public bool CanDestroyLoader()
         {
-            if (CanReleasableLoader() == false)
+            if (IsReleasable() == false)
                 return false;
 
             // YOOASSET_LEGACY_DEPENDENCY
@@ -191,10 +194,10 @@ namespace YooAsset
                 foreach (var bundleID in LoadBundleInfo.Bundle.ReferenceBundleIDs)
                 {
 #if YOOASSET_EXPERIMENTAL
-                    if (_resManager.CheckBundleReleasable(bundleID) == false)
+                    if (_resourceManager.CheckBundleReleasable(bundleID) == false)
                         return false;
 #else
-                    if (_resManager.CheckBundleDestroyed(bundleID) == false)
+                    if (_resourceManager.CheckBundleDestroyed(bundleID) == false)
                         return false;
 #endif
                 }
@@ -206,7 +209,7 @@ namespace YooAsset
         /// <summary>
         /// 是否可以释放
         /// </summary>
-        public bool CanReleasableLoader()
+        public bool IsReleasable()
         {
             // 注意：正在加载中的任务不可以销毁
             if (_steps == ESteps.LoadBundleFile)
@@ -221,7 +224,7 @@ namespace YooAsset
         /// <summary>
         /// 添加附属的资源提供者
         /// </summary>
-        public void AddProvider(ProviderOperation provider)
+        public void AddProvider(ProviderBase provider)
         {
             if (_providers.Contains(provider) == false)
                 _providers.Add(provider);
@@ -252,7 +255,7 @@ namespace YooAsset
             // 移除资源提供者
             if (_removeList.Count > 0)
             {
-                _resManager.RemoveBundleProviders(_removeList);
+                _resourceManager.RemoveBundleProviders(_removeList);
                 _removeList.Clear();
             }
         }

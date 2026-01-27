@@ -162,7 +162,7 @@ namespace YooAsset.Editor
             EditorConnection.instance.UnregisterConnection(OnHandleConnectionEvent);
             EditorConnection.instance.UnregisterDisconnection(OnHandleDisconnectionEvent);
             EditorConnection.instance.Unregister(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
-            MockEditorConnection.Instance.Unregister(DiagnosticSystemDefine.PlayerToEditorMessageId);
+            MockEditorConnection.Instance.Unregister(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
             _playerSessions.Clear();
         }
         public void Update()

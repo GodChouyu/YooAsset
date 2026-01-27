@@ -78,7 +78,7 @@ namespace YooAsset
         public float Progress { get; protected set; }
 
         /// <summary>
-        /// 任务逻辑是否完成（Status为Succeed、Failed或Aborted）
+        /// 任务逻辑是否完成（Status为Succeeded、Failed或Aborted）
         /// </summary>
         public bool IsDone
         {
@@ -102,7 +102,7 @@ namespace YooAsset
                 {
                     try
                     {
-                        //注意：任务已完成，立即调用回调
+                        // 注意：任务已完成，立即调用回调
                         value.Invoke(this);
                     }
                     catch (Exception ex)
@@ -162,7 +162,7 @@ namespace YooAsset
         /// </summary>
         internal virtual void InternalWaitForCompletion()
         {
-            throw new YooInternalException($"InternalWaitForCompletion not implemented : {this.GetType().Name}");
+            throw new YooInternalException($"InternalWaitForCompletion() is not implemented: {this.GetType().Name}");
         }
 
         /// <summary>
@@ -183,17 +183,17 @@ namespace YooAsset
 
 #if UNITY_EDITOR || DEBUG
             if (child == null)
-                throw new YooInternalException("The child node is null.");
+                throw new YooInternalException("Child operation is null.");
 
             if (ReferenceEquals(child, this))
-                throw new YooInternalException("The child node cannot be itself.");
+                throw new YooInternalException("Cannot add operation as its own child.");
 
             if (_children.Contains(child))
-                throw new YooInternalException($"The child node {child.GetType().Name} already exists.");
+                throw new YooInternalException($"Child operation {child.GetType().Name} already exists.");
 
             // 禁止形成环依赖
             if (WouldCreateCycle(child))
-                throw new YooInternalException($"AddChildOperation would create a cycle : {this.GetType().Name} -> {child.GetType().Name}");
+                throw new YooInternalException($"Adding {child.GetType().Name} would create a circular dependency with {this.GetType().Name}.");
 #endif
 
             _children.Add(child);
@@ -209,10 +209,10 @@ namespace YooAsset
 
 #if UNITY_EDITOR || DEBUG
             if (child == null)
-                throw new YooInternalException("The child node is null.");
+                throw new YooInternalException("Child operation is null.");
 
             if (_children.Contains(child) == false)
-                throw new YooInternalException($"The child node {child.GetType().Name} not exists.");
+                throw new YooInternalException($"Child operation {child.GetType().Name} does not exist.");
 #endif
 
             _children.Remove(child);
@@ -247,7 +247,7 @@ namespace YooAsset
                 {
                     Status = EOperationStatus.Failed;
                     Error = ex.ToString();
-                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalStart : {ex}");
+                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalStart: {ex}");
                 }
             }
         }
@@ -273,7 +273,7 @@ namespace YooAsset
                 {
                     Status = EOperationStatus.Failed;
                     Error = ex.ToString();
-                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalUpdate : {ex}");
+                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalUpdate: {ex}");
                 }
             }
 
@@ -300,11 +300,11 @@ namespace YooAsset
             {
                 InternalAbort();
                 Status = EOperationStatus.Aborted;
-                Error = "user abort";
+                Error = "Aborted by user";
                 YooLogger.Warning($"Async operation {this.GetType().Name} has been aborted.");
             }
 
-            //注意：强制收尾，确保Task能完成
+            // 注意：强制收尾，确保Task能完成
             FinishOperation();
         }
 
@@ -397,7 +397,7 @@ namespace YooAsset
                 if (IsDone)
                     break;
 
-                // 注意： 短暂休眠避免完全占用CPU资源
+                // 注意：短暂休眠避免完全占用CPU资源
                 System.Threading.Thread.Sleep(sleepMS);
             }
         }
@@ -407,7 +407,7 @@ namespace YooAsset
         /// </summary>
         public void WaitForCompletion()
         {
-            //注意：防止异步操作被挂起陷入无限死循环！
+            // 注意：防止异步操作被挂起陷入无限死循环
             if (Status == EOperationStatus.None)
             {
                 StartOperation();
@@ -423,11 +423,11 @@ namespace YooAsset
                 if (IsDone == false)
                 {
                     Status = EOperationStatus.Failed;
-                    Error = $"Operation {this.GetType().Name} failed to wait for async complete.";
+                    Error = $"Operation {this.GetType().Name} failed to wait for completion.";
                     YooLogger.Error(Error);
                 }
 
-                //注意：强制收尾，确保Task能完成
+                // 注意：强制收尾，确保Task能完成
                 FinishOperation();
             }
         }

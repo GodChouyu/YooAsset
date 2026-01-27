@@ -9,17 +9,6 @@ namespace YooAsset
         string PackageName { get; }
 
         /// <summary>
-        /// 文件根目录
-        /// </summary>
-        string FileRoot { get; }
-
-        /// <summary>
-        /// 文件数量
-        /// </summary>
-        int FileCount { get; }
-
-
-        /// <summary>
         /// 初始化文件系统
         /// </summary>
         FSInitializeOperation InitializeAsync();
@@ -72,11 +61,6 @@ namespace YooAsset
         bool Belong(PackageBundle bundle);
 
         /// <summary>
-        /// 查询文件是否存在
-        /// </summary>
-        bool Exists(PackageBundle bundle);
-
-        /// <summary>
         /// 是否需要下载
         /// </summary>
         bool NeedDownload(PackageBundle bundle);
@@ -90,10 +74,5 @@ namespace YooAsset
         /// 是否需要导入
         /// </summary>
         bool NeedImport(PackageBundle bundle);
-
-        /// <summary>
-        /// 获取资源包本地路径
-        /// </summary>
-        string GetBundleFilePath(PackageBundle bundle);
     }
 }

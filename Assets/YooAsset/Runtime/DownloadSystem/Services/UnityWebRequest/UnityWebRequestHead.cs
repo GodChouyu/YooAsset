@@ -13,8 +13,17 @@ namespace YooAsset
     /// </remarks>
     internal sealed class UnityWebRequestHead : UnityWebRequestBase, IDownloadHeadRequest
     {
-        // 注意：缓存响应头（因为 WebRequest 释放后无法获取）
+        /// <summary>
+        /// 缓存的响应头（请求完成后从 WebRequest 复制）
+        /// </summary>
+        /// <remarks>
+        /// WebRequest 释放后无法获取响应头，因此需要提前缓存。
+        /// </remarks>
         private Dictionary<string, string> _cachedResponseHeaders;
+
+        /// <summary>
+        /// 数据下载参数
+        /// </summary>
         private readonly DownloadDataRequestArgs _args;
 
         /// <summary>
@@ -70,7 +79,7 @@ namespace YooAsset
         /// <param name="args">数据下载参数</param>
         /// <param name="webRequestCreator">UnityWebRequest 创建器（可选）</param>
         public UnityWebRequestHead(DownloadDataRequestArgs args, UnityWebRequestCreator webRequestCreator)
-                            : base(args.URL, webRequestCreator)
+                            : base(args.Url, webRequestCreator)
         {
             _args = args;
         }
@@ -98,7 +107,7 @@ namespace YooAsset
         /// </summary>
         protected override void CreateWebRequest()
         {
-            _webRequest = CreateHeadRequest(URL);
+            _webRequest = CreateHeadWebRequest(Url);
             _webRequest.downloadHandler = null; // HEAD 请求不需要 DownloadHandler
             ConfigureRequest(_args.Timeout, _args.WatchdogTimeout, _args.Headers);
         }
@@ -106,7 +115,7 @@ namespace YooAsset
         /// <summary>
         /// 请求成功时的回调
         /// </summary>
-        protected override void OnRequestSucceed()
+        protected override void OnRequestSucceeded()
         {
             var headers = _webRequest.GetResponseHeaders();
             if (headers != null)

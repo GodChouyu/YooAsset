@@ -1,16 +1,21 @@
-﻿
+
 namespace YooAsset
 {
     internal class BuiltinFileSystemConstants
     {
         /// <summary>
-        /// 内置清单JSON文件名称
+        /// 解压清单文件的文件夹名称
         /// </summary>
-        public const string BuiltinCatalogJsonFileName = "BuiltinCatalog.json";
+        public const string UnpackManifestFilesFolderName = "UnpackManifestFiles";
+        
+        /// <summary>
+        /// 解压资源文件的文件夹名称
+        /// </summary>
+        public const string UnpackBundleFilesFolderName = "UnpackBundleFiles";
 
         /// <summary>
-        /// 内置清单二进制文件名称
+        /// 解压临时文件的文件夹名称
         /// </summary>
-        public const string BuiltinCatalogBinaryFileName = "BuiltinCatalog.bytes";
+        public const string UnpackTempFilesFolderName = "UnpackTempFiles";
     }
 }

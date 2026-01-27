@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -59,7 +59,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             {
                 string sourcePath = GetBuildinHashFilePath();
                 string destPath = GetCacheHashFilePath();
-                string url = DownloadSystemTools.ToLocalURL(sourcePath);
+                string url = DownloadSystemTools.ToLocalUrl(sourcePath);
                 var args = new DownloadFileRequestArgs(url, destPath, 60, 0);
                 _hashFileRequestOp = _backend.CreateFileRequest(args);
                 _hashFileRequestOp.SendRequest();
@@ -68,7 +68,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             if (_hashFileRequestOp.IsDone == false)
                 return;
 
-            if (_hashFileRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_hashFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.CheckManifestFile;
             }
@@ -99,7 +99,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             {
                 string sourcePath = GetBuildinManifestFilePath();
                 string destPath = GetCacheManifestFilePath();
-                string url = DownloadSystemTools.ToLocalURL(sourcePath);
+                string url = DownloadSystemTools.ToLocalUrl(sourcePath);
                 var args = new DownloadFileRequestArgs(url, destPath, 60, 0);
                 _manifestFileRequestOp = _backend.CreateFileRequest(args);
                 _manifestFileRequestOp.SendRequest();
@@ -108,7 +108,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             if (_manifestFileRequestOp.IsDone == false)
                 return;
 
-            if (_manifestFileRequestOp.Status == EDownloadRequestStatus.Succeed)
+            if (_manifestFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeeded;

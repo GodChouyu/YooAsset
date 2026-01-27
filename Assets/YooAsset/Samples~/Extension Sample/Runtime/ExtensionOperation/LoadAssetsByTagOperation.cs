@@ -86,9 +86,9 @@ public class LoadAssetsByTagOperation<TObject> : AsyncOperationBase where TObjec
                 }
                 else
                 {
-                    Debug.LogError($"{handle.LastError}");
+                    Debug.LogError($"{handle.Error}");
                     AssetObjects.Clear();
-                    SetFailed(handle.LastError);
+                    SetFailed(handle.Error);
                     return;
                 }
             }

@@ -1,7 +1,10 @@
-﻿
+
 namespace YooAsset
 {
-    internal sealed class AllAssetsProvider : ProviderOperation
+    /// <summary>
+    /// 全资源提供者，负责加载资源包内所有资源
+    /// </summary>
+    internal sealed class AllAssetsProvider : ProviderBase
     {
         private FSLoadAllAssetsOperation _loadAllAssetsOp;
 
@@ -17,7 +20,7 @@ namespace YooAsset
                 AddChildOperation(_loadAllAssetsOp);
 
 #if UNITY_WEBGL
-                if (_resManager.WebGLForceSyncLoadAsset)
+                if (_resourceManager.WebGLForceSyncLoadAsset)
                     _loadAllAssetsOp.WaitForAsyncComplete();
 #endif
             }

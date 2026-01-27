@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -6,7 +6,10 @@ using UnityEngine.SceneManagement;
 
 namespace YooAsset
 {
-    internal sealed class SceneProvider : ProviderOperation
+    /// <summary>
+    /// 场景提供者，负责场景资源的加载
+    /// </summary>
+    internal sealed class SceneProvider : ProviderBase
     {
         private readonly LoadSceneParameters _loadParams;
         private bool _suspendLoad;

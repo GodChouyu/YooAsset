@@ -42,7 +42,7 @@ namespace YooAsset
                 return;
             }
 
-            YooLogger.Logger = logger;
+            YooLogger.LoggerInstance = logger;
 
             // 创建驱动器
             _isInitialized = true;

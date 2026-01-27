@@ -1,69 +1,8 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 
 namespace YooAsset
 {
-    internal class SafeProxy
-    {
-        private const uint Poly = 0xedb88320u;
-        private readonly uint[] _table = new uint[16 * 256];
-
-        internal SafeProxy()
-        {
-            Init(Poly);
-        }
-        public void Init(uint poly)
-        {
-            var table = _table;
-            for (uint i = 0; i < 256; i++)
-            {
-                uint res = i;
-                for (int t = 0; t < 16; t++)
-                {
-                    for (int k = 0; k < 8; k++) res = (res & 1) == 1 ? poly ^ (res >> 1) : (res >> 1);
-                    table[(t * 256) + i] = res;
-                }
-            }
-        }
-        public uint Append(uint crc, byte[] input, int offset, int length)
-        {
-            uint crcLocal = uint.MaxValue ^ crc;
-
-            uint[] table = _table;
-            while (length >= 16)
-            {
-                var a = table[(3 * 256) + input[offset + 12]]
-                    ^ table[(2 * 256) + input[offset + 13]]
-                    ^ table[(1 * 256) + input[offset + 14]]
-                    ^ table[(0 * 256) + input[offset + 15]];
-
-                var b = table[(7 * 256) + input[offset + 8]]
-                    ^ table[(6 * 256) + input[offset + 9]]
-                    ^ table[(5 * 256) + input[offset + 10]]
-                    ^ table[(4 * 256) + input[offset + 11]];
-
-                var c = table[(11 * 256) + input[offset + 4]]
-                    ^ table[(10 * 256) + input[offset + 5]]
-                    ^ table[(9 * 256) + input[offset + 6]]
-                    ^ table[(8 * 256) + input[offset + 7]];
-
-                var d = table[(15 * 256) + ((byte)crcLocal ^ input[offset])]
-                    ^ table[(14 * 256) + ((byte)(crcLocal >> 8) ^ input[offset + 1])]
-                    ^ table[(13 * 256) + ((byte)(crcLocal >> 16) ^ input[offset + 2])]
-                    ^ table[(12 * 256) + ((crcLocal >> 24) ^ input[offset + 3])];
-
-                crcLocal = d ^ c ^ b ^ a;
-                offset += 16;
-                length -= 16;
-            }
-
-            while (--length >= 0)
-                crcLocal = table[(byte)(crcLocal ^ input[offset++])] ^ crcLocal >> 8;
-
-            return crcLocal ^ uint.MaxValue;
-        }
-    }
-
     /// <summary>
     /// This is .NET safe implementation of Crc32 algorithm.
     /// Implementation of CRC-32.
@@ -71,12 +10,73 @@ namespace YooAsset
     /// </summary>
     internal class CRC32Algorithm : HashAlgorithm
     {
+        private class CRC32Table
+        {
+            private const uint Poly = 0xedb88320u;
+            private readonly uint[] _table = new uint[16 * 256];
+
+            internal CRC32Table()
+            {
+                Init(Poly);
+            }
+            public void Init(uint poly)
+            {
+                var table = _table;
+                for (uint i = 0; i < 256; i++)
+                {
+                    uint res = i;
+                    for (int t = 0; t < 16; t++)
+                    {
+                        for (int k = 0; k < 8; k++) res = (res & 1) == 1 ? poly ^ (res >> 1) : (res >> 1);
+                        table[(t * 256) + i] = res;
+                    }
+                }
+            }
+            public uint Append(uint crc, byte[] input, int offset, int length)
+            {
+                uint crcLocal = uint.MaxValue ^ crc;
+
+                uint[] table = _table;
+                while (length >= 16)
+                {
+                    var a = table[(3 * 256) + input[offset + 12]]
+                        ^ table[(2 * 256) + input[offset + 13]]
+                        ^ table[(1 * 256) + input[offset + 14]]
+                        ^ table[(0 * 256) + input[offset + 15]];
+
+                    var b = table[(7 * 256) + input[offset + 8]]
+                        ^ table[(6 * 256) + input[offset + 9]]
+                        ^ table[(5 * 256) + input[offset + 10]]
+                        ^ table[(4 * 256) + input[offset + 11]];
+
+                    var c = table[(11 * 256) + input[offset + 4]]
+                        ^ table[(10 * 256) + input[offset + 5]]
+                        ^ table[(9 * 256) + input[offset + 6]]
+                        ^ table[(8 * 256) + input[offset + 7]];
+
+                    var d = table[(15 * 256) + ((byte)crcLocal ^ input[offset])]
+                        ^ table[(14 * 256) + ((byte)(crcLocal >> 8) ^ input[offset + 1])]
+                        ^ table[(13 * 256) + ((byte)(crcLocal >> 16) ^ input[offset + 2])]
+                        ^ table[(12 * 256) + ((crcLocal >> 24) ^ input[offset + 3])];
+
+                    crcLocal = d ^ c ^ b ^ a;
+                    offset += 16;
+                    length -= 16;
+                }
+
+                while (--length >= 0)
+                    crcLocal = table[(byte)(crcLocal ^ input[offset++])] ^ crcLocal >> 8;
+
+                return crcLocal ^ uint.MaxValue;
+            }
+        }
+
         private uint _currentCrc;
 
         /// <summary>
         /// Gets the computed hash value.
         /// </summary>
-        public uint CRCValue { private set; get; }
+        public uint Crc32Value { private set; get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CRC32Algorithm"/> class. 
@@ -109,7 +109,7 @@ namespace YooAsset
         /// </summary>
         protected override byte[] HashFinal()
         {
-            CRCValue = _currentCrc;
+            Crc32Value = _currentCrc;
 
             if (BitConverter.IsLittleEndian)
                 return new[] { (byte)_currentCrc, (byte)(_currentCrc >> 8), (byte)(_currentCrc >> 16), (byte)(_currentCrc >> 24) };
@@ -188,7 +188,7 @@ namespace YooAsset
         public static uint ComputeAndWriteToEnd(byte[] input, int offset, int length)
         {
             if (length + 4 > input.Length)
-                throw new ArgumentOutOfRangeException("length", "Length of data should be less than array length - 4 bytes of CRC data");
+                throw new ArgumentOutOfRangeException("length", "Data length exceeds buffer capacity (need 4 bytes reserved for CRC)");
             var crc = Append(0, input, offset, length);
             var r = offset + length;
             input[r] = (byte)crc;
@@ -206,7 +206,7 @@ namespace YooAsset
         public static uint ComputeAndWriteToEnd(byte[] input)
         {
             if (input.Length < 4)
-                throw new ArgumentOutOfRangeException("input", "Input array should be 4 bytes at least");
+                throw new ArgumentOutOfRangeException("input", "Input array must be at least 4 bytes");
             return ComputeAndWriteToEnd(input, 0, input.Length - 4);
         }
 
@@ -230,17 +230,17 @@ namespace YooAsset
         public static bool IsValidWithCrcAtEnd(byte[] input)
         {
             if (input.Length < 4)
-                throw new ArgumentOutOfRangeException("input", "Input array should be 4 bytes at least");
+                throw new ArgumentOutOfRangeException("input", "Input array must be at least 4 bytes");
             return Append(0, input, 0, input.Length) == 0x2144DF1C;
         }
 
 
-        private static readonly SafeProxy _proxy = new SafeProxy();
+        private static readonly CRC32Table _table = new CRC32Table();
         private static uint AppendInternal(uint initial, byte[] input, int offset, int length)
         {
             if (length > 0)
             {
-                return _proxy.Append(initial, input, offset, length);
+                return _table.Append(initial, input, offset, length);
             }
             else
                 return initial;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Networking.PlayerConnection;
 
@@ -39,7 +39,7 @@ namespace YooAsset
         private void OnDisable()
         {
 #if UNITY_EDITOR
-            MockPlayerConnection.Instance.Unregister(DiagnosticSystemDefine.EditorToPlayerMessageId);
+            MockPlayerConnection.Instance.Unregister(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
 #else
             PlayerConnection.instance.Unregister(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
 #endif

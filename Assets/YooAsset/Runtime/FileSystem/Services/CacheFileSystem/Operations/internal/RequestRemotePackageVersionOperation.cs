@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     internal class RequestRemotePackageVersionOperation : AsyncOperationBase
@@ -55,7 +55,7 @@ namespace YooAsset
                 if (_webTextRequestOp.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     PackageVersion = _webTextRequestOp.Result;
                     if (string.IsNullOrEmpty(PackageVersion))

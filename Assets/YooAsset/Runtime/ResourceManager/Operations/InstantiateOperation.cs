@@ -1,7 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 游戏对象实例化操作
+    /// </summary>
     public sealed class InstantiateOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -95,7 +98,7 @@ namespace YooAsset
                     _instantiateAsync = InstantiateAsyncInternal(_handle.AssetObject, _options);
                 }
 
-                if (IsWaitingForAsyncComplete)
+                if (IsWaitForCompletion)
                     _instantiateAsync.WaitForCompletion();
 
                 if (_instantiateAsync.isDone == false)
@@ -110,20 +113,20 @@ namespace YooAsset
                             Result.SetActive(false);
 
                         _steps = ESteps.Done;
-                        Status = EOperationStatus.Succeed;
+                        Status = EOperationStatus.Succeeded;
                     }
                     else
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Instantiate game object is null.";
+                        Error = $"Instantiated game object is null.";
                     }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Instantiate async results is null.";
+                    Error = $"Async instantiate results are null.";
                 }
             }
 #endif

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
@@ -66,7 +66,7 @@ namespace YooAsset
                 if (_webFileRequestOp.IsDone == false)
                     return;
 
-                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeed)
+                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;

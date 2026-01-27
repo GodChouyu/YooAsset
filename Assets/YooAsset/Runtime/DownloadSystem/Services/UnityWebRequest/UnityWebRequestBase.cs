@@ -13,33 +13,54 @@ namespace YooAsset
     /// </remarks>
     internal abstract class UnityWebRequestBase : IDownloadRequest
     {
+        /// <summary>
+        /// 自定义 UnityWebRequest 创建器
+        /// </summary>
         private readonly UnityWebRequestCreator _webRequestCreator;
+
+        /// <summary>
+        /// UnityWebRequest 实例
+        /// </summary>
         protected UnityWebRequest _webRequest;
 
-        // 看门狗相关
+        /// <summary>
+        /// 看门狗超时时间（秒）
+        /// </summary>
         private int _watchdogTimeout = 0;
+
+        /// <summary>
+        /// 是否已被看门狗中止
+        /// </summary>
         private bool _watchdogAborted = false;
-        private long _lastDownloadBytes = -1;
-        private double _lastDataReceivedTime;
+
+        /// <summary>
+        /// 最近一次记录的下载字节数
+        /// </summary>
+        private long _lastestDownloadBytes = -1;
+
+        /// <summary>
+        /// 最近一次接收数据的时间
+        /// </summary>
+        private double _lastestDataReceivedTime;
 
         #region 接口实现
         /// <summary>
         /// 请求地址
         /// </summary>
-        public string URL { get; }
+        public string Url { get; }
 
         /// <summary>
         /// 是否完成
         /// </summary>
         /// <remarks>
-        /// 每次调用都会主动轮询请求 PollingRequest
+        /// 每次访问此属性都会自动调用内部方法 UpdateRequest() 进行状态更新。
         /// </remarks>
         public bool IsDone
         {
             get
             {
-                PollingRequest();
-                return Status == EDownloadRequestStatus.Succeed
+                PollRequest();
+                return Status == EDownloadRequestStatus.Succeeded
                     || Status == EDownloadRequestStatus.Failed
                     || Status == EDownloadRequestStatus.Aborted;
             }
@@ -78,7 +99,7 @@ namespace YooAsset
         /// <param name="webRequestCreator">UnityWebRequest 创建器（可选）</param>
         protected UnityWebRequestBase(string url, UnityWebRequestCreator webRequestCreator)
         {
-            URL = url;
+            Url = url;
             _webRequestCreator = webRequestCreator;
             Status = EDownloadRequestStatus.None;
         }
@@ -86,6 +107,10 @@ namespace YooAsset
         /// <summary>
         /// 发起请求
         /// </summary>
+        /// <remarks>
+        /// 仅在 Status 为 None 时生效，重复调用无效。
+        /// 调用后 Status 变为 Running。
+        /// </remarks>
         public void SendRequest()
         {
             if (Status == EDownloadRequestStatus.None)
@@ -99,7 +124,7 @@ namespace YooAsset
                     if (_webRequest == null)
                     {
                         Status = EDownloadRequestStatus.Failed;
-                        Error = $"[{GetType().Name}] Created web request is null.";
+                        Error = $"[{GetType().Name}] CreateWebRequest() returned null";
                     }
                     else
                     {
@@ -115,46 +140,12 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 轮询请求
-        /// </summary>
-        public void PollingRequest()
-        {
-            if (Status != EDownloadRequestStatus.Running)
-                return;
-
-            DownloadProgress = _webRequest.downloadProgress;
-            DownloadedBytes = (long)_webRequest.downloadedBytes;
-
-            TickWatchdog();
-            if (_webRequest.isDone == false)
-                return;
-
-            HttpCode = _webRequest.responseCode;
-#if UNITY_2020_3_OR_NEWER
-            bool isSuccess = _webRequest.result == UnityWebRequest.Result.Success;
-#else
-            bool isSuccess = !_webRequest.isNetworkError && !_webRequest.isHttpError;
-#endif
-
-            if (isSuccess)
-            {
-                Status = EDownloadRequestStatus.Succeed;
-                OnRequestSucceed();
-            }
-            else
-            {
-                Status = EDownloadRequestStatus.Failed;
-                Error = $"[{GetType().Name}] URL: {URL} - Error: {_webRequest.error}";
-                OnRequestFailed();
-            }
-
-            // 完成后释放
-            CleanupWebRequest();
-        }
-
-        /// <summary>
         /// 中止请求
         /// </summary>
+        /// <remarks>
+        /// 可在任意状态调用，仅当 Status 为 None 或 Running 时生效。
+        /// 调用后 Status 变为 Aborted。
+        /// </remarks>
         public void AbortRequest()
         {
             if (Status == EDownloadRequestStatus.None || Status == EDownloadRequestStatus.Running)
@@ -182,7 +173,7 @@ namespace YooAsset
         /// <summary>
         /// 请求成功时的回调（子类可重写）
         /// </summary>
-        protected virtual void OnRequestSucceed()
+        protected virtual void OnRequestSucceeded()
         {
         }
 
@@ -199,7 +190,7 @@ namespace YooAsset
         /// </summary>
         /// <param name="requestUrl">请求地址</param>
         /// <returns>UnityWebRequest 实例</returns>
-        protected UnityWebRequest CreateGetRequest(string requestUrl)
+        protected UnityWebRequest CreateGetWebRequest(string requestUrl)
         {
             if (_webRequestCreator != null)
                 return _webRequestCreator.Invoke(requestUrl, UnityWebRequest.kHttpVerbGET);
@@ -212,7 +203,7 @@ namespace YooAsset
         /// </summary>
         /// <param name="requestUrl">请求地址</param>
         /// <returns>UnityWebRequest 实例</returns>
-        protected UnityWebRequest CreateHeadRequest(string requestUrl)
+        protected UnityWebRequest CreateHeadWebRequest(string requestUrl)
         {
             if (_webRequestCreator != null)
                 return _webRequestCreator.Invoke(requestUrl, UnityWebRequest.kHttpVerbHEAD);
@@ -223,10 +214,13 @@ namespace YooAsset
         /// <summary>
         /// 配置通用请求参数
         /// </summary>
+        /// <param name="timeout">响应超时时间（秒），0 表示不应用超时</param>
+        /// <param name="watchdogTimeout">看门狗超时时间（秒），0 表示禁用</param>
+        /// <param name="headers">自定义请求头（可选）</param>
         protected void ConfigureRequest(int timeout, int watchdogTimeout, Dictionary<string, string> headers)
         {
             if (_webRequest == null)
-                throw new YooInternalException("Web request is null.");
+                throw new YooInternalException("Cannot configure request: UnityWebRequest object is null. Ensure CreateWebRequest() is called first.");
 
             // 设置看门狗超时时间
             _watchdogTimeout = watchdogTimeout;
@@ -246,9 +240,47 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 检测看门狗
+        /// 更新网络请求
         /// </summary>
-        private void TickWatchdog()
+        private void PollRequest()
+        {
+            if (Status != EDownloadRequestStatus.Running)
+                return;
+
+            DownloadProgress = _webRequest.downloadProgress;
+            DownloadedBytes = (long)_webRequest.downloadedBytes;
+
+            UpdateWatchdog();
+            if (_webRequest.isDone == false)
+                return;
+
+            HttpCode = _webRequest.responseCode;
+#if UNITY_2020_3_OR_NEWER
+            bool isSuccess = _webRequest.result == UnityWebRequest.Result.Success;
+#else
+            bool isSuccess = !_webRequest.isNetworkError && !_webRequest.isHttpError;
+#endif
+
+            if (isSuccess)
+            {
+                Status = EDownloadRequestStatus.Succeeded;
+                OnRequestSucceeded();
+            }
+            else
+            {
+                Status = EDownloadRequestStatus.Failed;
+                Error = $"[{GetType().Name}] Request failed. URL: {Url}, Error: {_webRequest.error}";
+                OnRequestFailed();
+            }
+
+            // 完成后释放
+            CleanupWebRequest();
+        }
+
+        /// <summary>
+        /// 更新看门狗机制
+        /// </summary>
+        private void UpdateWatchdog()
         {
             if (_watchdogTimeout == 0)
                 return;
@@ -256,14 +288,14 @@ namespace YooAsset
                 return;
 
             double realtimeSinceStartup = TimeUtility.RealtimeSinceStartup;
-            if (DownloadedBytes != _lastDownloadBytes)
+            if (DownloadedBytes != _lastestDownloadBytes)
             {
-                _lastDownloadBytes = DownloadedBytes;
-                _lastDataReceivedTime = realtimeSinceStartup;
+                _lastestDownloadBytes = DownloadedBytes;
+                _lastestDataReceivedTime = realtimeSinceStartup;
             }
             else
             {
-                double deltaTime = realtimeSinceStartup - _lastDataReceivedTime;
+                double deltaTime = realtimeSinceStartup - _lastestDataReceivedTime;
                 if (deltaTime > _watchdogTimeout)
                 {
                     _watchdogAborted = true;

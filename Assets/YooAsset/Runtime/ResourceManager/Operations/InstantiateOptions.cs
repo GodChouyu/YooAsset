@@ -1,7 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 游戏对象实例化选项
+    /// </summary>
     public struct InstantiateOptions
     {
         /// <summary>
@@ -33,6 +36,10 @@ namespace YooAsset
 
         internal bool SetPositionAndRotation { private set; get; }
 
+        /// <summary>
+        /// 创建实例化选项（仅指定激活状态）
+        /// </summary>
+        /// <param name="actived">是否激活实例化对象</param>
         public InstantiateOptions(bool actived)
         {
             Actived = actived;
@@ -43,6 +50,13 @@ namespace YooAsset
             Position = Vector3.zero;
             Rotation = Quaternion.identity;
         }
+
+        /// <summary>
+        /// 创建实例化选项（指定父对象）
+        /// </summary>
+        /// <param name="actived">是否激活实例化对象</param>
+        /// <param name="parent">父对象</param>
+        /// <param name="inWorldSpace">是否在世界空间中定位</param>
         public InstantiateOptions(bool actived, Transform parent, bool inWorldSpace)
         {
             Actived = actived;
@@ -53,7 +67,15 @@ namespace YooAsset
             Position = Vector3.zero;
             Rotation = Quaternion.identity;
         }
-        public InstantiateOptions(bool actived, Transform parent,  Vector3 position, Quaternion rotation)
+
+        /// <summary>
+        /// 创建实例化选项（指定父对象和位置旋转）
+        /// </summary>
+        /// <param name="actived">是否激活实例化对象</param>
+        /// <param name="parent">父对象</param>
+        /// <param name="position">位置</param>
+        /// <param name="rotation">旋转</param>
+        public InstantiateOptions(bool actived, Transform parent, Vector3 position, Quaternion rotation)
         {
             Actived = actived;
             Parent = parent;
@@ -63,6 +85,13 @@ namespace YooAsset
             Position = position;
             Rotation = rotation;
         }
+
+        /// <summary>
+        /// 创建实例化选项（指定位置旋转）
+        /// </summary>
+        /// <param name="actived">是否激活实例化对象</param>
+        /// <param name="position">位置</param>
+        /// <param name="rotation">旋转</param>
         public InstantiateOptions(bool actived, Vector3 position, Quaternion rotation)
         {
             Actived = actived;

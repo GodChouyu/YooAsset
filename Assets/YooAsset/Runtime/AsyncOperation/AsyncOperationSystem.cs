@@ -68,7 +68,7 @@ namespace YooAsset
                 if (_maxTimeSlice == long.MaxValue)
                     return false;
 
-                // 注意 : 单次调用开销约1微秒
+                // 注意：单次调用开销约1微秒
                 return _stopwatch.ElapsedMilliseconds - _frameStartTime >= _maxTimeSlice;
             }
         }
@@ -265,7 +265,7 @@ namespace YooAsset
                 throw new YooInternalException("Package name is null or empty.");
 
             if (_isInitialized == false)
-                throw new YooInternalException($"{nameof(AsyncOperationSystem)} not initialized.");
+                throw new YooInternalException($"{nameof(AsyncOperationSystem)} is not initialized.");
         }
         #endregion
     }

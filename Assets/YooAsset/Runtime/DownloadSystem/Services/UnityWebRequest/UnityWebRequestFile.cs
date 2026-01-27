@@ -11,6 +11,9 @@ namespace YooAsset
     /// </remarks>
     internal sealed class UnityWebRequestFile : UnityWebRequestBase, IDownloadFileRequest
     {
+        /// <summary>
+        /// 文件下载参数
+        /// </summary>
         private readonly DownloadFileRequestArgs _args;
 
         /// <summary>
@@ -27,7 +30,7 @@ namespace YooAsset
         /// <param name="args">文件下载参数</param>
         /// <param name="webRequestCreator">UnityWebRequest 创建器（可选）</param>
         public UnityWebRequestFile(DownloadFileRequestArgs args, UnityWebRequestCreator webRequestCreator)
-            : base(args.URL, webRequestCreator)
+            : base(args.Url, webRequestCreator)
         {
             _args = args;
         }
@@ -40,7 +43,7 @@ namespace YooAsset
             var handler = new DownloadHandlerFile(_args.SavePath, _args.AppendToFile);
             handler.removeFileOnAbort = _args.RemoveFileOnAbort;
 
-            _webRequest = CreateGetRequest(URL);
+            _webRequest = CreateGetWebRequest(Url);
             _webRequest.downloadHandler = handler;
             _webRequest.disposeDownloadHandlerOnDispose = true;
 
