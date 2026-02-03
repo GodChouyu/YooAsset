@@ -94,19 +94,19 @@ namespace YooAsset.Editor
         public string BuildinFileCopyParams;
 
         /// <summary>
-        /// 资源包加密服务类
+        /// 资源包加密器
         /// </summary>
-        public IBundleEncryptionServices EncryptionServices;
+        public IBundleEncryptor BundleEncryptor;
 
         /// <summary>
-        /// 资源清单加密服务类
+        /// 资源清单加密器
         /// </summary>
-        public IManifestProcessServices ManifestProcessServices;
+        public IManifestEncryptor ManifestEncryptor;
 
         /// <summary>
-        /// 资源清单解密服务类
+        /// 资源清单解密器
         /// </summary>
-        public IManifestRestoreServices ManifestRestoreServices;
+        public IManifestDecryptor ManifestDecryptor;
 
         private string _pipelineOutputDirectory = string.Empty;
         private string _packageOutputDirectory = string.Empty;

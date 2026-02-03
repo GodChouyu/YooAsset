@@ -83,7 +83,7 @@ namespace YooAsset.Editor
         public static string GetPackageManifestProcessServicesClassName(string packageName, string buildPipeline)
         {
             string key = $"{Application.productName}_{packageName}_{buildPipeline}_ManifestProcessServicesClassName";
-            return EditorPrefs.GetString(key, $"{typeof(ManifestProcessNone).FullName}");
+            return EditorPrefs.GetString(key, $"{typeof(ManifestEncryptorNone).FullName}");
         }
         public static void SetPackageManifestProcessServicesClassName(string packageName, string buildPipeline, string encyptionClassName)
         {
@@ -95,7 +95,7 @@ namespace YooAsset.Editor
         public static string GetPackageManifestRestoreServicesClassName(string packageName, string buildPipeline)
         {
             string key = $"{Application.productName}_{packageName}_{buildPipeline}_ManifestRestoreServicesClassName";
-            return EditorPrefs.GetString(key, $"{typeof(ManifestRestoreNone).FullName}");
+            return EditorPrefs.GetString(key, $"{typeof(ManifestDecryptorNone).FullName}");
         }
         public static void SetPackageManifestRestoreServicesClassName(string packageName, string buildPipeline, string encyptionClassName)
         {

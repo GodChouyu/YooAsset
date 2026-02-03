@@ -23,7 +23,7 @@ namespace YooAsset
             Done,
         }
 
-        private readonly IManifestRestoreServices _services;
+        private readonly IManifestDecryptor _decryptor;
         private byte[] _sourceData;
         private BufferReader _buffer;
         private int _packageAssetCount;
@@ -36,9 +36,9 @@ namespace YooAsset
         /// </summary>
         public PackageManifest Manifest { get; private set; }
 
-        public DeserializeManifestOperation(IManifestRestoreServices services, byte[] binaryData)
+        public DeserializeManifestOperation(IManifestDecryptor decryptor, byte[] binaryData)
         {
-            _services = services;
+            _decryptor = decryptor;
             _sourceData = binaryData;
         }
         internal override void InternalStart()
@@ -52,9 +52,9 @@ namespace YooAsset
 
             if (_steps == ESteps.RestoreFileData)
             {
-                if (_services != null)
+                if (_decryptor != null)
                 {
-                    var resultData = _services.RestoreManifest(_sourceData);
+                    var resultData = _decryptor.Decrypt(_sourceData);
                     if (resultData != null)
                         _sourceData = resultData;
                 }

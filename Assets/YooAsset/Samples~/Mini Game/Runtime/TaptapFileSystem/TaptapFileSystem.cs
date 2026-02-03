@@ -105,7 +105,7 @@ internal class TaptapFileSystem : IFileSystem
     public IWebDecryptionServices DecryptionServices { private set; get; }
 
     /// <summary>
-    /// 自定义参数：资源清单服务类
+    /// 自定义参数：资源清单解密器
     /// </summary>
     public IManifestRestoreServices ManifestServices { private set; get; }
     #endregion

@@ -22,75 +22,77 @@ public class BundleStream : FileStream
         return index;
     }
 }
-public class TestFileStreamEncryption : IBundleEncryptionServices
+public class TestFileStreamEncryption : IBundleEncryptor
 {
-    public BundleEncryptionResult Encrypt(BundleEncryptionContext fileInfo)
+    public BundleEncryptResult Encrypt(BundleEncryptArgs fileInfo)
     {
         // 说明：对TestRes3资源目录进行加密
         if (fileInfo.BundleName.Contains("_testres3_"))
         {
-            var fileData = File.ReadAllBytes(fileInfo.FileLoadPath);
+            var fileData = File.ReadAllBytes(fileInfo.FilePath);
             for (int i = 0; i < fileData.Length; i++)
             {
                 fileData[i] ^= BundleStream.KEY;
             }
 
-            BundleEncryptionResult result = new BundleEncryptionResult();
+            BundleEncryptResult result = new BundleEncryptResult();
             result.Encrypted = true;
-            result.EncryptedData = fileData;
+            result.EncryptedFileData = fileData;
             return result;
         }
         else
         {
-            BundleEncryptionResult result = new BundleEncryptionResult();
+            BundleEncryptResult result = new BundleEncryptResult();
             result.Encrypted = false;
             return result;
         }
     }
 }
-public class TestFileOffsetEncryption : IBundleEncryptionServices
+public class TestFileOffsetEncryption : IBundleEncryptor
 {
-    public BundleEncryptionResult Encrypt(BundleEncryptionContext fileInfo)
+    public BundleEncryptResult Encrypt(BundleEncryptArgs fileInfo)
     {
         // 说明：对TestRes3资源目录进行加密
         if (fileInfo.BundleName.Contains("_testres3_"))
         {
             int offset = 32;
-            byte[] fileData = File.ReadAllBytes(fileInfo.FileLoadPath);
+            byte[] fileData = File.ReadAllBytes(fileInfo.FilePath);
             var encryptedData = new byte[fileData.Length + offset];
             Buffer.BlockCopy(fileData, 0, encryptedData, offset, fileData.Length);
 
-            BundleEncryptionResult result = new BundleEncryptionResult();
+            BundleEncryptResult result = new BundleEncryptResult();
             result.Encrypted = true;
-            result.EncryptedData = encryptedData;
+            result.EncryptedFileData = encryptedData;
             return result;
         }
         else
         {
-            BundleEncryptionResult result = new BundleEncryptionResult();
+            BundleEncryptResult result = new BundleEncryptResult();
             result.Encrypted = false;
             return result;
         }
     }
 }
 
-public class TestLoadAssetBundleFromOffsetOperation : DefaultLoadAssetBundleFromOffsetOperation
+public class TestFileOffsetDecryption : IBundleOffsetDecryptor
 {
     private const uint FILE_OFFSET = 32;
 
-    public TestLoadAssetBundleFromOffsetOperation(LoadAssetBundleOptions options) : base(options) { }
-
-    protected override uint GetFileOffset()
+    uint IBundleOffsetDecryptor.GetFileOffset(BundleDecryptArgs args)
     {
         return FILE_OFFSET;
     }
 }
-public class TestLoadAssetBundleFromMemoryOperation : DefaultLoadAssetBundleFromMemoryOperation
+public class TestFileMemoryDecryption : IBundleMemoryDecryptor
 {
-    public TestLoadAssetBundleFromMemoryOperation(LoadAssetBundleOptions options) : base(options) { }
-
-    protected override byte[] DecryptData(byte[] data)
+    byte[] IBundleMemoryDecryptor.GetDecryptData(BundleDecryptArgs args)
     {
+        byte[] data = args.FileData;
+
+        // 注意：如果数据为空，自行加载文件数据。
+        if (data == null)
+            data = FileUtility.ReadAllBytes(args.FilePath);
+
         for (int i = 0; i < data.Length; i++)
         {
             data[i] ^= BundleStream.KEY;
@@ -98,39 +100,16 @@ public class TestLoadAssetBundleFromMemoryOperation : DefaultLoadAssetBundleFrom
         return data;
     }
 }
-public class TestLoadAssetBundleFromStreamOperation : DefaultLoadAssetBundleFromStreamOperation
+public class TestFileStreamDecryption : IBundleStreamDecryptor
 {
-    public TestLoadAssetBundleFromStreamOperation(LoadAssetBundleOptions options) : base(options) { }
-
-    protected override FileStream CreateManagedFileStream()
+    Stream IBundleStreamDecryptor.GetDecryptStream(BundleDecryptArgs args)
     {
-        var fileStream = new BundleStream(_options.FileLoadPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var fileStream = new BundleStream(args.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         return fileStream;
     }
-    protected override uint GetManagedReadBufferSize()
+
+    uint IBundleStreamDecryptor.GetReadBufferSize(BundleDecryptArgs args)
     {
         return 1024;
-    }
-    protected override byte[] DecryptData(byte[] data)
-    {
-        for (int i = 0; i < data.Length; i++)
-        {
-            data[i] ^= BundleStream.KEY;
-        }
-        return data;
-    }
-}
-public class TestWebAssetBundleFromMemoryDecryption : DefaultLoadWebAssetBundleFromMemoryOperation
-{
-    public TestWebAssetBundleFromMemoryDecryption(LoadWebAssetBundleOptions opionts) : base(opionts) { }
-
-    protected override byte[] Decryption(byte[] data)
-    {
-        for (int i = 0; i < data.Length; i++)
-        {
-            data[i] ^= BundleStream.KEY;
-        }
-
-        return data;
     }
 }

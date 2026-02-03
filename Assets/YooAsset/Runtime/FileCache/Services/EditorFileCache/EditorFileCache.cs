@@ -84,8 +84,17 @@ namespace YooAsset
         }
         public virtual FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
         {
-            var operation = new EFCLoadVirtualBundleOperation(this, options.Bundle);
-            return operation;
+            if (options.Bundle.BundleType == (int)EBundleType.VirtualBundle)
+            {
+                var operation = new EFCLoadVirtualBundleOperation(this, options.Bundle);
+                return operation;
+            }
+            else
+            {
+                string error = $"{nameof(EditorFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                var operation = new FCLoadBundleErrorOperation(error);
+                return operation;
+            }
         }
         public virtual bool IsCached(string bundleGUID)
         {

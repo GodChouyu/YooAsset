@@ -13,7 +13,7 @@ namespace YooAsset.Editor
         /// </summary>
         public void EncryptingBundleFiles(BuildParametersContext buildParametersContext, BuildMapContext buildMapContext)
         {
-            var encryptionServices = buildParametersContext.Parameters.EncryptionServices;
+            var encryptionServices = buildParametersContext.Parameters.BundleEncryptor;
             if (encryptionServices == null)
                 return;
 
@@ -24,14 +24,14 @@ namespace YooAsset.Editor
             string pipelineOutputDirectory = buildParametersContext.GetPipelineOutputDirectory();
             foreach (var bundleInfo in buildMapContext.Collection)
             {
-                BundleEncryptionContext fileInfo = new BundleEncryptionContext();
-                fileInfo.BundleName = bundleInfo.BundleName;
-                fileInfo.FileLoadPath = $"{pipelineOutputDirectory}/{bundleInfo.BundleName}";
-                var encryptResult = encryptionServices.Encrypt(fileInfo);
+                BundleEncryptArgs args = new BundleEncryptArgs();
+                args.BundleName = bundleInfo.BundleName;
+                args.FilePath = $"{pipelineOutputDirectory}/{bundleInfo.BundleName}";
+                var encryptResult = encryptionServices.Encrypt(args);
                 if (encryptResult.Encrypted)
                 {
                     string filePath = $"{pipelineOutputDirectory}/{bundleInfo.BundleName}.encrypt";
-                    FileUtility.WriteAllBytes(filePath, encryptResult.EncryptedData);
+                    FileUtility.WriteAllBytes(filePath, encryptResult.EncryptedFileData);
                     bundleInfo.EncryptedFilePath = filePath;
                     bundleInfo.Encrypted = true;
                     BuildLogger.Log($"Bundle file encryption complete: {filePath}");

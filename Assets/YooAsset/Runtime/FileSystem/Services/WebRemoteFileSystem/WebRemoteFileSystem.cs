@@ -47,9 +47,14 @@ namespace YooAsset
         public IRemoteServices RemoteServices { private set; get; }
 
         /// <summary>
-        /// 自定义参数：资源清单服务类
+        /// 自定义参数：AssetBundle 解密器
         /// </summary>
-        public IManifestRestoreServices ManifestRestoreServices { private set; get; }
+        public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+        /// <summary>
+        /// 自定义参数：资源清单解密器
+        /// </summary>
+        public IManifestDecryptor ManifestDecryptor { private set; get; }
         #endregion
 
 
@@ -109,9 +114,13 @@ namespace YooAsset
             {
                 RemoteServices = (IRemoteServices)value;
             }
-            else if (name == FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES)
+            else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
             {
-                ManifestRestoreServices = (IManifestRestoreServices)value;
+                AssetBundleDecryptor = (IBundleDecryptor)value;
+            }
+            else if (name == FileSystemParametersDefine.MANIFEST_DECRYPTOR)
+            {
+                ManifestDecryptor = (IManifestDecryptor)value;
             }
             else
             {
@@ -128,11 +137,11 @@ namespace YooAsset
 
             // 创建Web文件缓存系统
             var cacheConfig = new WebRemoteFileCache.CacheConfig();
+            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
             cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
+            cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
             cacheConfig.RemoteServices = RemoteServices;
             cacheConfig.DownloadBackend = DownloadBackend;
-            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
-            cacheConfig.RetryCount = int.MaxValue;
             FileCache = new WebRemoteFileCache(packageName, packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()

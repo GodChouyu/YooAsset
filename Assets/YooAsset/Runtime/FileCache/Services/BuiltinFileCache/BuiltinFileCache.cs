@@ -7,6 +7,19 @@ namespace YooAsset
     {
         internal struct CacheConfig
         {
+            /// <summary>
+            /// AssetBundle 解密器
+            /// </summary>
+            public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+            /// <summary>
+            /// RawBundle 解密器
+            /// </summary>
+            public IBundleDecryptor RawBundleDecryptor { get; set; }
+
+            /// <summary>
+            /// 下载后台接口
+            /// </summary>
             public IDownloadBackend DownloadBackend { get; set; }
         }
 

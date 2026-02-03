@@ -44,43 +44,43 @@ namespace YooAsset.Editor
         }
 
         /// <summary>
-        /// 创建资源包加密服务类实例
+        /// 创建资源包加密器实例
         /// </summary>
-        protected IBundleEncryptionServices CreateEncryptionServicesInstance()
+        protected IBundleEncryptor CreateBundleEncryptorInstance()
         {
             var className = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(PackageName, PipelineName);
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptionServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptor));
             var classType = classTypes.Find(x => x.FullName.Equals(className));
             if (classType != null)
-                return (IBundleEncryptionServices)Activator.CreateInstance(classType);
+                return (IBundleEncryptor)Activator.CreateInstance(classType);
             else
                 return null;
         }
 
         /// <summary>
-        /// 创建资源清单加密服务类实例
+        /// 创建资源清单加密器实例
         /// </summary>
-        protected IManifestProcessServices CreateManifestProcessServicesInstance()
+        protected IManifestEncryptor CreateManifestEncryptorInstance()
         {
             var className = AssetBundleBuilderSetting.GetPackageManifestProcessServicesClassName(PackageName, PipelineName);
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestProcessServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestEncryptor));
             var classType = classTypes.Find(x => x.FullName.Equals(className));
             if (classType != null)
-                return (IManifestProcessServices)Activator.CreateInstance(classType);
+                return (IManifestEncryptor)Activator.CreateInstance(classType);
             else
                 return null;
         }
 
         /// <summary>
-        /// 创建资源清单解密服务类实例
+        /// 创建资源清单解密器实例
         /// </summary>
-        protected IManifestRestoreServices CreateManifestRestoreServicesInstance()
+        protected IManifestDecryptor CreateManifestDecryptorInstance()
         {
             var className = AssetBundleBuilderSetting.GetPackageManifestRestoreServicesClassName(PackageName, PipelineName);
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestRestoreServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestDecryptor));
             var classType = classTypes.Find(x => x.FullName.Equals(className));
             if (classType != null)
-                return (IManifestRestoreServices)Activator.CreateInstance(classType);
+                return (IManifestDecryptor)Activator.CreateInstance(classType);
             else
                 return null;
         }
@@ -184,7 +184,7 @@ namespace YooAsset.Editor
         protected PopupField<Type> CreateEncryptionServicesField(VisualElement container)
         {
             // 资源包加密服务类
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptionServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IBundleEncryptor));
             if (classTypes.Count > 0)
             {
                 var className = AssetBundleBuilderSetting.GetPackageEncyptionServicesClassName(PackageName, PipelineName);
@@ -215,7 +215,7 @@ namespace YooAsset.Editor
         protected PopupField<Type> CreateManifestProcessServicesField(VisualElement container)
         {
             // 资源清单加密服务类
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestProcessServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestEncryptor));
             if (classTypes.Count > 0)
             {
                 var className = AssetBundleBuilderSetting.GetPackageManifestProcessServicesClassName(PackageName, PipelineName);
@@ -246,7 +246,7 @@ namespace YooAsset.Editor
         protected PopupField<Type> CreateManifestRestoreServicesField(VisualElement container)
         {
             // 资源清单加密服务类
-            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestRestoreServices));
+            var classTypes = EditorTools.GetAssignableTypes(typeof(IManifestDecryptor));
             if (classTypes.Count > 0)
             {
                 var className = AssetBundleBuilderSetting.GetPackageManifestRestoreServicesClassName(PackageName, PipelineName);

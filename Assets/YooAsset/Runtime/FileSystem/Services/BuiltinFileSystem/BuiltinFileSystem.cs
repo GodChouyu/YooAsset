@@ -93,9 +93,24 @@ namespace YooAsset
         public int UnpackMaxRequestPerFrame { private set; get; }
 
         /// <summary>
-        /// 自定义参数：资源清单服务类
+        /// 自定义参数：AssetBundle 解密器
         /// </summary>
-        public IManifestRestoreServices ManifestRestoreServices { private set; get; }
+        public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+        /// <summary>
+        /// 自定义参数：RawBundle 解密器
+        /// </summary>
+        public IBundleDecryptor RawBundleDecryptor { get; set; }
+
+        /// <summary>
+        /// 自定义参数：AssetBundle 备用解密器
+        /// </summary>
+        public IBundleMemoryDecryptor AssetBundleFallbackDecryptor { get; set; }
+
+        /// <summary>
+        /// 自定义参数：资源清单解密器
+        /// </summary>
+        public IManifestDecryptor ManifestDecryptor { private set; get; }
         #endregion
 
 
@@ -190,9 +205,21 @@ namespace YooAsset
                 // 限制在合理范围内：1-32          
                 UnpackMaxRequestPerFrame = Mathf.Clamp(convertValue, 1, 32);
             }
-            else if (name == FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES)
+            else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
             {
-                ManifestRestoreServices = (IManifestRestoreServices)value;
+                AssetBundleDecryptor = (IBundleDecryptor)value;
+            }
+            else if (name == FileSystemParametersDefine.RAWBUNDLE_DECRYPTOR)
+            {
+                RawBundleDecryptor = (IBundleDecryptor)value;
+            }
+            else if (name == FileSystemParametersDefine.ASSETBUNDLE_FALLBACK_DECRYPTOR)
+            {
+                AssetBundleFallbackDecryptor = (IBundleMemoryDecryptor)value;
+            }
+            else if (name == FileSystemParametersDefine.MANIFEST_DECRYPTOR)
+            {
+                ManifestDecryptor = (IManifestDecryptor)value;
             }
             else
             {
@@ -218,13 +245,15 @@ namespace YooAsset
                 unpackRoot = GetDefaultUnpackCacheRoot(packageName);
             else
                 unpackRoot = UnpackFileSystemRoot;
-            _unpackManifestFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConstants.UnpackManifestFilesFolderName);
-            _unpackBundleFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConstants.UnpackBundleFilesFolderName);
-            _unpackTempFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConstants.UnpackTempFilesFolderName);
+            _unpackManifestFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackManifestFilesFolderName);
+            _unpackBundleFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackBundleFilesFolderName);
+            _unpackTempFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackTempFilesFolderName);
 
             // 创建内置缓存对象
             {
                 var cacheConfig = new BuiltinFileCache.CacheConfig();
+                cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
+                cacheConfig.RawBundleDecryptor = RawBundleDecryptor;
                 cacheConfig.DownloadBackend = DownloadBackend;
                 BuiltinFileCache = new BuiltinFileCache(packageName, _packageRoot, cacheConfig);
             }
@@ -232,8 +261,11 @@ namespace YooAsset
             // 创建沙盒缓存对象
             {
                 var cacheConfig = new SandboxFileCache.CacheConfig();
-                cacheConfig.FileVerifyLevel = FileVerifyLevel;
                 cacheConfig.FileVerifyMaxConcurrency = FileVerifyMaxConcurrency;
+                cacheConfig.FileVerifyLevel = FileVerifyLevel;
+                cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
+                cacheConfig.RawBundleDecryptor = RawBundleDecryptor;
+                cacheConfig.AssetBundleFallbackDecryptor = AssetBundleFallbackDecryptor;
                 UnpackFileCache = new SandboxFileCache(packageName, _unpackBundleFilesRoot, cacheConfig);
             }
         }
@@ -341,7 +373,7 @@ namespace YooAsset
         }
         public string GetSandboxAppFootPrintFilePath()
         {
-            return PathUtility.Combine(_unpackManifestFilesRoot, DefaultCacheFileSystemDefine.AppFootPrintFileName);
+            return PathUtility.Combine(_unpackManifestFilesRoot, SandboxFileSystemDefine.AppFootPrintFileName);
         }
 
         /// <summary>

@@ -9,18 +9,18 @@ namespace YooAsset
         private enum ESteps
         {
             None,
-            LoadAssetBundle,
-            CheckResult,
+            GetEntry,
+            LoadBundle,
+            VerifyFile,
             TryFallback,
             Done,
         }
 
         private readonly SandboxFileCache _fileCache;
         private readonly PackageBundle _bundle;
+        private LoadLocalAssetBundleOperation _loadLocalAssetBundleOp;
         private FCVerifyCacheOperation _verifyCacheOp;
-        private AssetBundleCreateRequest _createRequest;
-        private AssetBundle _assetBundle;
-        private string _filePath;
+        private SandboxFileCacheEntry _cacheEntry;
         private ESteps _steps = ESteps.None;
 
         public SFCLoadAssetBundleOperation(SandboxFileCache fileCache, PackageBundle bundle)
@@ -30,64 +30,75 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadAssetBundle;
+            _steps = ESteps.GetEntry;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadAssetBundle)
+            if (_steps == ESteps.GetEntry)
             {
-                var entry = _fileCache.GetEntry(_bundle.BundleGUID);
-                if (entry == null)
+                _cacheEntry = _fileCache.GetEntry(_bundle.BundleGUID);
+                if (_cacheEntry == null)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
                     Error = $"Not found file cache entry: {_bundle.BundleGUID}";
-                    return;
                 }
-
-                _filePath = entry.DataFilePath;
-                if (IsWaitForCompletion)
-                    _assetBundle = AssetBundle.LoadFromFile(_filePath);
                 else
-                    _createRequest = AssetBundle.LoadFromFileAsync(_filePath);
-
-                _steps = ESteps.CheckResult;
+                {
+                    _steps = ESteps.LoadBundle;
+                }
             }
 
-            if (_steps == ESteps.CheckResult)
+            if (_steps == ESteps.LoadBundle)
             {
-                if (_createRequest != null)
+                if (_loadLocalAssetBundleOp == null)
                 {
-                    if (IsWaitForCompletion)
+                    var options = new LoadLocalAssetBundleOptions();
+                    options.CacheName = _fileCache.GetType().Name;
+                    options.Bundle = _bundle;
+                    options.FilePath = _cacheEntry.DataFilePath;
+                    options.Decryptor = _fileCache.Config.AssetBundleDecryptor;
+                    _loadLocalAssetBundleOp = new LoadLocalAssetBundleOperation(options);
+                    _loadLocalAssetBundleOp.StartOperation();
+                    AddChildOperation(_loadLocalAssetBundleOp);
+                }
+
+                if (IsWaitForCompletion)
+                    _loadLocalAssetBundleOp.WaitForCompletion();
+
+                _loadLocalAssetBundleOp.UpdateOperation();
+                if (_loadLocalAssetBundleOp.IsDone == false)
+                    return;
+
+                if (_loadLocalAssetBundleOp.Status == EOperationStatus.Succeeded)
+                {
+                    if (_loadLocalAssetBundleOp.BundleResult == null)
+                        throw new YooInternalException("Loaded asset bundle result is null.");
+
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeeded;
+                    BundleResult = _loadLocalAssetBundleOp.BundleResult;
+                }
+                else
+                {
+                    // 注意：如果引擎加载失败，需要重新验证文件
+                    if (_loadLocalAssetBundleOp.UnityEngineLoadFailed)
                     {
-                        // 强制挂起主线程（注意：该操作会很耗时）
-                        YooLogger.Warning("Suspend the main thread to load unity bundle.");
-                        _assetBundle = _createRequest.assetBundle;
+                        _steps = ESteps.VerifyFile;
                     }
                     else
                     {
-                        if (_createRequest.isDone == false)
-                            return;
-                        _assetBundle = _createRequest.assetBundle;
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = _loadLocalAssetBundleOp.Error;
                     }
-                }
-
-                if (_assetBundle == null)
-                {
-                    _steps = ESteps.TryFallback;
-                }
-                else
-                {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Succeeded;
-                    BundleResult = new AssetBundleResult(_filePath, _bundle, _assetBundle, null);
                 }
             }
 
-            if (_steps == ESteps.TryFallback)
+            if (_steps == ESteps.VerifyFile)
             {
                 // 注意：当缓存文件的校验等级为Low的时候，并不能保证缓存文件的完整性。
                 // 说明：在AssetBundle文件加载失败的情况下，我们需要重新验证文件的完整性！
@@ -110,22 +121,7 @@ namespace YooAsset
 
                 if (_verifyCacheOp.Status == EOperationStatus.Succeeded)
                 {
-                    // 调用后备加载方法
-                    // 注意：在安卓移动平台，华为和三星真机上有极小概率加载资源包失败。
-                    // 说明：大多数情况在首次安装下载资源到沙盒内，游戏过程中切换到后台再回到游戏内有很大概率触发！
-                    AssetBundle assetBundle = LoadFromMemory();
-                    if (assetBundle != null)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Succeeded;
-                        BundleResult = new AssetBundleResult(_filePath, _bundle, assetBundle, null);
-                    }
-                    else
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = $"Failed to load asset bundle from memory : {_bundle.BundleName}";
-                    }
+                    _steps = ESteps.TryFallback;
                 }
                 else
                 {
@@ -134,18 +130,69 @@ namespace YooAsset
                     Error = _verifyCacheOp.Error;
                 }
             }
+
+            if (_steps == ESteps.TryFallback)
+            {
+                // 调用后备加载方法
+                // 注意：在安卓移动平台，华为和三星真机上有极小概率加载资源包失败。
+                // 说明：大多数情况在首次安装下载资源到沙盒内，游戏过程中切换到后台再回到游戏内有很大概率触发！
+                AssetBundle assetBundle;
+                if (_bundle.IsEncrypted)
+                {
+                    if (_fileCache.Config.AssetBundleFallbackDecryptor == null)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = $"{nameof(SandboxFileCache)} fallback decryptor is null.";
+                        return;
+                    }
+
+                    assetBundle = FallbackLoadDecryptAssetBundle(_fileCache.Config.AssetBundleFallbackDecryptor);
+                    if (assetBundle == null)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = $"Failed fallback load encrypted asset bundle: {_bundle.BundleName}";
+                    }
+                }
+                else
+                {
+                    assetBundle = FallbackLoadAssetBundle();
+                    if (assetBundle == null)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = $"Failed fallback load asset bundle: {_bundle.BundleName}";
+                    }
+                }
+
+                if (assetBundle != null)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeeded;
+                    BundleResult = new AssetBundleResult(_cacheEntry.DataFilePath, _bundle, assetBundle, null);
+                }
+            }
         }
         internal override void InternalWaitForCompletion()
         {
             ExecuteBatch();
         }
 
-        private AssetBundle LoadFromMemory()
+        private AssetBundle FallbackLoadAssetBundle()
         {
-            byte[] fileData = FileUtility.ReadAllBytes(_filePath);
+            byte[] fileData = FileUtility.ReadAllBytes(_cacheEntry.DataFilePath);
             if (fileData == null || fileData.Length == 0)
                 return null;
             return AssetBundle.LoadFromMemory(fileData);
+        }
+        private AssetBundle FallbackLoadDecryptAssetBundle(IBundleMemoryDecryptor decryptor)
+        {
+            var args = new BundleDecryptArgs();
+            args.Bundle = _bundle;
+            args.FilePath = _cacheEntry.DataFilePath;
+            var binaryData = decryptor.GetDecryptData(args);
+            return AssetBundle.LoadFromMemory(binaryData);
         }
     }
 
@@ -154,12 +201,16 @@ namespace YooAsset
         private enum ESteps
         {
             None,
-            LoadRawBundle,
+            GetEntry,
+            LoadBundle,
             Done,
         }
 
         private readonly SandboxFileCache _fileCache;
         private readonly PackageBundle _bundle;
+        private LoadLocalRawBundleOperation _loadLocalRawBundleOp;
+        private SandboxFileCacheEntry _cacheEntry;
+
         private ESteps _steps = ESteps.None;
 
         public SFCLoadRawBundleOperation(SandboxFileCache fileCache, PackageBundle bundle)
@@ -169,39 +220,61 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadRawBundle;
+            _steps = ESteps.GetEntry;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadRawBundle)
+            if (_steps == ESteps.GetEntry)
             {
-                var entry = _fileCache.GetEntry(_bundle.BundleGUID);
-                if (entry == null)
+                _cacheEntry = _fileCache.GetEntry(_bundle.BundleGUID);
+                if (_cacheEntry == null)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
                     Error = $"Not found file cache entry: {_bundle.BundleGUID}";
-                    return;
+                }
+                else
+                {
+                    _steps = ESteps.LoadBundle;
+                }
+            }
+
+            if (_steps == ESteps.LoadBundle)
+            {
+                if (_loadLocalRawBundleOp == null)
+                {
+                    var options = new LoadLocalRawBundleOptions();
+                    options.CacheName = _fileCache.GetType().Name;
+                    options.Bundle = _bundle;
+                    options.FilePath = _cacheEntry.DataFilePath;
+                    options.Decryptor = _fileCache.Config.AssetBundleDecryptor;
+                    _loadLocalRawBundleOp = new LoadLocalRawBundleOperation(options);
+                    _loadLocalRawBundleOp.StartOperation();
+                    AddChildOperation(_loadLocalRawBundleOp);
                 }
 
-                string filePath = entry.DataFilePath;
-                if (File.Exists(filePath))
-                {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Succeeded;
+                if (IsWaitForCompletion)
+                    _loadLocalRawBundleOp.WaitForCompletion();
 
-                    byte[] data = File.ReadAllBytes(filePath);
-                    var rawBundle = new RawBundle(data);
-                    BundleResult = new RawBundleResult(filePath, _bundle, rawBundle);
+                _loadLocalRawBundleOp.UpdateOperation();
+                if (_loadLocalRawBundleOp.IsDone == false)
+                    return;
+
+                if (_loadLocalRawBundleOp.Status == EOperationStatus.Succeeded)
+                {
+                    if (_loadLocalRawBundleOp.BundleResult == null)
+                        throw new YooInternalException("Loaded raw bundle result is null.");
+
+                    BundleResult = _loadLocalRawBundleOp.BundleResult;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Can not found raw bundle file : {filePath}";
+                    Error = _loadLocalRawBundleOp.Error;
                 }
             }
         }
@@ -209,17 +282,5 @@ namespace YooAsset
         {
             ExecuteBatch();
         }
-    }
-
-    internal abstract class SFCLoadAssetBundleFromOperation : FCLoadBundleOperation
-    {
-        internal abstract AssetBundle LoadFromOffset();
-        internal abstract AssetBundleCreateRequest LoadFromOffsetAsync();
-
-        internal abstract AssetBundle LoadFromMemory();
-        internal abstract AssetBundleCreateRequest LoadFromMemoryAsync();
-
-        internal abstract AssetBundle LoadFromStream();
-        internal abstract AssetBundleCreateRequest LoadFromStreamAsync();
     }
 }

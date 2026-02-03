@@ -113,9 +113,9 @@ namespace YooAsset.Editor
             buildParameters.BuildinFileCopyParams = buildinFileCopyParams;
             buildParameters.ClearBuildCacheFiles = clearBuildCache;
             buildParameters.UseAssetDependencyDB = useAssetDependencyDB;
-            buildParameters.EncryptionServices = CreateEncryptionServicesInstance();
-            buildParameters.ManifestProcessServices = CreateManifestProcessServicesInstance();
-            buildParameters.ManifestRestoreServices = CreateManifestRestoreServicesInstance();
+            buildParameters.BundleEncryptor = CreateBundleEncryptorInstance();
+            buildParameters.ManifestEncryptor = CreateManifestEncryptorInstance();
+            buildParameters.ManifestDecryptor = CreateManifestDecryptorInstance();
 
             RawFileBuildPipeline pipeline = new RawFileBuildPipeline();
             var buildResult = pipeline.Run(buildParameters, true);

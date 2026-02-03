@@ -121,9 +121,9 @@ namespace YooAsset.Editor
             buildParameters.CompressOption = compressOption;
             buildParameters.ClearBuildCacheFiles = clearBuildCache;
             buildParameters.UseAssetDependencyDB = useAssetDependencyDB;
-            buildParameters.EncryptionServices = CreateEncryptionServicesInstance();
-            buildParameters.ManifestProcessServices = CreateManifestProcessServicesInstance();
-            buildParameters.ManifestRestoreServices = CreateManifestRestoreServicesInstance();
+            buildParameters.BundleEncryptor = CreateBundleEncryptorInstance();
+            buildParameters.ManifestEncryptor = CreateManifestEncryptorInstance();
+            buildParameters.ManifestDecryptor = CreateManifestDecryptorInstance();
             buildParameters.BuiltinShadersBundleName = GetBuiltinShaderBundleName();
 
             ScriptableBuildPipeline pipeline = new ScriptableBuildPipeline();

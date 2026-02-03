@@ -1,7 +1,7 @@
 
 namespace YooAsset
 {
-    internal class BuiltinFileSystemConstants
+    internal class BuiltinFileSystemDefine
     {
         /// <summary>
         /// 解压清单文件的文件夹名称

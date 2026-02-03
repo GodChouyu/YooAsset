@@ -1,17 +1,17 @@
 ﻿
 namespace YooAsset.Editor
 {
-    public class ManifestProcessNone : IManifestProcessServices
+    public class ManifestEncryptorNone : IManifestEncryptor
     {
-        byte[] IManifestProcessServices.ProcessManifest(byte[] fileData)
+        byte[] IManifestEncryptor.Encrypt(byte[] fileData)
         {
             return fileData;
         }
     }
     
-    public class ManifestRestoreNone : IManifestRestoreServices
+    public class ManifestDecryptorNone : IManifestDecryptor
     {
-        byte[] IManifestRestoreServices.RestoreManifest(byte[] fileData)
+        byte[] IManifestDecryptor.Decrypt(byte[] fileData)
         {
             return fileData;
         }

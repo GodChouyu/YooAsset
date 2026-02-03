@@ -56,7 +56,7 @@ namespace YooAsset
         /// <param name="savePath">保存路径</param>
         /// <param name="manifest">清单对象</param>
         /// <param name="services">清单处理服务（可为null）</param>
-        public static void SerializeManifestToBinary(string savePath, PackageManifest manifest, IManifestProcessServices services)
+        public static void SerializeManifestToBinary(string savePath, PackageManifest manifest, IManifestEncryptor services)
         {
             using (FileStream fs = new FileStream(savePath, FileMode.Create))
             {
@@ -114,7 +114,7 @@ namespace YooAsset
                 if (services != null)
                 {
                     var tempBytes = buffer.GetBytes();
-                    var resultBytes = services.ProcessManifest(tempBytes);
+                    var resultBytes = services.Encrypt(tempBytes);
                     fs.Write(resultBytes, 0, resultBytes.Length);
                     fs.Flush();
                 }
@@ -154,9 +154,9 @@ namespace YooAsset
         /// <param name="binaryData">二进制数据</param>
         /// <param name="services">清单恢复服务（可为null）</param>
         /// <returns>返回反序列化后的清单对象</returns>
-        public static PackageManifest DeserializeManifestFromBinary(byte[] binaryData, IManifestRestoreServices services)
+        public static PackageManifest DeserializeManifestFromBinary(byte[] binaryData, IManifestDecryptor decryptor)
         {
-            DeserializeManifestOperation operation = new DeserializeManifestOperation(services, binaryData);
+            DeserializeManifestOperation operation = new DeserializeManifestOperation(decryptor, binaryData);
             operation.StartOperation();
             operation.WaitForCompletion();
             return operation.Manifest;

@@ -6,17 +6,17 @@ using UnityEngine;
 using NUnit.Framework;
 using YooAsset;
 
-public class TestProcessManifest : IManifestProcessServices
+public class TestManifestEncryptor : IManifestEncryptor
 {
-    byte[] IManifestProcessServices.ProcessManifest(byte[] fileData)
+    byte[] IManifestEncryptor.Encrypt(byte[] fileData)
     {
         return XorCrypto.Crypto(fileData, "YOO");
     }
 }
 
-public class TestRestoreManifest : IManifestRestoreServices
+public class TestManifestDecryptor : IManifestDecryptor
 {
-    byte[] IManifestRestoreServices.RestoreManifest(byte[] fileData)
+    byte[] IManifestDecryptor.Decrypt(byte[] fileData)
     {
         return XorCrypto.Crypto(fileData, "YOO");
     }

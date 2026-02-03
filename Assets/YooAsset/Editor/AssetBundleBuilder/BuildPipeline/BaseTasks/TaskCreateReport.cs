@@ -44,9 +44,9 @@ namespace YooAsset.Editor
                 buildReport.Summary.EnableSharePackRule = buildParameters.EnableSharePackRule;
                 buildReport.Summary.SingleReferencedPackAlone = buildParameters.SingleReferencedPackAlone;
                 buildReport.Summary.FileNameStyle = buildParameters.FileNameStyle;
-                buildReport.Summary.EncryptionServicesClassName = buildParameters.EncryptionServices == null ? "null" : buildParameters.EncryptionServices.GetType().FullName;
-                buildReport.Summary.ManifestProcessServicesClassName = buildParameters.ManifestProcessServices == null ? "null" : buildParameters.ManifestProcessServices.GetType().FullName;
-                buildReport.Summary.ManifestRestoreServicesClassName = buildParameters.ManifestRestoreServices == null ? "null" : buildParameters.ManifestRestoreServices.GetType().FullName;
+                buildReport.Summary.EncryptionServicesClassName = buildParameters.BundleEncryptor == null ? "null" : buildParameters.BundleEncryptor.GetType().FullName;
+                buildReport.Summary.ManifestProcessServicesClassName = buildParameters.ManifestEncryptor == null ? "null" : buildParameters.ManifestEncryptor.GetType().FullName;
+                buildReport.Summary.ManifestRestoreServicesClassName = buildParameters.ManifestDecryptor == null ? "null" : buildParameters.ManifestDecryptor.GetType().FullName;
 
                 if (buildParameters is BuiltinBuildParameters)
                 {

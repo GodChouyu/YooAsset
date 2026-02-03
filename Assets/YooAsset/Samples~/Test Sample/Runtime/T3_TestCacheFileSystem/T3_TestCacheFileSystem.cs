@@ -45,13 +45,13 @@ public class T3_TestCacheFileSystem : IPrebuildSetup, IPostBuildCleanup
 
             // 初始化资源包
             var initParams = new HostPlayModeOptions();
-            var manifestServices = new TestRestoreManifest();
+            var manifestServices = new TestManifestDecryptor();
 
             string hostServerIP = "http://127.0.0.1/CDN/Android/Test/";
             var remoteServices = new TestRemoteServices(hostServerIP);
             initParams.BuildinFileSystemParameters = null;
             initParams.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices);
-            initParams.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES, manifestServices);
+            initParams.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_DECRYPTOR, manifestServices);
             var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeeded)

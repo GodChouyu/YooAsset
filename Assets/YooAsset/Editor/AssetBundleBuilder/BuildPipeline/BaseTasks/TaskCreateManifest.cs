@@ -81,7 +81,7 @@ namespace YooAsset.Editor
             {
                 string fileName = YooAssetSettingsData.GetManifestBinaryFileName(buildParameters.PackageName, buildParameters.PackageVersion);
                 packagePath = $"{packageOutputDirectory}/{fileName}";
-                PackageManifestTools.SerializeManifestToBinary(packagePath, manifest, buildParameters.ManifestProcessServices);
+                PackageManifestTools.SerializeManifestToBinary(packagePath, manifest, buildParameters.ManifestEncryptor);
                 packageHash = HashUtility.ComputeFileCRC32(packagePath);
                 BuildLogger.Log($"Create package manifest file: {packagePath}");
             }
@@ -106,7 +106,7 @@ namespace YooAsset.Editor
             {
                 ManifestContext manifestContext = new ManifestContext();
                 byte[] bytesData = FileUtility.ReadAllBytes(packagePath);
-                manifestContext.Manifest = PackageManifestTools.DeserializeManifestFromBinary(bytesData, buildParameters.ManifestRestoreServices);
+                manifestContext.Manifest = PackageManifestTools.DeserializeManifestFromBinary(bytesData, buildParameters.ManifestDecryptor);
                 context.SetContextObject(manifestContext);
             }
         }

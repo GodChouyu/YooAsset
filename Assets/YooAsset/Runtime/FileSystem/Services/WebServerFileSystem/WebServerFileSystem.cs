@@ -45,9 +45,14 @@ namespace YooAsset
         public int DownloadWatchDogTimeout { private set; get; } = 0;
 
         /// <summary>
-        /// 自定义参数：资源清单服务类
+        /// 自定义参数：AssetBundle 解密器
         /// </summary>
-        public IManifestRestoreServices ManifestRestoreServices { private set; get; }
+        public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+        /// <summary>
+        /// 自定义参数：资源清单解密器
+        /// </summary>
+        public IManifestDecryptor ManifestDecryptor { private set; get; }
         #endregion
 
 
@@ -103,9 +108,13 @@ namespace YooAsset
                 int convertValue = Convert.ToInt32(value);
                 DownloadWatchDogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
             }
-            else if (name == FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES)
+            else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
             {
-                ManifestRestoreServices = (IManifestRestoreServices)value;
+                AssetBundleDecryptor = (IBundleDecryptor)value;
+            }
+            else if (name == FileSystemParametersDefine.MANIFEST_DECRYPTOR)
+            {
+                ManifestDecryptor = (IManifestDecryptor)value;
             }
             else
             {
@@ -127,10 +136,10 @@ namespace YooAsset
 
             // 创建Web文件缓存系统
             var cacheConfig = new WebServerFileCache.CacheConfig();
+            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
             cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
             cacheConfig.DownloadBackend = DownloadBackend;
-            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
-            cacheConfig.RetryCount = int.MaxValue;
+            cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
             FileCache = new WebServerFileCache(packageName, _packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()

@@ -15,7 +15,6 @@ namespace YooAsset
         private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-
         internal WRFSLoadBundleOperation(WebRemoteFileSystem fileSystem, LoadBundleOptions options)
         {
             _fileSystem = fileSystem;

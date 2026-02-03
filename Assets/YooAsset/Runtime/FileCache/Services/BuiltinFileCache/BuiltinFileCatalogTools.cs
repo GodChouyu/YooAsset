@@ -12,7 +12,7 @@ namespace YooAsset
         /// 生成包裹的内置资源目录文件
         /// 说明：根据指定目录下的文件生成清单文件。
         /// </summary>
-        public static bool CreateFile(IManifestRestoreServices services, string packageName, string packageDirectory)
+        public static bool CreateFile(IManifestDecryptor decryptor, string packageName, string packageDirectory)
         {
             // 获取资源清单版本
             string packageVersion;
@@ -40,7 +40,7 @@ namespace YooAsset
                 }
 
                 var binaryData = FileUtility.ReadAllBytes(manifestFilePath);
-                packageManifest = PackageManifestTools.DeserializeManifestFromBinary(binaryData, services);
+                packageManifest = PackageManifestTools.DeserializeManifestFromBinary(binaryData, decryptor);
             }
 
             // 获取文件名映射关系

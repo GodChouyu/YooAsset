@@ -65,7 +65,7 @@ namespace YooAsset
                 {
                     string packageHash = _requestWebPackageHashOp.PackageHash;
                     string packageName = _fileSystem.PackageName;
-                    var manifestServices = _fileSystem.ManifestRestoreServices;
+                    var manifestServices = _fileSystem.ManifestDecryptor;
                     var remoteServices = _fileSystem.RemoteServices;
                     var downloadBackend = _fileSystem.DownloadBackend;
                     _loadWebPackageManifestOp = new LoadWebPackageManifestOperation(manifestServices, remoteServices, downloadBackend, packageName, _packageVersion, packageHash, _timeout);

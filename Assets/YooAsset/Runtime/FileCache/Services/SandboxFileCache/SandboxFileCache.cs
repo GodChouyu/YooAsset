@@ -16,6 +16,21 @@ namespace YooAsset
             /// 文件校验级别
             /// </summary>
             public EFileVerifyLevel FileVerifyLevel { get; set; }
+
+            /// <summary>
+            /// AssetBundle 解密器
+            /// </summary>
+            public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+            /// <summary>
+            /// RawBundle 解密器
+            /// </summary>
+            public IBundleDecryptor RawBundleDecryptor { get; set; }
+
+            /// <summary>
+            /// AssetBundle 备用解密器
+            /// </summary>
+            public IBundleMemoryDecryptor AssetBundleFallbackDecryptor { get; set; }
         }
 
         private const int HashFolderLength = 2;

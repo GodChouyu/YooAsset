@@ -1,4 +1,4 @@
-
+ï»¿
 namespace YooAsset
 {
     internal class BFSInitializeOperation : FSInitializeOperation
@@ -45,7 +45,7 @@ namespace YooAsset
                 var appFootprint = new ApplicationFootprint(footprintFilePath);
                 appFootprint.Load(_fileSystem.PackageName);
 
-                // Èç¹ûË®Ó¡·¢Éú±ä»¯£¬ÔòËµÃ÷¸²¸Ç°²×°ºóÊ×´Î´ò¿ªÓÎÏ·
+                // å¦‚æœæ°´å°å‘ç”Ÿå˜åŒ–ï¼Œåˆ™è¯´æ˜è¦†ç›–å®‰è£…åé¦–æ¬¡æ‰“å¼€æ¸¸æˆ
                 if (appFootprint.IsDirty())
                 {
                     if (_fileSystem.InstallClearMode == EInstallCleanupMode.None)
@@ -163,8 +163,8 @@ namespace YooAsset
 
             if (_steps == ESteps.CreateScheduler)
             {
-                // ×¢Òâ: ÏÂÔØµ÷¶ÈÖĞĞÄÔÚ×îºóÒ»²½´´½¨£¬·ÀÖ¹³õÊ¼»¯Ê§°Üºó²ĞÁôÈÎÎñ¡£
-                // ×¢Òâ: ÏÂÔØµ÷¶ÈÖĞĞÄ×÷Îª¶ÀÁ¢ÈÎÎñÔËĞĞ£¡
+                // æ³¨æ„: ä¸‹è½½è°ƒåº¦ä¸­å¿ƒåœ¨æœ€åä¸€æ­¥åˆ›å»ºï¼Œé˜²æ­¢åˆå§‹åŒ–å¤±è´¥åæ®‹ç•™ä»»åŠ¡ã€‚
+                // æ³¨æ„: ä¸‹è½½è°ƒåº¦ä¸­å¿ƒä½œä¸ºç‹¬ç«‹ä»»åŠ¡è¿è¡Œï¼
                 if (_fileSystem.UnpackScheduler == null)
                 {
                     var schedulerConfig = new DownloadSchedulerOperation.SchedulerConfig();

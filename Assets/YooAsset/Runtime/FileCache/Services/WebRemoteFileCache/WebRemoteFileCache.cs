@@ -8,26 +8,29 @@ namespace YooAsset
         internal struct CacheConfig
         {
             /// <summary>
+            /// 看门狗超时时间
+            /// </summary>
+            public int WatchdogTimeout { get; set; }
+
+            /// <summary>
             /// 禁用Unity的网络缓存
             /// </summary>
             public bool DisableUnityWebCache { get; set; }
 
+            /// <summary>
+            /// AssetBundle 解密器
+            /// </summary>
+            public IBundleDecryptor AssetBundleDecryptor { get; set; }
+
+            /// <summary>
+            /// 远程服务接口
+            /// </summary>
             public IRemoteServices RemoteServices { get; set; }
 
             /// <summary>
             /// 下载后台接口
             /// </summary>
             public IDownloadBackend DownloadBackend { get; set; }
-
-            /// <summary>
-            /// 看门狗超时时间
-            /// </summary>
-            public int WatchdogTimeout { get; set; }
-
-            /// <summary>
-            /// 失败后重试次数
-            /// </summary>
-            public int RetryCount { get; set; }
         }
 
         private readonly Dictionary<string, WebRemoteFileCacheEntry> _caches = new Dictionary<string, WebRemoteFileCacheEntry>(10000);
@@ -101,8 +104,17 @@ namespace YooAsset
         }
         public virtual FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
         {
-            var operation = new WRFCLoadAssetBundleOperation(this, options);
-            return operation;
+            if (options.Bundle.BundleType == (int)EBundleType.AssetBundle)
+            {
+                var operation = new WRFCLoadAssetBundleOperation(this, options);
+                return operation;
+            }
+            else
+            {
+                string error = $"{nameof(WebServerFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                var operation = new FCLoadBundleErrorOperation(error);
+                return operation;
+            }
         }
         public virtual bool IsCached(string bundleGUID)
         {

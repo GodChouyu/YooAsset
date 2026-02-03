@@ -102,7 +102,7 @@ namespace YooAsset
             {
                 if (_deserializer == null)
                 {
-                    _deserializer = new DeserializeManifestOperation(_fileSystem.ManifestRestoreServices, _fileData);
+                    _deserializer = new DeserializeManifestOperation(_fileSystem.ManifestDecryptor, _fileData);
                     _deserializer.StartOperation();
                     AddChildOperation(_deserializer);
                 }

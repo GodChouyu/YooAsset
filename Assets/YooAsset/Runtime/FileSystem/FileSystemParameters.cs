@@ -96,7 +96,7 @@ namespace YooAsset
         /// <param name="packageRoot">文件系统的根目录</param>
         public static FileSystemParameters CreateDefaultCacheFileSystemParameters(IRemoteServices remoteServices, string packageRoot = null)
         {
-            string fileSystemClass = typeof(CacheFileSystem).FullName;
+            string fileSystemClass = typeof(SandboxFileSystem).FullName;
             var fileSystemParams = new FileSystemParameters(fileSystemClass, packageRoot);
             fileSystemParams.AddParameter(FileSystemParametersDefine.REMOTE_SERVICES, remoteServices);
             return fileSystemParams;

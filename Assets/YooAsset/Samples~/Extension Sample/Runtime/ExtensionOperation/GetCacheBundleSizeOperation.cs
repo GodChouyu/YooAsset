@@ -62,6 +62,6 @@ public class GetCacheBundleSizeOperation : AsyncOperationBase
     {
         string rootDirectory = YooAssetSettingsData.GetYooDefaultCacheRoot();
         string packageRoot = PathUtility.Combine(rootDirectory, _packageName);
-        return PathUtility.Combine(packageRoot, DefaultCacheFileSystemDefine.BundleFilesFolderName);
+        return PathUtility.Combine(packageRoot, SandboxFileSystemDefine.BundleFilesFolderName);
     }
 }

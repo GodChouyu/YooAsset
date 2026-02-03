@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.IO;
 
 namespace YooAsset
@@ -77,7 +77,7 @@ namespace YooAsset
             {
                 if (_webFileRequestOp == null)
                 {
-                    //TODO ÍÅ½áÒıÇæ£¬ÔÚÄ³Ğ©°²×¿»úĞÍ£¨ºìÃ×£©£¬Í¨¹ıUnityWebRequest¿½±´°üÄÚÎÄ¼ş»áĞ¡¸ÅÂÊÊ§°Ü£¡ĞèÒª½èÖúÆäËü·½Ê½À´¿½±´°üÄÚÎÄ¼ş¡£
+                    //TODO å›¢ç»“å¼•æ“ï¼Œåœ¨æŸäº›å®‰å“æœºå‹ï¼ˆçº¢ç±³ï¼‰ï¼Œé€šè¿‡UnityWebRequestæ‹·è´åŒ…å†…æ–‡ä»¶ä¼šå°æ¦‚ç‡å¤±è´¥ï¼éœ€è¦å€ŸåŠ©å…¶å®ƒæ–¹å¼æ¥æ‹·è´åŒ…å†…æ–‡ä»¶ã€‚
                     string url = DownloadSystemTools.ToLocalUrl(_sourceFilePath);
                     var args = new DownloadFileRequestArgs(url, _destFilePath, 60, 0);
                     _webFileRequestOp = _fileSystem.DownloadBackend.CreateFileRequest(args);
@@ -102,7 +102,7 @@ namespace YooAsset
         }
         internal override void InternalWaitForCompletion()
         {
-            //TODO µÈ´ı½âÑ¹±¾µØÎÄ¼şÍê±Ï£¬¸Ã²Ù×÷»á¹ÒÆğÖ÷Ïß³Ì£¡
+            //TODO ç­‰å¾…è§£å‹æœ¬åœ°æ–‡ä»¶å®Œæ¯•ï¼Œè¯¥æ“ä½œä¼šæŒ‚èµ·ä¸»çº¿ç¨‹ï¼
             ExecuteUntilComplete();
         }
     }

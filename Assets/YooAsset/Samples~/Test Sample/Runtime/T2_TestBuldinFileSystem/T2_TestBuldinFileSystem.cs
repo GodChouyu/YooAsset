@@ -60,9 +60,9 @@ public class T2_TestBuldinFileSystem : IPrebuildSetup, IPostBuildCleanup
 
             // 初始化资源包
             var initParams = new OfflinePlayModeOptions();
-            var manifestServices = new TestRestoreManifest();
+            var manifestServices = new TestManifestDecryptor();
             initParams.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters(packageRoot);
-            initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_RESTORE_SERVICES, manifestServices);
+            initParams.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.MANIFEST_DECRYPTOR, manifestServices);
             var initializeOp = package.InitializePackageAsync(initParams);
             yield return initializeOp;
             if (initializeOp.Status != EOperationStatus.Succeeded)

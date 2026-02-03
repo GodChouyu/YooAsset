@@ -120,7 +120,7 @@ namespace YooAsset
             if (string.IsNullOrEmpty(destRoot))
             {
                 string defaultCacheRoot = YooAssetSettingsData.GetYooDefaultCacheRoot();
-                destRoot = PathUtility.Combine(defaultCacheRoot, _fileSystem.PackageName, DefaultCacheFileSystemDefine.ManifestFilesFolderName);
+                destRoot = PathUtility.Combine(defaultCacheRoot, _fileSystem.PackageName, SandboxFileSystemDefine.ManifestFilesFolderName);
             }
             return destRoot;
         }

@@ -24,9 +24,9 @@ namespace YooAsset
         public const string REMOTE_SERVICES = "REMOTE_SERVICES";
 
         /// <summary>
-        /// 资源清单服务类 <see cref=IManifestRestoreServices>
+        /// AssetBundle 解密器 <see cref=IBundleDecryptor>
         /// </summary>
-        public const string MANIFEST_RESTORE_SERVICES = "MANIFEST_RESTORE_SERVICES";
+        public const string ASSETBUNDLE_DECRYPTOR = "ASSETBUNDLE_DECRYPTOR";
 
         /// <summary>
         /// 禁用Unity的网络缓存 <see cref=bool>
@@ -34,14 +34,14 @@ namespace YooAsset
         public const string DISABLE_UNITY_WEB_CACHE = "DISABLE_UNITY_WEB_CACHE";
 
         /// <summary>
-        /// 禁用边玩边下机制 <see cref=bool>
-        /// </summary>
-        public const string DISABLE_ONDEMAND_DOWNLOAD = "DISABLE_ONDEMAND_DOWNLOAD";
-
-        /// <summary>
         /// UnityWebRequest 创建委托 <see cref=UnityWebRequestCreator>
         /// </summary>
         public const string UNITY_WEB_REQUEST_CREATOR = "UNITY_WEB_REQUEST_CREATOR";
+
+        /// <summary>
+        /// 禁用边玩边下机制 <see cref=bool>
+        /// </summary>
+        public const string DOWNLOAD_DISABLE_ONDEMAND = "DOWNLOAD_DISABLE_ONDEMAND";
 
         /// <summary>
         /// 下载后台接口 <see cref=IDownloadBackend>
@@ -66,12 +66,12 @@ namespace YooAsset
         /// <summary>
         /// 启用断点续传的最小尺寸 <see cref=long>
         /// </summary>
-        public const string RESUME_DOWNLOAD_MINMUM_SIZE = "RESUME_DOWNLOAD_MINMUM_SIZE";
+        public const string DOWNLOAD_RESUME_MINMUM_SIZE = "DOWNLOAD_RESUME_MINMUM_SIZE";
 
         /// <summary>
         /// 断点续传下载器关注的错误码 <see cref=List<long>>
         /// </summary>
-        public const string RESUME_DOWNLOAD_RESPONSE_CODES = "RESUME_DOWNLOAD_RESPONSE_CODES";
+        public const string DOWNLOAD_RESUME_RESPONSE_CODES = "DOWNLOAD_RESUME_RESPONSE_CODES";
 
         /// <summary>
         /// 模拟WebGL平台模式 <see cref=bool>
@@ -112,5 +112,20 @@ namespace YooAsset
         /// 解压文件系统的根目录 <see cref=string>
         /// </summary>
         public const string UNPACK_FILE_SYSTEM_ROOT = "UNPACK_FILE_SYSTEM_ROOT";
+
+        /// <summary>
+        /// RawBundle 解密器 <see cref=IBundleDecryptor>
+        /// </summary>
+        public const string RAWBUNDLE_DECRYPTOR = "RAWBUNDLE_DECRYPTOR";
+
+        /// <summary>
+        /// AssetBundle 备用解密器 <see cref=IBundleMemoryDecryptor>
+        /// </summary>
+        public const string ASSETBUNDLE_FALLBACK_DECRYPTOR = "ASSETBUNDLE_FALLBACK_DECRYPTOR";
+
+        /// <summary>
+        /// 资源清单解密器 <see cref=IManifestDecryptor>
+        /// </summary>
+        public const string MANIFEST_DECRYPTOR = "MANIFEST_DECRYPTOR";
     }
 }
