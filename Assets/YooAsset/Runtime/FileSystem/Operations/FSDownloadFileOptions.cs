@@ -1,7 +1,7 @@
 ﻿
 namespace YooAsset
 {
-    internal readonly struct DownloadFileOptions
+    internal readonly struct FSDownloadFileOptions
     {
         /// <summary>
         /// 资源包对象
@@ -18,13 +18,13 @@ namespace YooAsset
         /// </summary>
         public readonly string ImportFilePath;
 
-        public DownloadFileOptions(PackageBundle bundle, int retryCount)
+        public FSDownloadFileOptions(PackageBundle bundle, int retryCount)
         {
             Bundle = bundle;
             RetryCount = retryCount;
             ImportFilePath = null;
         }
-        public DownloadFileOptions(PackageBundle bundle, int retryCount, string importFilePath)
+        public FSDownloadFileOptions(PackageBundle bundle, int retryCount, string importFilePath)
         {
             Bundle = bundle;
             RetryCount = retryCount;

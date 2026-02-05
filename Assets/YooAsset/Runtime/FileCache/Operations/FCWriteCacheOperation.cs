@@ -1,10 +1,16 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 写入缓存操作基类
+    /// </summary>
     internal abstract class FCWriteCacheOperation : AsyncOperationBase
     {
     }
 
+    /// <summary>
+    /// 写入缓存完成操作
+    /// </summary>
     internal class FCWriteCacheCompleteOperation : FCWriteCacheOperation
     {
         private readonly string _error;

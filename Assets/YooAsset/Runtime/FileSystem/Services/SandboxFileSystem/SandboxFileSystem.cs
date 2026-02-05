@@ -156,12 +156,12 @@ namespace YooAsset
                 return operation;
             }
         }
-        public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
+        public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             var downloader = new SFSDownloadFileOperation(this, options);
             return downloader;
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             var operation = new SFSLoadBundleOperation(this, options);
             return operation;

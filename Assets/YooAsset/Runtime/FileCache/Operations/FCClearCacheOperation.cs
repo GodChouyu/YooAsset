@@ -1,10 +1,16 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 清理缓存操作基类
+    /// </summary>
     internal abstract class FCClearCacheOperation : AsyncOperationBase
     {
     }
 
+    /// <summary>
+    /// 清理缓存完成操作
+    /// </summary>
     internal class FCClearCacheCompleteOperation : FCClearCacheOperation
     {
         private readonly string _error;

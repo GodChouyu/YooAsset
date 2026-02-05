@@ -157,12 +157,10 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 内部同步等待方法（子类可选实现）
-        /// 默认抛出异常，如果异步操作需要支持，子类应重写以支持同步等待
+        /// 内部释放方法（子类可选实现）
         /// </summary>
-        internal virtual void InternalWaitForCompletion()
+        internal virtual void InternalDispose()
         {
-            throw new YooInternalException($"InternalWaitForCompletion() is not implemented: {this.GetType().Name}");
         }
 
         /// <summary>
@@ -171,6 +169,15 @@ namespace YooAsset
         internal virtual string InternalGetDescription()
         {
             return string.Empty;
+        }
+
+        /// <summary>
+        /// 内部同步等待方法（子类可选实现）
+        /// 默认抛出异常，如果异步操作需要支持，子类应重写以支持同步等待
+        /// </summary>
+        internal virtual void InternalWaitForCompletion()
+        {
+            throw new YooInternalException($"InternalWaitForCompletion() is not implemented: {this.GetType().Name}");
         }
 
         /// <summary>
@@ -321,25 +328,38 @@ namespace YooAsset
                 // 结束记录
                 DebugEndRecording();
 
-                if (_onCompleted != null)
+                try
                 {
-                    var invocationList = _onCompleted.GetInvocationList();
-                    foreach (var handler in invocationList)
-                    {
-                        try
-                        {
-                            ((Action<AsyncOperationBase>)handler).Invoke(this);
-                        }
-                        catch (Exception ex)
-                        {
-                            YooLogger.Error($"Exception in completion callback: {ex}");
-                        }
-                    }
+                    InternalDispose();
+                }
+                catch (Exception ex)
+                {
+                    YooLogger.Error($"Exception in {this.GetType().Name}.InternalDispose: {ex}");
                 }
 
-                _onCompleted = null;
+                if (_onCompleted != null)
+                {
+                    var invocations = _onCompleted.GetInvocationList();
+                    InvokeSafely(invocations);
+                    _onCompleted = null;
+                }
+
                 if (_taskCompletionSource != null)
                     _taskCompletionSource.TrySetResult(null);
+            }
+        }
+        private void InvokeSafely(Delegate[] invocations)
+        {
+            foreach (var handler in invocations)
+            {
+                try
+                {
+                    ((Action<AsyncOperationBase>)handler).Invoke(this);
+                }
+                catch (Exception ex)
+                {
+                    YooLogger.Error($"Exception in inoke callback: {ex}");
+                }
             }
         }
 

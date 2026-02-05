@@ -1,11 +1,14 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace YooAsset
 {
-    internal static class BuiltinFileCatalogTools
+    /// <summary>
+    /// 内置资源目录工具类
+    /// </summary>
+    internal static class BuiltinCatalogTools
     {
 #if UNITY_EDITOR
         /// <summary>
@@ -21,7 +24,7 @@ namespace YooAsset
                 string versionFilePath = $"{packageDirectory}/{versionFileName}";
                 if (File.Exists(versionFilePath) == false)
                 {
-                    Debug.LogError($"Can not found package version file : {versionFilePath}");
+                    Debug.LogError($"Package version file not found: {versionFilePath}");
                     return false;
                 }
 
@@ -35,7 +38,7 @@ namespace YooAsset
                 string manifestFilePath = $"{packageDirectory}/{manifestFileName}";
                 if (File.Exists(manifestFilePath) == false)
                 {
-                    Debug.LogError($"Can not found package manifest file : {manifestFilePath}");
+                    Debug.LogError($"Package manifest file not found: {manifestFilePath}");
                     return false;
                 }
 
@@ -53,29 +56,29 @@ namespace YooAsset
             }
 
             // 创建内置清单实例
-            var buildinFileCatalog = new BuiltinFileCatalog();
-            buildinFileCatalog.FileVersion = BuiltinFileCatalogDefine.FileVersion;
-            buildinFileCatalog.PackageName = packageName;
-            buildinFileCatalog.PackageVersion = packageVersion;
+            var buildinCatalog = new BuiltinCatalog();
+            buildinCatalog.FileVersion = BuiltinCatalogDefine.FileVersion;
+            buildinCatalog.PackageName = packageName;
+            buildinCatalog.PackageVersion = packageVersion;
 
             // 创建白名单查询集合
-            HashSet<string> whiteFileList = new HashSet<string>
+            HashSet<string> whiteFileNameList = new HashSet<string>
             {
                 "link.xml",
                 "buildlogtep.json",
-                BuiltinFileCatalogDefine.JsonFileName,
-                BuiltinFileCatalogDefine.BinaryFileName
+                BuiltinCatalogDefine.JsonFileName,
+                BuiltinCatalogDefine.BinaryFileName
             };
             string packageVersionFileName = YooAssetSettingsData.GetPackageVersionFileName(packageName);
             string packageHashFileName = YooAssetSettingsData.GetPackageHashFileName(packageName, packageVersion);
-            string manifestBinaryFIleName = YooAssetSettingsData.GetManifestBinaryFileName(packageName, packageVersion);
-            string manifestJsonFIleName = YooAssetSettingsData.GetManifestJsonFileName(packageName, packageVersion);
+            string manifestBinaryFileName = YooAssetSettingsData.GetManifestBinaryFileName(packageName, packageVersion);
+            string manifestJsonFileName = YooAssetSettingsData.GetManifestJsonFileName(packageName, packageVersion);
             string reportFileName = YooAssetSettingsData.GetBuildReportFileName(packageName, packageVersion);
-            whiteFileList.Add(packageVersionFileName);
-            whiteFileList.Add(packageHashFileName);
-            whiteFileList.Add(manifestBinaryFIleName);
-            whiteFileList.Add(manifestJsonFIleName);
-            whiteFileList.Add(reportFileName);
+            whiteFileNameList.Add(packageVersionFileName);
+            whiteFileNameList.Add(packageHashFileName);
+            whiteFileNameList.Add(manifestBinaryFileName);
+            whiteFileNameList.Add(manifestJsonFileName);
+            whiteFileNameList.Add(reportFileName);
 
             // 记录所有内置资源文件
             DirectoryInfo rootDirectory = new DirectoryInfo(packageDirectory);
@@ -85,37 +88,37 @@ namespace YooAsset
                 if (fileInfo.Extension == ".meta")
                     continue;
 
-                if (whiteFileList.Contains(fileInfo.Name))
+                if (whiteFileNameList.Contains(fileInfo.Name))
                     continue;
 
                 string fileName = fileInfo.Name;
                 if (fileMapping.TryGetValue(fileName, out string bundleGUID))
                 {
-                    var wrapper = new BuiltinFileCatalog.FileWrapper();
-                    wrapper.BundleGUID = bundleGUID;
-                    wrapper.FileName = fileName;
-                    buildinFileCatalog.Wrappers.Add(wrapper);
+                    var fileEntry = new BuiltinCatalog.FileEntry();
+                    fileEntry.BundleGUID = bundleGUID;
+                    fileEntry.FileName = fileName;
+                    buildinCatalog.FileEntries.Add(fileEntry);
                 }
                 else
                 {
-                    Debug.LogWarning($"Failed mapping file : {fileName}");
+                    Debug.LogWarning($"Failed to map file: {fileName}");
                 }
             }
 
             // 创建输出文件
-            string jsonFilePath = $"{packageDirectory}/{BuiltinFileCatalogDefine.JsonFileName}";
+            string jsonFilePath = $"{packageDirectory}/{BuiltinCatalogDefine.JsonFileName}";
             if (File.Exists(jsonFilePath))
                 File.Delete(jsonFilePath);
-            SerializeToJson(jsonFilePath, buildinFileCatalog);
+            SerializeToJson(jsonFilePath, buildinCatalog);
 
             // 创建输出文件
-            string binaryFilePath = $"{packageDirectory}/{BuiltinFileCatalogDefine.BinaryFileName}";
+            string binaryFilePath = $"{packageDirectory}/{BuiltinCatalogDefine.BinaryFileName}";
             if (File.Exists(binaryFilePath))
                 File.Delete(binaryFilePath);
-            SerializeToBinary(binaryFilePath, buildinFileCatalog);
+            SerializeToBinary(binaryFilePath, buildinCatalog);
 
             UnityEditor.AssetDatabase.Refresh();
-            Debug.Log($"Succeed to save catalog file : {binaryFilePath}");
+            Debug.Log($"Successfully saved catalog file: {binaryFilePath}");
             return true;
         }
 
@@ -125,71 +128,62 @@ namespace YooAsset
         public static bool CreateEmptyFile(string packageName, string packageVersion, string outputPath)
         {
             // 创建内置清单实例
-            var buildinFileCatalog = new BuiltinFileCatalog();
-            buildinFileCatalog.FileVersion = BuiltinFileCatalogDefine.FileVersion;
+            var buildinFileCatalog = new BuiltinCatalog();
+            buildinFileCatalog.FileVersion = BuiltinCatalogDefine.FileVersion;
             buildinFileCatalog.PackageName = packageName;
             buildinFileCatalog.PackageVersion = packageVersion;
 
             // 创建输出文件
-            string jsonFilePath = $"{outputPath}/{BuiltinFileCatalogDefine.JsonFileName}";
+            string jsonFilePath = $"{outputPath}/{BuiltinCatalogDefine.JsonFileName}";
             if (File.Exists(jsonFilePath))
                 File.Delete(jsonFilePath);
             SerializeToJson(jsonFilePath, buildinFileCatalog);
 
             // 创建输出文件
-            string binaryFilePath = $"{outputPath}/{BuiltinFileCatalogDefine.BinaryFileName}";
+            string binaryFilePath = $"{outputPath}/{BuiltinCatalogDefine.BinaryFileName}";
             if (File.Exists(binaryFilePath))
                 File.Delete(binaryFilePath);
             SerializeToBinary(binaryFilePath, buildinFileCatalog);
 
             UnityEditor.AssetDatabase.Refresh();
-            Debug.Log($"Succeed to save catalog file : {binaryFilePath}");
+            Debug.Log($"Successfully saved catalog file: {binaryFilePath}");
             return true;
         }
-#endif
 
         /// <summary>
         /// 序列化（JSON文件）
         /// </summary>
-        public static void SerializeToJson(string savePath, BuiltinFileCatalog catalog)
+        public static void SerializeToJson(string savePath, BuiltinCatalog catalog)
         {
             string json = JsonUtility.ToJson(catalog, true);
             FileUtility.WriteAllText(savePath, json);
         }
 
         /// <summary>
-        /// 反序列化（JSON文件）
-        /// </summary>
-        public static BuiltinFileCatalog DeserializeFromJson(string jsonContent)
-        {
-            return JsonUtility.FromJson<BuiltinFileCatalog>(jsonContent);
-        }
-
-        /// <summary>
         /// 序列化（二进制文件）
         /// </summary>
-        public static void SerializeToBinary(string savePath, BuiltinFileCatalog catalog)
+        public static void SerializeToBinary(string savePath, BuiltinCatalog catalog)
         {
             using (FileStream fs = new FileStream(savePath, FileMode.Create))
             {
                 // 创建缓存器
-                BufferWriter buffer = new BufferWriter(BuiltinFileCatalogDefine.FileMaxSize);
+                BufferWriter buffer = new BufferWriter(BuiltinCatalogDefine.MaxFileSize);
 
                 // 写入文件标记
-                buffer.WriteUInt32(BuiltinFileCatalogDefine.FileSign);
+                buffer.WriteUInt32(BuiltinCatalogDefine.FileHeader);
 
                 // 写入文件版本
-                buffer.WriteUTF8(BuiltinFileCatalogDefine.FileVersion);
+                buffer.WriteUTF8(BuiltinCatalogDefine.FileVersion);
 
                 // 写入文件头信息
                 buffer.WriteUTF8(catalog.PackageName);
                 buffer.WriteUTF8(catalog.PackageVersion);
 
                 // 写入资源包列表
-                buffer.WriteInt32(catalog.Wrappers.Count);
-                for (int i = 0; i < catalog.Wrappers.Count; i++)
+                buffer.WriteInt32(catalog.FileEntries.Count);
+                for (int i = 0; i < catalog.FileEntries.Count; i++)
                 {
-                    var fileWrapper = catalog.Wrappers[i];
+                    var fileWrapper = catalog.FileEntries[i];
                     buffer.WriteUTF8(fileWrapper.BundleGUID);
                     buffer.WriteUTF8(fileWrapper.FileName);
                 }
@@ -199,11 +193,20 @@ namespace YooAsset
                 fs.Flush();
             }
         }
+#endif
+
+        /// <summary>
+        /// 反序列化（JSON文件）
+        /// </summary>
+        public static BuiltinCatalog DeserializeFromJson(string jsonContent)
+        {
+            return JsonUtility.FromJson<BuiltinCatalog>(jsonContent);
+        }
 
         /// <summary>
         /// 反序列化（二进制文件）
         /// </summary>
-        public static BuiltinFileCatalog DeserializeFromBinary(byte[] binaryData)
+        public static BuiltinCatalog DeserializeFromBinary(byte[] binaryData)
         {
             if (binaryData == null || binaryData.Length == 0)
                 throw new Exception("Catalog file data is null or empty.");
@@ -212,31 +215,31 @@ namespace YooAsset
             BufferReader buffer = new BufferReader(binaryData);
 
             // 读取文件标记
-            uint fileSign = buffer.ReadUInt32();
-            if (fileSign != BuiltinFileCatalogDefine.FileSign)
+            uint fileHeader = buffer.ReadUInt32();
+            if (fileHeader != BuiltinCatalogDefine.FileHeader)
                 throw new Exception("Invalid catalog file.");
 
             // 读取文件版本
             string fileVersion = buffer.ReadUTF8();
-            if (fileVersion != BuiltinFileCatalogDefine.FileVersion)
-                throw new Exception($"The catalog file version are not compatible : {fileVersion} != {BuiltinFileCatalogDefine.FileVersion}");
+            if (fileVersion != BuiltinCatalogDefine.FileVersion)
+                throw new Exception($"The catalog file version is not compatible: {fileVersion} != {BuiltinCatalogDefine.FileVersion}");
 
-            BuiltinFileCatalog catalog = new BuiltinFileCatalog();
+            BuiltinCatalog catalog = new BuiltinCatalog();
             {
                 // 读取文件头信息
                 catalog.FileVersion = fileVersion;
                 catalog.PackageName = buffer.ReadUTF8();
                 catalog.PackageVersion = buffer.ReadUTF8();
 
-                // 读取资源包列表
+                // 读取文件条目列表
                 int fileCount = buffer.ReadInt32();
-                catalog.Wrappers = new List<BuiltinFileCatalog.FileWrapper>(fileCount);
+                catalog.FileEntries = new List<BuiltinCatalog.FileEntry>(fileCount);
                 for (int i = 0; i < fileCount; i++)
                 {
-                    var fileWrapper = new BuiltinFileCatalog.FileWrapper();
-                    fileWrapper.BundleGUID = buffer.ReadUTF8();
-                    fileWrapper.FileName = buffer.ReadUTF8();
-                    catalog.Wrappers.Add(fileWrapper);
+                    var fileEntry = new BuiltinCatalog.FileEntry();
+                    fileEntry.BundleGUID = buffer.ReadUTF8();
+                    fileEntry.FileName = buffer.ReadUTF8();
+                    catalog.FileEntries.Add(fileEntry);
                 }
             }
 

@@ -61,10 +61,10 @@ namespace YooAsset
             using (FileStream fs = new FileStream(savePath, FileMode.Create))
             {
                 // 创建缓存器
-                BufferWriter buffer = new BufferWriter(PackageManifestDefine.FileMaxSize);
+                BufferWriter buffer = new BufferWriter(PackageManifestDefine.MaxFileSize);
 
                 // 写入文件标记
-                buffer.WriteUInt32(PackageManifestDefine.FileSign);
+                buffer.WriteUInt32(PackageManifestDefine.FileSignature);
 
                 // 写入文件版本
                 buffer.WriteUTF8(manifest.FileVersion);

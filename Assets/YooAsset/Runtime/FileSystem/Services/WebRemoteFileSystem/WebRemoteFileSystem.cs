@@ -6,7 +6,7 @@ using UnityEngine;
 namespace YooAsset
 {
     /// <summary>
-    /// Web文件系统
+    /// Web远端文件系统
     /// </summary>
     internal class WebRemoteFileSystem : IFileSystem
     {
@@ -40,6 +40,11 @@ namespace YooAsset
         /// 自定义参数：下载任务的看门狗机制超时时间
         /// </summary>
         public int DownloadWatchDogTimeout { private set; get; } = 0;
+
+        /// <summary>
+        /// 自定义参数：下载的资源包数据的校验级别
+        /// </summary>
+        public EFileVerifyLevel DownloadVerifyLevel { private set; get; } = EFileVerifyLevel.Middle;
 
         /// <summary>
         /// 自定义参数：远程服务接口的实例类（支持跨域下载）
@@ -81,11 +86,11 @@ namespace YooAsset
             var operation = new FSClearCacheCompleteOperation();
             return operation;
         }
-        public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
+        public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             throw new System.NotImplementedException();
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             var operation = new WRFSLoadBundleOperation(this, options);
             return operation;
@@ -109,6 +114,10 @@ namespace YooAsset
             {
                 int convertValue = Convert.ToInt32(value);
                 DownloadWatchDogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
+            }
+            else if (name == FileSystemParametersDefine.FILE_VERIFY_LEVEL)
+            {
+                DownloadVerifyLevel = (EFileVerifyLevel)value;
             }
             else if (name == FileSystemParametersDefine.REMOTE_SERVICES)
             {
@@ -139,6 +148,7 @@ namespace YooAsset
             var cacheConfig = new WebRemoteFileCache.CacheConfig();
             cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
             cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
+            cacheConfig.DownloadVerifyLevel = DownloadVerifyLevel;
             cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
             cacheConfig.RemoteServices = RemoteServices;
             cacheConfig.DownloadBackend = DownloadBackend;

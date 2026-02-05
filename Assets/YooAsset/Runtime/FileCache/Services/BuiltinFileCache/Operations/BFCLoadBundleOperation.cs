@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 内置文件缓存加载 AssetBundle 操作
+    /// </summary>
     internal class BFCLoadAssetBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
@@ -38,7 +41,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Not found file cache entry: {_bundle.BundleGUID}";
+                    Error = $"File cache entry not found: {_bundle.BundleGUID}";
                 }
                 else
                 {
@@ -54,7 +57,7 @@ namespace YooAsset
                     options.CacheName = _fileCache.GetType().Name;
                     options.Bundle = _bundle;
                     options.FilePath = _cacheEntry.FilePath;
-                    options.Decryptor = _fileCache.Config.AssetBundleDecryptor;
+                    options.AssetBundleDecryptor = _fileCache.Config.AssetBundleDecryptor;
                     _loadLocalAssetBundleOp = new LoadLocalAssetBundleOperation(options);
                     _loadLocalAssetBundleOp.StartOperation();
                     AddChildOperation(_loadLocalAssetBundleOp);
@@ -70,7 +73,7 @@ namespace YooAsset
                 if (_loadLocalAssetBundleOp.Status == EOperationStatus.Succeeded)
                 {
                     if (_loadLocalAssetBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded asset bundle result is null.");
+                        throw new YooInternalException("Loaded bundle result is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -90,6 +93,9 @@ namespace YooAsset
         }
     }
 
+    /// <summary>
+    /// 内置文件缓存加载 RawBundle 操作
+    /// </summary>
     internal class BFCLoadRawBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
@@ -127,7 +133,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Not found file cache entry: {_bundle.BundleGUID}";
+                    Error = $"File cache entry not found: {_bundle.BundleGUID}";
                 }
                 else
                 {
@@ -143,7 +149,7 @@ namespace YooAsset
                     options.CacheName = _fileCache.GetType().Name;
                     options.Bundle = _bundle;
                     options.FilePath = _cacheEntry.FilePath;
-                    options.Decryptor = _fileCache.Config.AssetBundleDecryptor;
+                    options.RawBundleDecryptor = _fileCache.Config.RawBundleDecryptor;
                     _loadLocalRawBundleOp = new LoadLocalRawBundleOperation(options);
                     _loadLocalRawBundleOp.StartOperation();
                     AddChildOperation(_loadLocalRawBundleOp);
@@ -159,8 +165,10 @@ namespace YooAsset
                 if(_loadLocalRawBundleOp.Status == EOperationStatus.Succeeded)
                 {
                     if (_loadLocalRawBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded raw bundle result is null.");
+                        throw new YooInternalException("Loaded bundle result is null.");
 
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeeded;
                     BundleResult = _loadLocalRawBundleOp.BundleResult;
                 }
                 else

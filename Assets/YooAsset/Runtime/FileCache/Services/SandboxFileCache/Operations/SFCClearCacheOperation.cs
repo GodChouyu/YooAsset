@@ -77,6 +77,9 @@ namespace YooAsset
         protected abstract bool ParseOptionsStep();
     }
 
+    /// <summary>
+    /// 清理所有沙盒缓存操作
+    /// </summary>
     internal sealed class SFCClearAllCacheOperation : SFCClearCacheOperation
     {
         internal SFCClearAllCacheOperation(SandboxFileCache fileCache, ClearCacheOptions options)
@@ -84,15 +87,18 @@ namespace YooAsset
 
         protected override bool ParseOptionsStep()
         {
-            var allEntrys = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntrys.Count);
-            foreach (var entry in allEntrys)
+            var allEntries = _fileCache.GetAllEntries();
+            _bundleGUIDs = new List<string>(allEntries.Count);
+            foreach (var entry in allEntries)
             {
                 _bundleGUIDs.Add(entry.BundleGUID);
             }
             return true;
         }
     }
+    /// <summary>
+    /// 清理未使用的沙盒缓存操作
+    /// </summary>
     internal sealed class SFCClearUnusedCacheOperation : SFCClearCacheOperation
     {
         internal SFCClearUnusedCacheOperation(SandboxFileCache fileCache, ClearCacheOptions options)
@@ -104,13 +110,13 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = "Can not found active package manifest.";
+                Error = "Active package manifest not found.";
                 return false;
             }
 
-            var allEntrys = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntrys.Count);
-            foreach (var entry in allEntrys)
+            var allEntries = _fileCache.GetAllEntries();
+            _bundleGUIDs = new List<string>(allEntries.Count);
+            foreach (var entry in allEntries)
             {
                 if (_options.Manifest.IsIncludeBundleFile(entry.BundleGUID) == false)
                 {
@@ -120,6 +126,9 @@ namespace YooAsset
             return true;
         }
     }
+    /// <summary>
+    /// 按资源地址清理沙盒缓存操作
+    /// </summary>
     internal sealed class SFCClearCacheByLocationsOperation : SFCClearCacheOperation
     {
         internal SFCClearCacheByLocationsOperation(SandboxFileCache fileCache, ClearCacheOptions options)
@@ -131,7 +140,7 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = "Can not found active package manifest.";
+                Error = "Active package manifest not found.";
                 return false;
             }
 
@@ -154,7 +163,7 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = $"Invalid clear param : {_options.ClearParam.GetType().FullName}";
+                Error = $"Invalid clear param: {_options.ClearParam.GetType().FullName}";
                 return false;
             }
 
@@ -171,6 +180,9 @@ namespace YooAsset
             return true;
         }
     }
+    /// <summary>
+    /// 按标签清理沙盒缓存操作
+    /// </summary>
     internal sealed class SFCClearCacheByTagsOperation : SFCClearCacheOperation
     {
         internal SFCClearCacheByTagsOperation(SandboxFileCache fileCache, ClearCacheOptions options)
@@ -182,7 +194,7 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = "Can not found active package manifest.";
+                Error = "Active package manifest not found.";
                 return false;
             }
 
@@ -205,13 +217,13 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = $"Invalid clear param : {_options.ClearParam.GetType().FullName}";
+                Error = $"Invalid clear param: {_options.ClearParam.GetType().FullName}";
                 return false;
             }
 
-            var allEntrys = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntrys.Count);
-            foreach (var entry in allEntrys)
+            var allEntries = _fileCache.GetAllEntries();
+            _bundleGUIDs = new List<string>(allEntries.Count);
+            foreach (var entry in allEntries)
             {
                 if (_options.Manifest.TryGetPackageBundleByBundleGUID(entry.BundleGUID, out PackageBundle bundle))
                 {

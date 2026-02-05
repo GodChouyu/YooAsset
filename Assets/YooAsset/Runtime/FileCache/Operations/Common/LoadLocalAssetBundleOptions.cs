@@ -22,9 +22,9 @@ namespace YooAsset
         public string FilePath { get; set; }
 
         /// <summary>
-        /// 解密接口
+        /// AssetBundle 解密器
         /// </summary>
-        public IBundleDecryptor Decryptor { get; set; }
+        public IBundleDecryptor AssetBundleDecryptor { get; set; }
     }
 }
 

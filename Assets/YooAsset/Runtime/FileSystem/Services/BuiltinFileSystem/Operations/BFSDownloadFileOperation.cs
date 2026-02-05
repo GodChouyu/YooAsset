@@ -14,7 +14,7 @@ namespace YooAsset
         }
 
         private readonly BuiltinFileSystem _fileSystem;
-        private readonly DownloadFileOptions _options;
+        private readonly FSDownloadFileOptions _options;
         private DownloadFileBaseOperation _downloadFileOp;
         private ESteps _steps = ESteps.None;
 
@@ -22,7 +22,7 @@ namespace YooAsset
         private float _tryAgainTimer = 0;
         private int _failedTryAgain;
 
-        internal BFSDownloadFileOperation(BuiltinFileSystem fileSystem, DownloadFileOptions options) : base(options.Bundle)
+        internal BFSDownloadFileOperation(BuiltinFileSystem fileSystem, FSDownloadFileOptions options) : base(options.Bundle)
         {
             _fileSystem = fileSystem;
             _options = options;

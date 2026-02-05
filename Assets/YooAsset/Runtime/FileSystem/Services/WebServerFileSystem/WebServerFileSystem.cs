@@ -6,7 +6,7 @@ using UnityEngine;
 namespace YooAsset
 {
     /// <summary>
-    /// Web文件系统
+    /// Web服务端文件系统
     /// </summary>
     internal class WebServerFileSystem : IFileSystem
     {
@@ -45,6 +45,11 @@ namespace YooAsset
         public int DownloadWatchDogTimeout { private set; get; } = 0;
 
         /// <summary>
+        /// 自定义参数：下载的资源包数据的校验级别
+        /// </summary>
+        public EFileVerifyLevel DownloadVerifyLevel { private set; get; } = EFileVerifyLevel.Middle;
+
+        /// <summary>
         /// 自定义参数：AssetBundle 解密器
         /// </summary>
         public IBundleDecryptor AssetBundleDecryptor { get; set; }
@@ -79,11 +84,11 @@ namespace YooAsset
             var operation = new FSClearCacheCompleteOperation();
             return operation;
         }
-        public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
+        public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             throw new System.NotImplementedException();
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             var operation = new WSFSLoadAssetBundleOperation(this, options);
             return operation;
@@ -107,6 +112,10 @@ namespace YooAsset
             {
                 int convertValue = Convert.ToInt32(value);
                 DownloadWatchDogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
+            }
+            else if (name == FileSystemParametersDefine.FILE_VERIFY_LEVEL)
+            {
+                DownloadVerifyLevel = (EFileVerifyLevel)value;
             }
             else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
             {
@@ -138,8 +147,9 @@ namespace YooAsset
             var cacheConfig = new WebServerFileCache.CacheConfig();
             cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
             cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
-            cacheConfig.DownloadBackend = DownloadBackend;
+            cacheConfig.DownloadVerifyLevel = DownloadVerifyLevel;
             cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
+            cacheConfig.DownloadBackend = DownloadBackend;
             FileCache = new WebServerFileCache(packageName, _packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()

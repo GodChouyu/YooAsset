@@ -1,19 +1,29 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
     /// <summary>
-    /// 内置资源清单目录
+    /// 内置资源目录
     /// </summary>
     [Serializable]
-    internal class BuiltinFileCatalog
+    internal class BuiltinCatalog
     {
+        /// <summary>
+        /// 内置资源文件条目
+        /// </summary>
         [Serializable]
-        public class FileWrapper
+        public class FileEntry
         {
+            /// <summary>
+            /// 资源包唯一标识
+            /// </summary>
             public string BundleGUID;
+
+            /// <summary>
+            /// 资源包文件名
+            /// </summary>
             public string FileName;
         }
 
@@ -33,8 +43,8 @@ namespace YooAsset
         public string PackageVersion;
 
         /// <summary>
-        /// 文件列表
+        /// 文件条目列表
         /// </summary>
-        public List<FileWrapper> Wrappers = new List<FileWrapper>();
+        public List<FileEntry> FileEntries = new List<FileEntry>();
     }
 }

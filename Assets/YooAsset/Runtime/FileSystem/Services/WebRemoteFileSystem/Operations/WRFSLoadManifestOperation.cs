@@ -38,7 +38,13 @@ namespace YooAsset
             {
                 if (_requestWebPackageHashOp == null)
                 {
-                    _requestWebPackageHashOp = new RequestWebPackageHashOperation(_fileSystem.RemoteServices, _fileSystem.DownloadBackend, _fileSystem.PackageName, _packageVersion, _timeout);
+                    var options = new RequestWebPackageHashOptions();
+                    options.PackageName = _fileSystem.PackageName;
+                    options.PackageVersion = _packageVersion;
+                    options.Timeout = _timeout;
+                    options.RemoteServices = _fileSystem.RemoteServices;
+                    options.DownloadBackend = _fileSystem.DownloadBackend;
+                    _requestWebPackageHashOp = new RequestWebPackageHashOperation(options);
                     _requestWebPackageHashOp.StartOperation();
                     AddChildOperation(_requestWebPackageHashOp);
                 }
@@ -63,12 +69,15 @@ namespace YooAsset
             {
                 if (_loadWebPackageManifestOp == null)
                 {
-                    string packageHash = _requestWebPackageHashOp.PackageHash;
-                    string packageName = _fileSystem.PackageName;
-                    var manifestServices = _fileSystem.ManifestDecryptor;
-                    var remoteServices = _fileSystem.RemoteServices;
-                    var downloadBackend = _fileSystem.DownloadBackend;
-                    _loadWebPackageManifestOp = new LoadWebPackageManifestOperation(manifestServices, remoteServices, downloadBackend, packageName, _packageVersion, packageHash, _timeout);
+                    var options = new LoadWebPackageManifestOptions();
+                    options.PackageName = _fileSystem.PackageName;
+                    options.PackageVersion = _packageVersion;
+                    options.PackageHash = _requestWebPackageHashOp.PackageHash;
+                    options.Timeout = _timeout;
+                    options.RemoteServices = _fileSystem.RemoteServices;
+                    options.ManifestDecryptor = _fileSystem.ManifestDecryptor;
+                    options.DownloadBackend = _fileSystem.DownloadBackend;
+                    _loadWebPackageManifestOp = new LoadWebPackageManifestOperation(options);
                     _loadWebPackageManifestOp.StartOperation();
                     AddChildOperation(_loadWebPackageManifestOp);
                 }

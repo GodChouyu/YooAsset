@@ -99,12 +99,12 @@ namespace YooAsset
             var operation = new FSClearCacheCompleteOperation();
             return operation;
         }
-        public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
+        public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             var downloader = new EFSDownloadFileOperation(this, options);
             return downloader;
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             var operation = new EFSLoadBundleOperation(this, options);
             return operation;
@@ -232,14 +232,6 @@ namespace YooAsset
         }
 
         #region 内部方法
-        public string GetBundleFilePath(PackageBundle bundle)
-        {
-            if (bundle.IncludeMainAssets.Count == 0)
-                return string.Empty;
-
-            var pacakgeAsset = bundle.IncludeMainAssets[0];
-            return pacakgeAsset.AssetPath;
-        }
         public string GetEditorPackageVersionFilePath()
         {
             string fileName = YooAssetSettingsData.GetPackageVersionFileName(PackageName);

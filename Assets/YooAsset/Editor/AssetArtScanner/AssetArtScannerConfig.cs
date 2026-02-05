@@ -15,7 +15,7 @@ namespace YooAsset.Editor
             /// <summary>
             /// 文件签名
             /// </summary>
-            public string FileSign;
+            public string FileSignature;
 
             /// <summary>
             /// 文件版本
@@ -40,7 +40,7 @@ namespace YooAsset.Editor
             ConfigWrapper setting = JsonUtility.FromJson<ConfigWrapper>(json);
 
             // 检测配置文件的签名
-            if (setting.FileSign != ScannerDefine.SettingFileSign)
+            if (setting.FileSignature != ScannerDefine.SettingFileSign)
                 throw new Exception($"导入的配置文件无法识别 : {filePath}");
 
             // 检测配置文件的版本
@@ -74,7 +74,7 @@ namespace YooAsset.Editor
                 File.Delete(savePath);
 
             ConfigWrapper wrapper = new ConfigWrapper();
-            wrapper.FileSign = ScannerDefine.SettingFileSign;
+            wrapper.FileSignature = ScannerDefine.SettingFileSign;
             wrapper.FileVersion = ScannerDefine.SettingFileVersion;
             wrapper.Scanners = AssetArtScannerSettingData.Setting.Scanners;
 

@@ -92,5 +92,13 @@ namespace YooAsset
                 }
             }
         }
+        internal override void InternalDispose()
+        {
+            if (_webTextRequestOp != null)
+            {
+                _webTextRequestOp.Dispose();
+                _webTextRequestOp = null;
+            }
+        }
     }
 }

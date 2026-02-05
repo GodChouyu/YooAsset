@@ -3,6 +3,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件缓存写入操作
+    /// </summary>
     internal class SFCWriteCacheOperation : FCWriteCacheOperation
     {
         private enum ESteps
@@ -14,14 +17,14 @@ namespace YooAsset
             Done,
         }
 
-        private readonly SandboxFileCache _cache;
-        private readonly WriteCacheOptions _options;
-        private VerifyTempFileOperation _verifyOperation;
+        private readonly SandboxFileCache _fileCache;
+        private readonly FCWriteCacheOptions _options;
+        private VerifyTempFileOperation _verifyTempFileOp;
         private ESteps _steps = ESteps.None;
 
-        public SFCWriteCacheOperation(SandboxFileCache cache, WriteCacheOptions options)
+        public SFCWriteCacheOperation(SandboxFileCache fileCache, FCWriteCacheOptions options)
         {
-            _cache = cache;
+            _fileCache = fileCache;
             _options = options;
         }
         internal override void InternalStart()
@@ -35,11 +38,11 @@ namespace YooAsset
 
             if (_steps == ESteps.Check)
             {
-                if (_cache.IsCached(_options.Bundle.BundleGUID))
+                if (_fileCache.IsCached(_options.Bundle.BundleGUID))
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "The bundle is cached.";
+                    Error = "The bundle is already cached.";
                 }
                 else
                 {
@@ -49,22 +52,22 @@ namespace YooAsset
 
             if (_steps == ESteps.VerifyFile)
             {
-                if (_verifyOperation == null)
+                if (_verifyTempFileOp == null)
                 {
                     var element = new TempFileInfo(_options.FilePath, _options.Bundle.FileCRC, _options.Bundle.FileSize);
-                    _verifyOperation = new VerifyTempFileOperation(element);
-                    _verifyOperation.StartOperation();
-                    AddChildOperation(_verifyOperation);
+                    _verifyTempFileOp = new VerifyTempFileOperation(element);
+                    _verifyTempFileOp.StartOperation();
+                    AddChildOperation(_verifyTempFileOp);
                 }
 
                 if (IsWaitForCompletion)
-                    _verifyOperation.WaitForCompletion();
+                    _verifyTempFileOp.WaitForCompletion();
 
-                _verifyOperation.UpdateOperation();
-                if (_verifyOperation.IsDone == false)
+                _verifyTempFileOp.UpdateOperation();
+                if (_verifyTempFileOp.IsDone == false)
                     return;
 
-                if (_verifyOperation.Status == EOperationStatus.Succeeded)
+                if (_verifyTempFileOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.CacheFile;
                 }
@@ -72,37 +75,45 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _verifyOperation.Error;
+                    Error = _verifyTempFileOp.Error;
                 }
             }
 
             if (_steps == ESteps.CacheFile)
             {
-                string infoFilePath = _cache.GetInfoFilePath(_options.Bundle);
-                string dataFilePath = _cache.GetDataFilePath(_options.Bundle);
+                string dataFilePath = _fileCache.GetDataFilePath(_options.Bundle);
+                string infoFilePath = _fileCache.GetInfoFilePath(_options.Bundle);
+                string dataTempPath = _fileCache.GetDataTempFilePath(_options.Bundle);
+                string infoTempPath = _fileCache.GetInfoTempFilePath(_options.Bundle);
 
                 try
                 {
-                    if (File.Exists(infoFilePath))
-                        File.Delete(infoFilePath);
-                    if (File.Exists(dataFilePath))
-                        File.Delete(dataFilePath);
-
-                    // 拷贝数据文件
+                    // 阶段A：准备目标目录，清理可能存在的残留文件
                     FileUtility.EnsureFileDirectory(dataFilePath);
-                    FileInfo fileInfo = new FileInfo(_options.FilePath);
-                    fileInfo.CopyTo(dataFilePath, true);
+                    DeleteFileSafely(dataTempPath);
+                    DeleteFileSafely(infoTempPath);
 
-                    // 写入信息文件
-                    FileUtility.EnsureFileDirectory(infoFilePath);
-                    using (FileStream fs = new FileStream(infoFilePath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    // 阶段B：写入临时文件
+                    FileInfo fileInfo = new FileInfo(_options.FilePath);
+                    fileInfo.CopyTo(dataTempPath, true);
+
+                    using (FileStream fs = new FileStream(infoTempPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
-                        _cache.SharedBuffer.Clear();
-                        _cache.SharedBuffer.WriteUInt32(_options.Bundle.FileCRC);
-                        _cache.SharedBuffer.WriteInt64(_options.Bundle.FileSize);
-                        _cache.SharedBuffer.WriteToStream(fs);
+                        var buffer = new BufferWriter(128);
+                        buffer.WriteUInt32(_options.Bundle.FileCRC);
+                        buffer.WriteInt64(_options.Bundle.FileSize);
+                        buffer.WriteToStream(fs);
                         fs.Flush();
                     }
+
+                    // 阶段C：原子提交
+                    if (File.Exists(dataFilePath))
+                        File.Delete(dataFilePath);
+                    File.Move(dataTempPath, dataFilePath);
+
+                    if (File.Exists(infoFilePath))
+                        File.Delete(infoFilePath);
+                    File.Move(infoTempPath, infoFilePath);
                 }
                 catch (Exception ex)
                 {
@@ -110,11 +121,16 @@ namespace YooAsset
                     Status = EOperationStatus.Failed;
                     Error = $"Failed to write cache file. Error: {ex.Message}";
                     YooLogger.Error(Error);
-                    return; //失败后直接返回
+
+                    // 回滚：清理临时文件，正式文件不受影响
+                    DeleteFileSafely(dataTempPath);
+                    DeleteFileSafely(infoTempPath);
+                    return;
                 }
 
+                // 阶段D：注册内存缓存条目
                 var cacheEntry = new SandboxFileCacheEntry(_options.Bundle.BundleGUID, infoFilePath, dataFilePath);
-                _cache.AddEntry(_options.Bundle.BundleGUID, cacheEntry);
+                _fileCache.AddEntry(_options.Bundle.BundleGUID, cacheEntry);
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeeded;
             }
@@ -122,6 +138,19 @@ namespace YooAsset
         internal override void InternalWaitForCompletion()
         {
             ExecuteBatch();
+        }
+
+        private static void DeleteFileSafely(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
+            catch (Exception ex)
+            {
+                YooLogger.Warning($"Failed to delete file: {filePath} Error: {ex.Message}");
+            }
         }
     }
 }

@@ -16,12 +16,12 @@ namespace YooAsset
         }
 
         private readonly BuiltinFileSystem _fileSystem;
-        private readonly LoadBundleOptions _options;
+        private readonly FCLoadBundleOptions _options;
         private FSDownloadFileOperation _unpackFileOp;
         private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-        internal BFSLoadBundleOperation(BuiltinFileSystem fileSystem, LoadBundleOptions options)
+        internal BFSLoadBundleOperation(BuiltinFileSystem fileSystem, FCLoadBundleOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;
@@ -73,7 +73,7 @@ namespace YooAsset
             {
                 if (_unpackFileOp == null)
                 {
-                    var options = new DownloadFileOptions(_options.Bundle, int.MaxValue);
+                    var options = new FSDownloadFileOptions(_options.Bundle, int.MaxValue);
                     _unpackFileOp = _fileSystem.DownloadFileAsync(options); // 注意：异步任务的开启由调度器统一控制
                     AddChildOperation(_unpackFileOp);
                 }

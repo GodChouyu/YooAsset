@@ -1,18 +1,21 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// Web服务器文件缓存初始化操作
+    /// </summary>
     internal class WSFCInitializeOperation : FCInitializeOperation
     {
         private enum ESteps
         {
             None,
-            LoadCatalogFile,
-            RecordFiles,
+            LoadCatalog,
+            RecordEntry,
             Done,
         }
 
         private readonly WebServerFileCache _fileCache;
-        private LoadWebServerCatalogOperation _loadWebCatalogFileOp;
+        private LoadBuiltinCatalogOperation _loadBuiltinCatalogOp;
         private ESteps _steps = ESteps.None;
 
         public WSFCInitializeOperation(WebServerFileCache cache)
@@ -21,47 +24,54 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadCatalogFile;
+            _steps = ESteps.LoadCatalog;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadCatalogFile)
+            if (_steps == ESteps.LoadCatalog)
             {
-                if (_loadWebCatalogFileOp == null)
+                if (_loadBuiltinCatalogOp == null)
                 {
-                    _loadWebCatalogFileOp = new LoadWebServerCatalogOperation(_fileCache);
-                    _loadWebCatalogFileOp.StartOperation();
-                    AddChildOperation(_loadWebCatalogFileOp);
+                    var options = new LoadBuiltinCatalogOptions();
+                    options.PackageName = _fileCache.PackageName;
+                    options.FilePath = _fileCache.GetCatalogBinaryFileLoadPath();
+                    options.DownloadBackend = _fileCache.Config.DownloadBackend;
+                    _loadBuiltinCatalogOp = new LoadBuiltinCatalogOperation(options);
+                    _loadBuiltinCatalogOp.StartOperation();
+                    AddChildOperation(_loadBuiltinCatalogOp);
                 }
 
-                _loadWebCatalogFileOp.UpdateOperation();
-                if (_loadWebCatalogFileOp.IsDone == false)
+                _loadBuiltinCatalogOp.UpdateOperation();
+                if (_loadBuiltinCatalogOp.IsDone == false)
                     return;
 
-                if (_loadWebCatalogFileOp.Status == EOperationStatus.Succeeded)
+                if (_loadBuiltinCatalogOp.Status == EOperationStatus.Succeeded)
                 {
-                    _steps = ESteps.RecordFiles;
+                    _steps = ESteps.RecordEntry;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadWebCatalogFileOp.Error;
+                    Error = _loadBuiltinCatalogOp.Error;
                 }
             }
 
-            if (_steps == ESteps.RecordFiles)
+            if (_steps == ESteps.RecordEntry)
             {
-                var catalog = _loadWebCatalogFileOp.Catalog;
-                foreach (var wrapper in catalog.Wrappers)
+                var catalog = _loadBuiltinCatalogOp.Catalog;
+                foreach (var fileEntry in catalog.FileEntries)
                 {
-                    string filePath = PathUtility.Combine(_fileCache.RootPath, wrapper.FileName);
-                    var entry = new WebServerFileCacheEntry(wrapper.BundleGUID, filePath);
-                    _fileCache.AddEntry(wrapper.BundleGUID, entry);
+                    string filePath = PathUtility.Combine(_fileCache.RootPath, fileEntry.FileName);
+                    var cacheEntry = new WebServerFileCacheEntry(fileEntry.BundleGUID, filePath);
+                    _fileCache.AddEntry(fileEntry.BundleGUID, cacheEntry);
                 }
+
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Succeeded;
             }
         }
     }

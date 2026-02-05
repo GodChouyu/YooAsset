@@ -1,13 +1,16 @@
-﻿
+
 namespace YooAsset
 {
-    internal class EFCLoadVirtualBundleOperation : FCLoadBundleOperation
+    /// <summary>
+    /// 编辑器文件缓存加载资源包操作
+    /// </summary>
+    internal class EFCLoadBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
         {
             None,
-            LoadVirtualBundle,
-            CheckResult,
+            CheckCache,
+            LoadBundle,
             Done,
         }
 
@@ -16,14 +19,14 @@ namespace YooAsset
         private int _asyncSimulateFrame;
         private ESteps _steps = ESteps.None;
 
-        public EFCLoadVirtualBundleOperation(EditorFileCache fileCache, PackageBundle bundle)
+        public EFCLoadBundleOperation(EditorFileCache fileCache, PackageBundle bundle)
         {
             _fileCache = fileCache;
             _bundle = bundle;
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadVirtualBundle;
+            _steps = ESteps.CheckCache;
             _asyncSimulateFrame = GetAsyncSimulateFrame();
         }
         internal override void InternalUpdate()
@@ -31,21 +34,20 @@ namespace YooAsset
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadVirtualBundle)
+            if (_steps == ESteps.CheckCache)
             {
-                var entry = _fileCache.GetEntry(_bundle.BundleGUID);
-                if (entry == null)
+                if (_fileCache.IsCached(_bundle.BundleGUID) == false)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Not found file cache entry: {_bundle.BundleGUID}";
+                    Error = $"File cache entry not found: {_bundle.BundleGUID}";
                     return;
                 }
 
-                _steps = ESteps.CheckResult;
+                _steps = ESteps.LoadBundle;
             }
 
-            if (_steps == ESteps.CheckResult)
+            if (_steps == ESteps.LoadBundle)
             {
                 if (IsWaitForCompletion)
                 {
@@ -53,12 +55,15 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = "WebGL mode only support asyn load method.";
+                        Error = "WebGL mode only supports async load method.";
                     }
                     else
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Succeeded;
+
+                        string editorFilePath = EditorFileSystemTools.GetEditorFilePath(_bundle);
+                        BundleResult = new VirtualBundleResult(editorFilePath, _bundle);
                     }
                 }
                 else
@@ -68,6 +73,9 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Succeeded;
+
+                        string editorFilePath = EditorFileSystemTools.GetEditorFilePath(_bundle);
+                        BundleResult = new VirtualBundleResult(editorFilePath, _bundle);
                     }
                 }
             }

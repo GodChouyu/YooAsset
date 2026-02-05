@@ -3,13 +3,35 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件缓存条目
+    /// </summary>
     internal class SandboxFileCacheEntry : ICacheEntry
     {
-        public string BundleGUID { get; private set; }
-        public string InfoFilePath { get; private set; }
-        public string DataFilePath { get; private set; }
-        private long _fileSize = 0;
+        private long _fileSize = -1;
 
+        /// <summary>
+        /// 资源包唯一标识
+        /// </summary>
+        public string BundleGUID { get; private set; }
+
+        /// <summary>
+        /// 信息文件路径
+        /// </summary>
+        public string InfoFilePath { get; private set; }
+
+        /// <summary>
+        /// 数据文件路径
+        /// </summary>
+        public string DataFilePath { get; private set; }
+
+
+        /// <summary>
+        /// 创建沙盒文件缓存条目
+        /// </summary>
+        /// <param name="bundleGUID">资源包唯一标识</param>
+        /// <param name="infoFilePath">信息文件路径</param>
+        /// <param name="dataFilePath">数据文件路径</param>
         public SandboxFileCacheEntry(string bundleGUID, string infoFilePath, string dataFilePath)
         {
             BundleGUID = bundleGUID;
@@ -18,8 +40,9 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 删除记录文件
+        /// 删除缓存文件夹及其所有内容
         /// </summary>
+        /// <returns>删除是否成功</returns>
         public bool Delete()
         {
             try
@@ -43,13 +66,14 @@ namespace YooAsset
             }
         }
 
+        /// <summary>
+        /// 获取缓存文件总大小
+        /// </summary>
+        /// <returns>文件总大小（字节）</returns>
         public long GetFileSize()
         {
-            if (_fileSize == 0)
-            {
-                _fileSize = FileUtility.GetFileSize(InfoFilePath);
-                _fileSize += FileUtility.GetFileSize(DataFilePath);
-            }
+            if (_fileSize < 0)
+                _fileSize = FileUtility.GetFileSize(DataFilePath);
             return _fileSize;
         }
     }

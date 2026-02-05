@@ -80,6 +80,14 @@ namespace YooAsset
                 }
             }
         }
+        internal override void InternalDispose()
+        {
+            if (_webFileRequestOp != null)
+            {
+                _webFileRequestOp.Dispose();
+                _webFileRequestOp = null;
+            }
+        }
 
         private string GetWebRequestURL(string fileName)
         {

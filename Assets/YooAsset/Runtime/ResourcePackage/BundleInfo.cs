@@ -46,7 +46,7 @@ namespace YooAsset
         /// <returns>返回资源包加载操作对象</returns>
         public FSLoadBundleOperation CreateBundleLoader()
         {
-            var options = new LoadBundleOptions(Bundle);
+            var options = new FCLoadBundleOptions(Bundle);
             return _fileSystem.LoadBundleAsync(options);
         }
 
@@ -57,7 +57,7 @@ namespace YooAsset
         /// <returns>返回文件下载操作对象</returns>
         public FSDownloadFileOperation CreateBundleDownloader(int retryCount)
         {
-            var options = new DownloadFileOptions(Bundle, retryCount, _importFilePath);
+            var options = new FSDownloadFileOptions(Bundle, retryCount, _importFilePath);
             return _fileSystem.DownloadFileAsync(options);
         }
 

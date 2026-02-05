@@ -75,7 +75,7 @@ namespace YooAsset
 
                 // 读取文件标记
                 uint fileSign = _buffer.ReadUInt32();
-                if (fileSign != PackageManifestDefine.FileSign)
+                if (fileSign != PackageManifestDefine.FileSignature)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;

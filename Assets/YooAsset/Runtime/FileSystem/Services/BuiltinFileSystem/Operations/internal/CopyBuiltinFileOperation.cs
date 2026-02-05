@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace YooAsset
@@ -100,9 +100,17 @@ namespace YooAsset
                 }
             }
         }
+        internal override void InternalDispose()
+        {
+            if (_webFileRequestOp != null)
+            {
+                _webFileRequestOp.Dispose();
+                _webFileRequestOp = null;
+            }
+        }
         internal override void InternalWaitForCompletion()
         {
-            //TODO 等待解压本地文件完毕，该操作会挂起主线程！
+            //注意：等待解压本地文件完毕，该操作会挂起主线程！
             ExecuteUntilComplete();
         }
     }

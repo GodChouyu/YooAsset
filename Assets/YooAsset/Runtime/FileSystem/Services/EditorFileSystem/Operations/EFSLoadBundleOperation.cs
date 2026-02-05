@@ -15,12 +15,12 @@ namespace YooAsset
         }
 
         private readonly EditorFileSystem _fileSystem;
-        private readonly LoadBundleOptions _options;
+        private readonly FCLoadBundleOptions _options;
         private FSDownloadFileOperation _downloadFileOp;
         private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-        internal EFSLoadBundleOperation(EditorFileSystem fileSystem, LoadBundleOptions options)
+        internal EFSLoadBundleOperation(EditorFileSystem fileSystem, FCLoadBundleOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;
@@ -63,7 +63,7 @@ namespace YooAsset
             {
                 if (_downloadFileOp == null)
                 {
-                    DownloadFileOptions options = new DownloadFileOptions(_options.Bundle, int.MaxValue);
+                    FSDownloadFileOptions options = new FSDownloadFileOptions(_options.Bundle, int.MaxValue);
                     _downloadFileOp = _fileSystem.DownloadFileAsync(options);
                     _downloadFileOp.StartOperation();
                     AddChildOperation(_downloadFileOp);

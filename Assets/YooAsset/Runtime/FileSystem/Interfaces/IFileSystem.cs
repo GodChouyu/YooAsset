@@ -31,12 +31,12 @@ namespace YooAsset
         /// <summary>
         /// 下载Bundle文件
         /// </summary>
-        FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options);
+        FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options);
 
         /// <summary>
         /// 加载Bundle文件
         /// </summary>
-        FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options);
+        FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options);
 
 
         /// <summary>

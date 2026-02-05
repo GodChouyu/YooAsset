@@ -17,6 +17,7 @@ namespace YooAsset
         {
             if (File.Exists(filePath) == false)
                 return null;
+
             return File.ReadAllText(filePath, Encoding.UTF8);
         }
 
@@ -27,6 +28,7 @@ namespace YooAsset
         {
             if (File.Exists(filePath) == false)
                 return null;
+
             return File.ReadAllBytes(filePath);
         }
 
@@ -78,6 +80,9 @@ namespace YooAsset
         /// </summary>
         public static long GetFileSize(string filePath)
         {
+            if (File.Exists(filePath) == false)
+                return 0;
+
             FileInfo fileInfo = new FileInfo(filePath);
             return fileInfo.Length;
         }

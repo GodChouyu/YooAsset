@@ -3,7 +3,7 @@ using System;
 namespace YooAsset
 {
     /// <summary>
-    /// 可轮询的下载请求接口
+    /// 下载请求接口
     /// </summary>
     internal interface IDownloadRequest : IDisposable
     {

@@ -122,7 +122,7 @@ namespace YooAsset.Editor
                 throw new Exception($"Failed to load schema : {ScannerSchema}");
 
             var report = schema.RunScanner(this);
-            report.FileSign = ScannerDefine.ReportFileSign;
+            report.FileSignature = ScannerDefine.ReportFileSign;
             report.FileVersion = ScannerDefine.ReportFileVersion;
             report.SchemaType = schema.GetType().FullName;
             report.ScannerGUID = ScannerGUID;

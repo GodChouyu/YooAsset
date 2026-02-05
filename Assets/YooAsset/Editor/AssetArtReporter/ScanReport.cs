@@ -10,7 +10,7 @@ namespace YooAsset.Editor
         /// <summary>
         /// 文件签名（自动填写）
         /// </summary>
-        public string FileSign;
+        public string FileSignature;
 
         /// <summary>
         /// 文件版本（自动填写）

@@ -1,8 +1,11 @@
-using System.IO;
+﻿using System.IO;
 using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 从本地文件加载 AssetBundle 操作
+    /// </summary>
     internal class LoadLocalAssetBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
@@ -13,14 +16,16 @@ namespace YooAsset
             Done,
         }
 
-        private readonly PackageBundle _bundle;
         private readonly LoadLocalAssetBundleOptions _options;
         private AssetBundleCreateRequest _createRequest;
         private AssetBundle _assetBundle;
         private Stream _loadStream;
         private ESteps _steps = ESteps.None;
 
-        public bool UnityEngineLoadFailed = false;
+        /// <summary>
+        /// Unity引擎加载是否失败
+        /// </summary>
+        public bool UnityEngineLoadFailed { get; private set; } = false;
 
         public LoadLocalAssetBundleOperation(LoadLocalAssetBundleOptions options)
         {
@@ -37,13 +42,13 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadBundle)
             {
-                if (_bundle.IsEncrypted == false)
+                if (_options.Bundle.IsEncrypted == false)
                 {
                     LoadFromFile();
                 }
                 else
                 {
-                    var decryptor = _options.Decryptor;
+                    var decryptor = _options.AssetBundleDecryptor;
                     if (decryptor == null)
                     {
                         _steps = ESteps.Done;
@@ -52,23 +57,32 @@ namespace YooAsset
                         return;
                     }
 
+                    LoadResult result;
                     if (decryptor is IBundleOffsetDecryptor offsetDecryptor)
                     {
-                        LoadFromFileWithOffset(offsetDecryptor);
+                        result = LoadFromFileWithOffset(offsetDecryptor);
                     }
                     else if (decryptor is IBundleMemoryDecryptor memoryDecryptor)
                     {
-                        LoadFromMemory(memoryDecryptor);
+                        result = LoadFromMemory(memoryDecryptor);
                     }
                     else if (decryptor is IBundleStreamDecryptor streamDecryptor)
                     {
-                        LoadFromStream(streamDecryptor);
+                        result = LoadFromStream(streamDecryptor);
                     }
                     else
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
                         Error = $"{_options.CacheName} not support {decryptor.GetType().Name}";
+                        return;
+                    }
+
+                    if (result.Succeeded == false)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = result.Error;
                         return;
                     }
                 }
@@ -82,8 +96,8 @@ namespace YooAsset
                 {
                     if (IsWaitForCompletion)
                     {
-                        // ǿ�ƹ������̣߳�ע�⣺�ò�����ܺ�ʱ��
-                        YooLogger.Warning("Suspend the main thread to load unity bundle.");
+                        // 强制挂起主线程（注意：该操作会很耗时）
+                        YooLogger.Warning("Suspending the main thread to load Unity bundle.");
                         _assetBundle = _createRequest.assetBundle;
                     }
                     else
@@ -100,6 +114,7 @@ namespace YooAsset
                     Status = EOperationStatus.Failed;
                     Error = "Unity engine load failed.";
                     UnityEngineLoadFailed = true;
+                    CleanupStream();
                 }
                 else
                 {
@@ -121,10 +136,10 @@ namespace YooAsset
             else
                 _createRequest = AssetBundle.LoadFromFileAsync(_options.FilePath);
         }
-        private void LoadFromFileWithOffset(IBundleOffsetDecryptor decryptor)
+        private LoadResult LoadFromFileWithOffset(IBundleOffsetDecryptor decryptor)
         {
             var args = new BundleDecryptArgs();
-            args.Bundle = _bundle;
+            args.Bundle = _options.Bundle;
             args.FilePath = _options.FilePath;
             uint offset = decryptor.GetFileOffset(args);
 
@@ -132,31 +147,51 @@ namespace YooAsset
                 _assetBundle = AssetBundle.LoadFromFile(_options.FilePath, 0, offset);
             else
                 _createRequest = AssetBundle.LoadFromFileAsync(_options.FilePath, 0, offset);
+
+            return LoadResult.Default();
         }
-        private void LoadFromMemory(IBundleMemoryDecryptor decryptor)
+        private LoadResult LoadFromMemory(IBundleMemoryDecryptor decryptor)
         {
             var args = new BundleDecryptArgs();
-            args.Bundle = _bundle;
+            args.Bundle = _options.Bundle;
             args.FilePath = _options.FilePath;
             var binaryData = decryptor.GetDecryptData(args);
+            if (binaryData == null)
+                return LoadResult.Failure($"{_options.CacheName} decryptor returned null data.");
 
             if (IsWaitForCompletion)
                 _assetBundle = AssetBundle.LoadFromMemory(binaryData);
             else
                 _createRequest = AssetBundle.LoadFromMemoryAsync(binaryData);
+
+            return LoadResult.Default();
         }
-        private void LoadFromStream(IBundleStreamDecryptor decryptor)
+        private LoadResult LoadFromStream(IBundleStreamDecryptor decryptor)
         {
             var args = new BundleDecryptArgs();
-            args.Bundle = _bundle;
+            args.Bundle = _options.Bundle;
             args.FilePath = _options.FilePath;
             uint bufferSize = decryptor.GetReadBufferSize(args);
             _loadStream = decryptor.GetDecryptStream(args);
+            if (_loadStream == null)
+                return LoadResult.Failure($"{_options.CacheName} decryptor returned null stream.");
 
+            uint unityCRC = 0;
             if (IsWaitForCompletion)
-                _assetBundle = AssetBundle.LoadFromStream(_loadStream, 0, bufferSize);
+                _assetBundle = AssetBundle.LoadFromStream(_loadStream, unityCRC, bufferSize);
             else
-                _createRequest = AssetBundle.LoadFromStreamAsync(_loadStream, 0, bufferSize);
+                _createRequest = AssetBundle.LoadFromStreamAsync(_loadStream, unityCRC, bufferSize);
+
+            return LoadResult.Default();
+        }
+        private void CleanupStream()
+        {
+            if (_loadStream != null)
+            {
+                _loadStream.Close();
+                _loadStream.Dispose();
+                _loadStream = null;
+            }
         }
     }
 }

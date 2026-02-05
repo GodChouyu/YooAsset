@@ -1,17 +1,20 @@
-﻿
+
 namespace YooAsset
 {
-    internal class BuiltinFileCatalogDefine
+    /// <summary>
+    /// 内置资源目录常量定义
+    /// </summary>
+    internal class BuiltinCatalogDefine
     {
         /// <summary>
         /// 文件极限大小（100MB）
         /// </summary>
-        public const int FileMaxSize = 104857600;
+        public const int MaxFileSize = 104857600;
 
         /// <summary>
         /// 文件头标记
         /// </summary>
-        public const uint FileSign = 0x133C5EE;
+        public const uint FileHeader = 0x133C5EE;
 
         /// <summary>
         /// 文件格式版本

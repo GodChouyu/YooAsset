@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 
 namespace YooAsset
@@ -49,11 +49,11 @@ namespace YooAsset
 
             if (_steps == ESteps.Waiting)
             {
-                int result = _element.Result;
-                if (result == 0)
+                int resultCode = _element.VerifyResultCode; //注意: 一次命令取值
+                if (resultCode == 0)
                     return;
 
-                VerifyResult = (EFileVerifyResult)result;
+                VerifyResult = (EFileVerifyResult)resultCode;
                 if (VerifyResult == EFileVerifyResult.Succeed)
                 {
                     _steps = ESteps.Done;
@@ -63,21 +63,21 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Failed to verify file : {_element.TempFilePath} ErrorCode : {VerifyResult}";
+                    Error = $"Failed to verify file: {_element.FilePath} ErrorCode: {VerifyResult}";
                 }
             }
         }
         internal override void InternalWaitForCompletion()
         {
-            //TODO 等待子线程验证文件完毕，该操作会挂起主线程！
+            //注意: 等待子线程验证文件完毕，该操作会挂起主线程！
             ExecuteUntilComplete();
         }
 
         private void VerifyFileInThread(object obj)
         {
             TempFileInfo element = (TempFileInfo)obj;
-            int result = (int)FileVerifyTools.FileVerify(element.TempFilePath, element.TempFileSize, element.TempFileCRC);
-            element.Result = result;
+            int resultCode = (int)FileVerifyTools.FileVerify(element.FilePath, element.FileSize, element.FileCRC);
+            element.VerifyResultCode = resultCode; //注意: 一次命令赋值
         }
     }
 }

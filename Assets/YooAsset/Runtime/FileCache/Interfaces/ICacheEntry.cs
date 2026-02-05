@@ -2,7 +2,7 @@
 namespace YooAsset
 {
     /// <summary>
-    /// 缓存记录接口
+    /// 缓存条目接口
     /// </summary>
     internal interface ICacheEntry
     {

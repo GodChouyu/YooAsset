@@ -1,7 +1,10 @@
 
 namespace YooAsset
 {
-    internal struct WriteCacheOptions
+    /// <summary>
+    /// 写入缓存操作选项
+    /// </summary>
+    internal struct FCWriteCacheOptions
     {
         /// <summary>
         /// 要缓存的资源包

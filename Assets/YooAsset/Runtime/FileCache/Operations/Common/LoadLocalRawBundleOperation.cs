@@ -3,6 +3,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 从本地加载 RawBundle 操作
+    /// </summary>
     internal class LoadLocalRawBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
@@ -34,7 +37,7 @@ namespace YooAsset
             {
                 if (_options.Bundle.IsEncrypted == false)
                 {
-                    if (IsSupportFileIO(_options.FilePath) == false)
+                    if (SupportsFileIO(_options.FilePath) == false)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
@@ -46,7 +49,7 @@ namespace YooAsset
                 }
                 else
                 {
-                    var decryptor = _options.Decryptor;
+                    var decryptor = _options.RawBundleDecryptor;
                     if (decryptor == null)
                     {
                         _steps = ESteps.Done;
@@ -55,15 +58,24 @@ namespace YooAsset
                         return;
                     }
 
+                    LoadResult result;
                     if (decryptor is IBundleMemoryDecryptor memoryDecryptor)
                     {
-                        LoadFromMemory(memoryDecryptor);
+                        result = LoadFromMemory(memoryDecryptor);
                     }
                     else
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
                         Error = $"{_options.CacheName} not support {decryptor.GetType().Name}";
+                        return;
+                    }
+
+                    if (result.Succeeded == false)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = result.Error;
                         return;
                     }
                 }
@@ -95,17 +107,19 @@ namespace YooAsset
         private void LoadFromFile()
         {
             byte[] data = File.ReadAllBytes(_options.FilePath);
-            if (data != null)
-                _rawBundle = new RawBundle(data);
+            _rawBundle = new RawBundle(data);
         }
-        private void LoadFromMemory(IBundleMemoryDecryptor decryptor)
+        private LoadResult LoadFromMemory(IBundleMemoryDecryptor decryptor)
         {
             var args = new BundleDecryptArgs();
             args.Bundle = _options.Bundle;
             args.FilePath = _options.FilePath;
             var binaryData = decryptor.GetDecryptData(args);
-            if (binaryData != null)
-                _rawBundle = new RawBundle(binaryData);
+            if (binaryData == null)
+                return LoadResult.Failure($"{_options.CacheName} decryptor returned null data.");
+
+            _rawBundle = new RawBundle(binaryData);
+            return LoadResult.Default();
         }
     }
 }

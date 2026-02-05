@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// Web服务器文件缓存加载 AssetBundle 操作
+    /// </summary>
     internal class WSFCLoadAssetBundleOperation : FCLoadBundleOperation
     {
         private enum ESteps
@@ -12,12 +15,12 @@ namespace YooAsset
         }
 
         private readonly WebServerFileCache _fileCache;
-        private readonly LoadBundleOptions _options;
+        private readonly FCLoadBundleOptions _options;
         private LoadWebAssetBundleOperation _loadWebAssetBundleOp;
         private WebServerFileCacheEntry _cacheEntry;
         private ESteps _steps = ESteps.None;
 
-        public WSFCLoadAssetBundleOperation(WebServerFileCache fileCache, LoadBundleOptions options)
+        public WSFCLoadAssetBundleOperation(WebServerFileCache fileCache, FCLoadBundleOptions options)
         {
             _fileCache = fileCache;
             _options = options;
@@ -38,7 +41,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Not found file cache entry: {_options.Bundle.BundleGUID}";
+                    Error = $"File cache entry not found: {_options.Bundle.BundleGUID}";
                 }
                 else
                 {
@@ -56,8 +59,9 @@ namespace YooAsset
                     options.Bundle = _options.Bundle;
                     options.MainURL = url;
                     options.FallbackURL = url;
-                    options.Decryptor = _fileCache.Config.AssetBundleDecryptor;
+                    options.AssetBundleDecryptor = _fileCache.Config.AssetBundleDecryptor;
                     options.DownloadBackend = _fileCache.Config.DownloadBackend;
+                    options.DownloadVerifyLevel = _fileCache.Config.DownloadVerifyLevel;
                     options.WatchdogTimeout = _fileCache.Config.WatchdogTimeout;
                     options.DisableUnityWebCache = _fileCache.Config.DisableUnityWebCache;
 
@@ -77,7 +81,7 @@ namespace YooAsset
                 if (_loadWebAssetBundleOp.Status == EOperationStatus.Succeeded)
                 {
                     if (_loadWebAssetBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded asset bundle result is null.");
+                        throw new YooInternalException("Loaded bundle result is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -89,6 +93,16 @@ namespace YooAsset
                     Status = EOperationStatus.Failed;
                     Error = _loadWebAssetBundleOp.Error;
                 }
+            }
+        }
+        internal override void InternalWaitForCompletion()
+        {
+            if (_steps != ESteps.Done)
+            {
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = $"{nameof(WebServerFileCache)} not support sync load asset bundle.";
+                YooLogger.Error(Error);
             }
         }
     }

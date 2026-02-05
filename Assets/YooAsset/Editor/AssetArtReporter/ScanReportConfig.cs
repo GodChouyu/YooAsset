@@ -20,7 +20,7 @@ namespace YooAsset.Editor
             ScanReport report = JsonUtility.FromJson<ScanReport>(jsonData);
 
             // 检测配置文件的签名
-            if (report.FileSign != ScannerDefine.ReportFileSign)
+            if (report.FileSignature != ScannerDefine.ReportFileSign)
                 throw new Exception($"导入的报告文件无法识别 : {filePath}");
 
             // 检测报告文件的版本

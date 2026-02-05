@@ -60,9 +60,6 @@ namespace YooAsset
                     Status = EOperationStatus.Failed;
                     Error = _downloadRequest.Error;
                 }
-
-                // 最终释放请求器
-                _downloadRequest.Dispose();
             }
 
             // 缓存文件
@@ -70,7 +67,7 @@ namespace YooAsset
             {
                 if (_writeCacheOp == null)
                 {
-                    var options = new WriteCacheOptions();
+                    var options = new FCWriteCacheOptions();
                     options.Bundle = Bundle;
                     options.FilePath = Url;
                     _writeCacheOp = _fileSystem.FileCache.WriteCacheAsync(options);
@@ -95,10 +92,13 @@ namespace YooAsset
                 }
             }
         }
-        internal override void InternalAbort()
+        internal override void InternalDispose()
         {
             if (_downloadRequest != null)
+            {
                 _downloadRequest.Dispose();
+                _downloadRequest = null;
+            }
         }
         internal override void InternalWaitForCompletion()
         {

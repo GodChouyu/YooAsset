@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// TODO: 下载和缓存不能拆分，因为FSDownloadFileOperation下载任务并不唯一，会造成写入缓存冲突。
+    /// </summary>
     internal sealed class DownloadAndCacheFileOperation : DownloadFileBaseOperation
     {
         private enum ESteps
@@ -79,9 +82,6 @@ namespace YooAsset
                 // 在遇到特殊错误的时候删除文件
                 if (_enableResume)
                     ClearTempFileWhenError(_downloadRequest.HttpCode);
-
-                // 最终释放请求器
-                _downloadRequest.Dispose();
             }
 
             // 缓存文件
@@ -89,7 +89,7 @@ namespace YooAsset
             {
                 if (_writeCacheOp == null)
                 {
-                    var options = new WriteCacheOptions();
+                    var options = new FCWriteCacheOptions();
                     options.Bundle = Bundle;
                     options.FilePath = _tempFilePath;
                     _writeCacheOp = _fileSystem.FileCache.WriteCacheAsync(options);
@@ -118,10 +118,13 @@ namespace YooAsset
                     File.Delete(_tempFilePath);
             }
         }
-        internal override void InternalAbort()
+        internal override void InternalDispose()
         {
             if (_downloadRequest != null)
+            {
                 _downloadRequest.Dispose();
+                _downloadRequest = null;
+            }
         }
         internal override void InternalWaitForCompletion()
         {

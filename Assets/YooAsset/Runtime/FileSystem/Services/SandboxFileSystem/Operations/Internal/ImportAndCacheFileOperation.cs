@@ -66,7 +66,7 @@ namespace YooAsset
             {
                 if (_bundleCacheOp == null)
                 {
-                    var options = new WriteCacheOptions();
+                    var options = new FCWriteCacheOptions();
                     options.Bundle = Bundle;
                     options.FilePath = _tempFilePath;
                     _bundleCacheOp = _fileSystem.FileCache.WriteCacheAsync(options);

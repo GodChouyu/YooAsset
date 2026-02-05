@@ -14,7 +14,7 @@ namespace YooAsset
         }
 
         private readonly EditorFileSystem _fileSystem;
-        private readonly DownloadFileOptions _options;
+        private readonly FSDownloadFileOptions _options;
         private DownloadFileBaseOperation _downloadFileOp;
         private ESteps _steps = ESteps.None;
 
@@ -22,7 +22,7 @@ namespace YooAsset
         private float _tryAgainTimer = 0;
         private int _failedTryAgain;
 
-        internal EFSDownloadFileOperation(EditorFileSystem fileSystem, DownloadFileOptions options) : base(options.Bundle)
+        internal EFSDownloadFileOperation(EditorFileSystem fileSystem, FSDownloadFileOptions options) : base(options.Bundle)
         {
             _fileSystem = fileSystem;
             _options = options;
@@ -59,7 +59,7 @@ namespace YooAsset
                     _downloadFileOp = _fileSystem.DownloadScheduler.TryGetDownloadFile(Bundle);
                     if (_downloadFileOp == null)
                     {
-                        string editorFilePath = _fileSystem.GetBundleFilePath(Bundle);
+                        string editorFilePath = EditorFileSystemTools.GetEditorFilePath(Bundle);
                         _downloadFileOp = new SimulateAndCacheFileOperation(_fileSystem, Bundle, editorFilePath);
                         _fileSystem.DownloadScheduler.AddDownloadFile(_downloadFileOp);
                     }

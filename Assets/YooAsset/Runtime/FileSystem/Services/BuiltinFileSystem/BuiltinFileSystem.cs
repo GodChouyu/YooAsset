@@ -137,12 +137,12 @@ namespace YooAsset
             var operation = new BFSClearCacheOperation(this, options);
             return operation;
         }
-        public virtual FSDownloadFileOperation DownloadFileAsync(DownloadFileOptions options)
+        public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             var operation = new BFSDownloadFileOperation(this, options);
             return operation;
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             var operation = new BFSLoadBundleOperation(this, options);
             return operation;
@@ -235,21 +235,21 @@ namespace YooAsset
             else
                 _packageRoot = packageRoot;
 
-            // 创建默认的下载后台接口
-            if (DownloadBackend == null)
-                DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
-
-            // 创建解压缓存系统
+            // 设置根目录
             string unpackRoot;
             if (string.IsNullOrEmpty(UnpackFileSystemRoot))
-                unpackRoot = GetDefaultUnpackCacheRoot(packageName);
+                unpackRoot = GetDefaultUnpackPathRoot(packageName);
             else
                 unpackRoot = UnpackFileSystemRoot;
             _unpackManifestFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackManifestFilesFolderName);
             _unpackBundleFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackBundleFilesFolderName);
             _unpackTempFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackTempFilesFolderName);
 
-            // 创建内置缓存对象
+            // 创建默认的下载后台接口
+            if (DownloadBackend == null)
+                DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
+
+            // 创建内置文件缓存系统
             {
                 var cacheConfig = new BuiltinFileCache.CacheConfig();
                 cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
@@ -258,7 +258,7 @@ namespace YooAsset
                 BuiltinFileCache = new BuiltinFileCache(packageName, _packageRoot, cacheConfig);
             }
 
-            // 创建沙盒缓存对象
+            // 创建沙盒文件缓存系统
             {
                 var cacheConfig = new SandboxFileCache.CacheConfig();
                 cacheConfig.FileVerifyMaxConcurrency = FileVerifyMaxConcurrency;
@@ -377,7 +377,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 删除所有缓存的资源文件
+        /// 删除所有解压的资源文件
         /// </summary>
         public void DeleteAllBundleFiles()
         {
@@ -388,9 +388,9 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取默认的解压缓存根目录
+        /// 获取默认的解压根目录
         /// </summary>
-        public string GetDefaultUnpackCacheRoot(string packageName)
+        public string GetDefaultUnpackPathRoot(string packageName)
         {
             string rootDirectory = YooAssetSettingsData.GetYooDefaultCacheRoot();
             return PathUtility.Combine(rootDirectory, packageName);

@@ -9,8 +9,13 @@ namespace YooAsset
         /// <summary>
         /// 验证异常
         /// </summary>
-        Exception = -7,
+        Exception = -8,
 
+        /// <summary>
+        /// 数据无效
+        /// </summary>
+        BytesDataInvalid = -7,
+        
         /// <summary>
         /// 未找到缓存信息
         /// </summary>

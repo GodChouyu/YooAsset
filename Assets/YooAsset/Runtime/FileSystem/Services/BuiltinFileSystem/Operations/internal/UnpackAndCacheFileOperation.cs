@@ -19,7 +19,7 @@ namespace YooAsset
         private readonly string _builtinFilePath;
         private readonly string _tempFilePath;
         private CopyBuiltinFileOperation _copyBuiltinFileOp;
-        private FCWriteCacheOperation _bundleCacheOp;
+        private FCWriteCacheOperation _writeCacheOp;
         private ESteps _steps = ESteps.None;
 
         internal UnpackAndCacheFileOperation(BuiltinFileSystem fileSystem, PackageBundle bundle, string builtinFilePath) : base(bundle, builtinFilePath)
@@ -80,24 +80,24 @@ namespace YooAsset
             // 缓存文件
             if (_steps == ESteps.CacheFile)
             {
-                if (_bundleCacheOp == null)
+                if (_writeCacheOp == null)
                 {
-                    var options = new WriteCacheOptions();
+                    var options = new FCWriteCacheOptions();
                     options.Bundle = Bundle;
                     options.FilePath = _tempFilePath;
-                    _bundleCacheOp = _fileSystem.UnpackFileCache.WriteCacheAsync(options);
-                    _bundleCacheOp.StartOperation();
-                    AddChildOperation(_bundleCacheOp);
+                    _writeCacheOp = _fileSystem.UnpackFileCache.WriteCacheAsync(options);
+                    _writeCacheOp.StartOperation();
+                    AddChildOperation(_writeCacheOp);
                 }
 
                 if (IsWaitForCompletion)
-                    _bundleCacheOp.WaitForCompletion();
+                    _writeCacheOp.WaitForCompletion();
 
-                _bundleCacheOp.UpdateOperation();
-                if (_bundleCacheOp.IsDone == false)
+                _writeCacheOp.UpdateOperation();
+                if (_writeCacheOp.IsDone == false)
                     return;
 
-                if (_bundleCacheOp.Status == EOperationStatus.Succeeded)
+                if (_writeCacheOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -106,7 +106,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _bundleCacheOp.Error;
+                    Error = _writeCacheOp.Error;
                 }
 
                 // 注意：缓存完成后直接删除临时文件

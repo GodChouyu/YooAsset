@@ -50,7 +50,7 @@ namespace YooAsset
             {
                 var manifest = loadPackageManifestOp.Manifest;
                 var packageBundle = GetPackageBundle(manifest, testLocation);
-                var options = new DownloadFileOptions(packageBundle, 1);
+                var options = new FSDownloadFileOptions(packageBundle, 1);
                 var downloadFileOp = fileSystem.DownloadFileAsync(options);
                 AsyncOperationSystem.StartOperation(packageName, downloadFileOp);
                 yield return downloadFileOp;
@@ -70,7 +70,7 @@ namespace YooAsset
             {
                 var manifest = loadPackageManifestOp.Manifest;
                 var packageBundle = GetPackageBundle(manifest, testLocation);
-                var loadBundleFileOptions = new LoadBundleOptions(packageBundle);
+                var loadBundleFileOptions = new FCLoadBundleOptions(packageBundle);
                 var loadBundleFileOp = fileSystem.LoadBundleAsync(loadBundleFileOptions);
                 AsyncOperationSystem.StartOperation(packageName, loadBundleFileOp);
                 yield return loadBundleFileOp;

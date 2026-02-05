@@ -1,67 +1,77 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 内置文件缓存初始化操作
+    /// </summary>
     internal class BFCInitializeOperation : FCInitializeOperation
     {
         private enum ESteps
         {
             None,
-            LoadCatalogFile,
-            RecordFiles,
+            LoadCatalog,
+            RecordEntry,
             Done,
         }
 
         private readonly BuiltinFileCache _fileCache;
-        private LoadBuiltinCatalogFileOperation _loadBuiltinCatalogFileOp;
+        private LoadBuiltinCatalogOperation _loadBuiltinCatalogOp;
         private ESteps _steps = ESteps.None;
 
-        public BFCInitializeOperation(BuiltinFileCache cache)
+        public BFCInitializeOperation(BuiltinFileCache fileCache)
         {
-            _fileCache = cache;
+            _fileCache = fileCache;
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.LoadCatalogFile;
+            _steps = ESteps.LoadCatalog;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.LoadCatalogFile)
+            if (_steps == ESteps.LoadCatalog)
             {
-                if (_loadBuiltinCatalogFileOp == null)
+                if (_loadBuiltinCatalogOp == null)
                 {
-                    _loadBuiltinCatalogFileOp = new LoadBuiltinCatalogFileOperation(_fileCache);
-                    _loadBuiltinCatalogFileOp.StartOperation();
-                    AddChildOperation(_loadBuiltinCatalogFileOp);
+                    var options = new LoadBuiltinCatalogOptions();
+                    options.PackageName = _fileCache.PackageName;
+                    options.FilePath = _fileCache.GetCatalogBinaryFileLoadPath();
+                    options.DownloadBackend = _fileCache.Config.DownloadBackend;
+                    _loadBuiltinCatalogOp = new LoadBuiltinCatalogOperation(options);
+                    _loadBuiltinCatalogOp.StartOperation();
+                    AddChildOperation(_loadBuiltinCatalogOp);
                 }
 
-                _loadBuiltinCatalogFileOp.UpdateOperation();
-                if (_loadBuiltinCatalogFileOp.IsDone == false)
+                _loadBuiltinCatalogOp.UpdateOperation();
+                if (_loadBuiltinCatalogOp.IsDone == false)
                     return;
 
-                if (_loadBuiltinCatalogFileOp.Status == EOperationStatus.Succeeded)
+                if (_loadBuiltinCatalogOp.Status == EOperationStatus.Succeeded)
                 {
-                    _steps = ESteps.RecordFiles;
+                    _steps = ESteps.RecordEntry;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadBuiltinCatalogFileOp.Error;
+                    Error = _loadBuiltinCatalogOp.Error;
                 }
             }
 
-            if (_steps == ESteps.RecordFiles)
+            if (_steps == ESteps.RecordEntry)
             {
-                var catalog = _loadBuiltinCatalogFileOp.Catalog;
-                foreach (var wrapper in catalog.Wrappers)
+                var catalog = _loadBuiltinCatalogOp.Catalog;
+                foreach (var fileEntry in catalog.FileEntries)
                 {
-                    string filePath = PathUtility.Combine(_fileCache.RootPath, wrapper.FileName);
-                    var entry = new BuiltinFileCacheEntry(wrapper.BundleGUID, filePath);
-                    _fileCache.AddEntry(wrapper.BundleGUID, entry);
+                    string filePath = PathUtility.Combine(_fileCache.RootPath, fileEntry.FileName);
+                    var cacheEntry = new BuiltinFileCacheEntry(fileEntry.BundleGUID, filePath);
+                    _fileCache.AddEntry(fileEntry.BundleGUID, cacheEntry);
                 }
+
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Succeeded;
             }
         }
     }

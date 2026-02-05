@@ -1,18 +1,24 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// ä»ç½‘ç»œåŠ è½½ AssetBundle æ“ä½œçš„æŠ½è±¡åŸºç±»
+    /// </summary>
     internal abstract class LoadWebAssetBundleOperation : FCLoadBundleOperation
     {
     }
 
+    /// <summary>
+    /// ä»ç½‘ç»œåŠ è½½æœªåŠ å¯† AssetBundle æ“ä½œ
+    /// </summary>
     internal class LoadWebNormalAssetBundleOperation : LoadWebAssetBundleOperation
     {
         private enum ESteps
         {
             None,
-            DownloadBundle,
-            CheckResult,
+            BundleRequest,
+            CheckRequest,
             TryAgain,
             Done,
         }
@@ -21,7 +27,7 @@ namespace YooAsset
         private IDownloadAssetBundleRequest _downloadAssetBundleRequest;
         private ESteps _steps = ESteps.None;
 
-        // Ê§°ÜÖØÊÔ
+        // å¤±è´¥é‡è¯•
         private int _requestCount = 0;
         private float _tryAgainTimer = 0;
         private int _failedTryAgain;
@@ -29,27 +35,27 @@ namespace YooAsset
         public LoadWebNormalAssetBundleOperation(LoadWebAssetBundleOptions options)
         {
             _options = options;
-            _failedTryAgain = int.MaxValue; //×¢Òâ£ºÍøÂçÔ­ÒòÊ§°Üºó£¬ÖØĞÂ³¢ÊÔÖ±µ½³É¹¦
+            _failedTryAgain = int.MaxValue; //æ³¨æ„ï¼šç½‘ç»œåŸå› å¤±è´¥åï¼Œé‡æ–°å°è¯•ç›´åˆ°æˆåŠŸ
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.DownloadBundle;
+            _steps = ESteps.BundleRequest;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.DownloadBundle)
+            if (_steps == ESteps.BundleRequest)
             {
                 string url = GetRequestURL();
                 var args = new DownloadAssetBundleRequestArgs(url, 0, _options.WatchdogTimeout, _options.DisableUnityWebCache, _options.Bundle.FileHash, _options.Bundle.UnityCRC);
                 _downloadAssetBundleRequest = _options.DownloadBackend.CreateAssetBundleRequest(args);
                 _downloadAssetBundleRequest.SendRequest();
-                _steps = ESteps.CheckResult;
+                _steps = ESteps.CheckRequest;
             }
 
-            if (_steps == ESteps.CheckResult)
+            if (_steps == ESteps.CheckRequest)
             {
                 Progress = _downloadAssetBundleRequest.DownloadProgress;
                 if (_downloadAssetBundleRequest.IsDone == false)
@@ -62,7 +68,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Fatal error: dwonload asset bundle is null.";
+                        Error = $"Fatal error: downloaded asset bundle is null.";
                     }
                     else
                     {
@@ -73,7 +79,7 @@ namespace YooAsset
                 }
                 else
                 {
-                    if (_failedTryAgain > 0)
+                    if (_failedTryAgain > 0 && IsRetryableError(_downloadAssetBundleRequest.HttpCode))
                     {
                         _steps = ESteps.TryAgain;
                     }
@@ -84,27 +90,39 @@ namespace YooAsset
                         Error = _downloadAssetBundleRequest.Error;
                     }
                 }
-
-                // ×îÖÕÊÍ·ÅÇëÇóÆ÷
-                _downloadAssetBundleRequest.Dispose();
             }
 
             if (_steps == ESteps.TryAgain)
             {
+                // æ³¨æ„ï¼šå¤±è´¥åé‡Šæ”¾ç½‘ç»œè¯·æ±‚
+                if (_downloadAssetBundleRequest != null)
+                {
+                    _downloadAssetBundleRequest.Dispose();
+                    _downloadAssetBundleRequest = null;
+                }
+
                 _tryAgainTimer += UnityEngine.Time.unscaledDeltaTime;
                 if (_tryAgainTimer > 1f)
                 {
                     _tryAgainTimer = 0f;
                     _failedTryAgain--;
                     Progress = 0f;
-                    _steps = ESteps.DownloadBundle;
+                    _steps = ESteps.BundleRequest;
                 }
+            }
+        }
+        internal override void InternalDispose()
+        {
+            if (_downloadAssetBundleRequest != null)
+            {
+                _downloadAssetBundleRequest.Dispose();
+                _downloadAssetBundleRequest = null;
             }
         }
 
         private string GetRequestURL()
         {
-            // ÂÖÁ÷·µ»ØÇëÇóµØÖ·
+            // è½®æµè¿”å›è¯·æ±‚åœ°å€
             _requestCount++;
             if (_requestCount % 2 == 0)
                 return _options.FallbackURL;
@@ -113,12 +131,18 @@ namespace YooAsset
         }
     }
 
+    /// <summary>
+    /// ä»ç½‘ç»œåŠ è½½åŠ å¯†çš„ AssetBundle æ“ä½œ
+    /// </summary>
     internal class LoadWebEncryptedAssetBundleOperation : LoadWebAssetBundleOperation
     {
         private enum ESteps
         {
             None,
-            DownloadData,
+            DataRequest,
+            CheckRequest,
+            VerifyData,
+            LoadBundle,
             CheckResult,
             TryAgain,
             Done,
@@ -127,9 +151,10 @@ namespace YooAsset
         protected readonly LoadWebAssetBundleOptions _options;
         private IDownloadBytesRequest _downloadBytesRequest;
         private IBundleMemoryDecryptor _decryptor;
+        private AssetBundleCreateRequest _createRequest;
         private ESteps _steps = ESteps.None;
 
-        // Ê§°ÜÖØÊÔ
+        // å¤±è´¥é‡è¯•
         private int _requestCount = 0;
         private float _tryAgainTimer = 0;
         private int _failedTryAgain;
@@ -137,20 +162,20 @@ namespace YooAsset
         public LoadWebEncryptedAssetBundleOperation(LoadWebAssetBundleOptions options)
         {
             _options = options;
-            _failedTryAgain = int.MaxValue; //×¢Òâ£ºÍøÂçÔ­ÒòÊ§°Üºó£¬ÖØĞÂ³¢ÊÔÖ±µ½³É¹¦
+            _failedTryAgain = int.MaxValue; //æ³¨æ„ï¼šç½‘ç»œåŸå› å¤±è´¥åï¼Œé‡æ–°å°è¯•ç›´åˆ°æˆåŠŸ
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.DownloadData;
+            _steps = ESteps.DataRequest;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.DownloadData)
+            if (_steps == ESteps.DataRequest)
             {
-                var decryptor = _options.Decryptor;
+                var decryptor = _options.AssetBundleDecryptor;
                 if (decryptor == null)
                 {
                     _steps = ESteps.Done;
@@ -161,12 +186,12 @@ namespace YooAsset
 
                 if (decryptor is IBundleMemoryDecryptor)
                 {
-                    string url = GetRequestURL();
                     _decryptor = decryptor as IBundleMemoryDecryptor;
+                    string url = GetRequestURL();
                     var args = new DownloadDataRequestArgs(url, 0, _options.WatchdogTimeout);
                     _downloadBytesRequest = _options.DownloadBackend.CreateBytesRequest(args);
                     _downloadBytesRequest.SendRequest();
-                    _steps = ESteps.CheckResult;
+                    _steps = ESteps.CheckRequest;
                 }
                 else
                 {
@@ -177,32 +202,19 @@ namespace YooAsset
                 }
             }
 
-            if (_steps == ESteps.CheckResult)
+            if (_steps == ESteps.CheckRequest)
             {
                 Progress = _downloadBytesRequest.DownloadProgress;
                 if (_downloadBytesRequest.IsDone == false)
                     return;
 
-                // ¼ì²éÍøÂç´íÎó
                 if (_downloadBytesRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    var assetBundle = LoadFromMemory(_decryptor, _downloadBytesRequest.Result);
-                    if (assetBundle == null)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = "Unity engine load failed.";
-                    }
-                    else
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Succeeded;
-                        BundleResult = new AssetBundleResult(_downloadBytesRequest.Url, _options.Bundle, assetBundle, null);
-                    }
+                    _steps = ESteps.VerifyData;
                 }
                 else
                 {
-                    if (_failedTryAgain > 0)
+                    if (_failedTryAgain > 0 && IsRetryableError(_downloadBytesRequest.HttpCode))
                     {
                         _steps = ESteps.TryAgain;
                     }
@@ -213,35 +225,118 @@ namespace YooAsset
                         Error = _downloadBytesRequest.Error;
                     }
                 }
+            }
 
-                // ×îÖÕÊÍ·ÅÇëÇóÆ÷
-                _downloadBytesRequest.Dispose();
+            if (_steps == ESteps.VerifyData)
+            {
+                // æ³¨æ„ï¼šç½‘ç»œ/ä»£ç†/æœåŠ¡å™¨å¼‚å¸¸å¯¼è‡´å†…å®¹ä¸å®Œæ•´ä½†è¯·æ±‚ä»æˆåŠŸ
+                EFileVerifyResult verifyResult;
+                if (_options.DownloadVerifyLevel == EFileVerifyLevel.Low || _options.DownloadVerifyLevel == EFileVerifyLevel.Middle)
+                    verifyResult = FileVerifyTools.FileVerify(_downloadBytesRequest.Result, _options.Bundle.FileSize, 0);
+                else if (_options.DownloadVerifyLevel == EFileVerifyLevel.High)
+                    verifyResult = FileVerifyTools.FileVerify(_downloadBytesRequest.Result, _options.Bundle.FileSize, _options.Bundle.FileCRC);
+                else
+                    throw new System.NotImplementedException(_options.DownloadVerifyLevel.ToString());
+
+                if (verifyResult == EFileVerifyResult.Succeed)
+                {
+                    _steps = ESteps.LoadBundle;
+                }
+                else
+                {
+                    string error = $"[WebBundleVerify] Verify failed. Url:{_downloadBytesRequest.Url} Level: {_options.DownloadVerifyLevel} Result: {verifyResult}";
+                    YooLogger.Warning(error);
+
+                    if (_failedTryAgain > 0)
+                    {
+                        _steps = ESteps.TryAgain;
+                    }
+                    else
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = error;
+                    }
+                }
+            }
+
+            if (_steps == ESteps.LoadBundle)
+            {
+                LoadResult result = LoadFromMemory(_decryptor, _downloadBytesRequest.Result);
+                if (result.Succeeded == false)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = result.Error;
+                    return;
+                }
+
+                _steps = ESteps.CheckResult;
+            }
+
+            if (_steps == ESteps.CheckResult)
+            {
+                if (_createRequest.isDone == false)
+                    return;
+
+                var assetBundle = _createRequest.assetBundle;
+                if (assetBundle == null)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = "Unity engine load failed.";
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeeded;
+                    BundleResult = new AssetBundleResult(_downloadBytesRequest.Url, _options.Bundle, assetBundle, null);
+                }
             }
 
             if (_steps == ESteps.TryAgain)
             {
+                // æ³¨æ„ï¼šå¤±è´¥åé‡Šæ”¾ç½‘ç»œè¯·æ±‚
+                if (_downloadBytesRequest != null)
+                {
+                    _downloadBytesRequest.Dispose();
+                    _downloadBytesRequest = null;
+                }
+
                 _tryAgainTimer += Time.unscaledDeltaTime;
                 if (_tryAgainTimer > 1f)
                 {
                     _tryAgainTimer = 0f;
                     _failedTryAgain--;
                     Progress = 0f;
-                    _steps = ESteps.DownloadData;
+                    _steps = ESteps.DataRequest;
                 }
             }
         }
+        internal override void InternalDispose()
+        {
+            if (_downloadBytesRequest != null)
+            {
+                _downloadBytesRequest.Dispose();
+                _downloadBytesRequest = null;
+            }
+        }
 
-        private AssetBundle LoadFromMemory(IBundleMemoryDecryptor decryptor, byte[] fileData)
+        private LoadResult LoadFromMemory(IBundleMemoryDecryptor decryptor, byte[] fileData)
         {
             var args = new BundleDecryptArgs();
             args.Bundle = _options.Bundle;
             args.FileData = fileData;
             var binaryData = decryptor.GetDecryptData(args);
-            return AssetBundle.LoadFromMemory(binaryData);
+            if (binaryData == null)
+                return LoadResult.Failure($"{_options.CacheName} decryptor returned null data.");
+
+            _createRequest = AssetBundle.LoadFromMemoryAsync(binaryData);
+            return LoadResult.Default();
         }
         private string GetRequestURL()
         {
-            // ÂÖÁ÷·µ»ØÇëÇóµØÖ·
+            // è½®æµè¿”å›è¯·æ±‚åœ°å€
             _requestCount++;
             if (_requestCount % 2 == 0)
                 return _options.FallbackURL;

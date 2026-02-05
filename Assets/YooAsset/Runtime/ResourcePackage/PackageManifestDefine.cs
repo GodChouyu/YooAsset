@@ -9,12 +9,12 @@ namespace YooAsset
         /// <summary>
         /// 文件极限大小（100MB）
         /// </summary>
-        public const int FileMaxSize = 104857600;
+        public const int MaxFileSize = 104857600;
 
         /// <summary>
         /// 文件头标记
         /// </summary>
-        public const uint FileSign = 0x594F4F;
+        public const uint FileSignature = 0x594F4F;
 
         /// <summary>
         /// 当前文件格式版本

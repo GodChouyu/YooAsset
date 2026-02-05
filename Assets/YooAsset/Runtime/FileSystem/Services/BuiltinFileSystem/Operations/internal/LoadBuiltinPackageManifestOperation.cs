@@ -126,6 +126,14 @@ namespace YooAsset
                 }
             }
         }
+        internal override void InternalDispose()
+        {
+            if (_webDataRequestOp != null)
+            {
+                _webDataRequestOp.Dispose();
+                _webDataRequestOp = null;
+            }
+        }
         internal override string InternalGetDescription()
         {
             return $"PackageVersion : {_packageVersion} PackageHash : {_packageHash}";

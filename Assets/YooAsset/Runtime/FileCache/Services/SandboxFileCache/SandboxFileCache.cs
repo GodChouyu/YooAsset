@@ -3,8 +3,14 @@ using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件缓存系统，用于管理下载到本地的资源包缓存
+    /// </summary>
     internal class SandboxFileCache : IFileCache
     {
+        /// <summary>
+        /// 沙盒文件缓存配置
+        /// </summary>
         internal struct CacheConfig
         {
             /// <summary>
@@ -33,16 +39,15 @@ namespace YooAsset
             public IBundleMemoryDecryptor AssetBundleFallbackDecryptor { get; set; }
         }
 
-        private const int HashFolderLength = 2;
-        private readonly Dictionary<string, SandboxFileCacheEntry> _caches = new Dictionary<string, SandboxFileCacheEntry>(10000);
+        private const int HashFolderNameLength = 2;
+        private readonly Dictionary<string, SandboxFileCacheEntry> _cacheEntries = new Dictionary<string, SandboxFileCacheEntry>(10000);
         private readonly Dictionary<string, string> _dataFilePathMapping = new Dictionary<string, string>(10000);
         private readonly Dictionary<string, string> _infoFilePathMapping = new Dictionary<string, string>(10000);
 
-        // 缓存配置
+        /// <summary>
+        /// 缓存配置
+        /// </summary>
         internal readonly CacheConfig Config;
-
-        // 共享缓冲区
-        internal readonly BufferWriter SharedBuffer = new BufferWriter(1024);
 
         #region 接口属性
         /// <summary>
@@ -67,7 +72,7 @@ namespace YooAsset
         {
             get
             {
-                return _caches.Count;
+                return _cacheEntries.Count;
             }
         }
 
@@ -78,6 +83,12 @@ namespace YooAsset
         public long SpaceOccupied { get; private set; }
         #endregion
 
+        /// <summary>
+        /// 创建沙盒文件缓存系统实例
+        /// </summary>
+        /// <param name="packageName">包裹名称</param>
+        /// <param name="rootPath">缓存根目录</param>
+        /// <param name="config">缓存配置</param>
         public SandboxFileCache(string packageName, string rootPath, CacheConfig config)
         {
             PackageName = packageName;
@@ -93,7 +104,7 @@ namespace YooAsset
             var operation = new SFCInitializeOperation(this);
             return operation;
         }
-        public virtual FCWriteCacheOperation WriteCacheAsync(WriteCacheOptions options)
+        public virtual FCWriteCacheOperation WriteCacheAsync(FCWriteCacheOptions options)
         {
             var operation = new SFCWriteCacheOperation(this, options);
             return operation;
@@ -127,12 +138,12 @@ namespace YooAsset
                 return operation;
             }
         }
-        public virtual FCVerifyCacheOperation VerifyCacheAsync(VerifyCacheOptions options)
+        public virtual FCVerifyCacheOperation VerifyCacheAsync(FCVerifyCacheOptions options)
         {
             var operation = new SFCVerifyCacheOperation(this, options);
             return operation;
         }
-        public virtual FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FCLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             if (options.Bundle.BundleType == (int)EBundleType.AssetBundle)
             {
@@ -153,7 +164,7 @@ namespace YooAsset
         }
         public virtual bool IsCached(string bundleGUID)
         {
-            return _caches.ContainsKey(bundleGUID);
+            return _cacheEntries.ContainsKey(bundleGUID);
         }
 
         #region 内部方法
@@ -186,11 +197,29 @@ namespace YooAsset
         }
 
         /// <summary>
+        /// 获取 Bundle 数据临时文件路径
+        /// </summary>
+        internal string GetDataTempFilePath(PackageBundle bundle)
+        {
+            string folderName = GetHashFolderName(bundle.FileHash);
+            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleDataTempFileName);
+        }
+
+        /// <summary>
+        /// 获取 Bundle 信息临时文件路径
+        /// </summary>
+        internal string GetInfoTempFilePath(PackageBundle bundle)
+        {
+            string folderName = GetHashFolderName(bundle.FileHash);
+            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleInfoTempFileName);
+        }
+
+        /// <summary>
         /// 获取指定缓存
         /// </summary>
         internal SandboxFileCacheEntry GetEntry(string bundleGUID)
         {
-            if (_caches.TryGetValue(bundleGUID, out SandboxFileCacheEntry entry))
+            if (_cacheEntries.TryGetValue(bundleGUID, out SandboxFileCacheEntry entry))
                 return entry;
             else
                 return null;
@@ -201,19 +230,19 @@ namespace YooAsset
         /// </summary>
         internal IReadOnlyCollection<SandboxFileCacheEntry> GetAllEntries()
         {
-            return _caches.Values;
+            return _cacheEntries.Values;
         }
 
         /// <summary>
         /// 添加指定缓存
         /// </summary>
-        internal void AddEntry(string bundleGUID, SandboxFileCacheEntry entry)
+        internal void AddEntry(string bundleGUID, SandboxFileCacheEntry cacheEntry)
         {
-            if (_caches.ContainsKey(bundleGUID))
-                throw new YooInternalException($"Cache entry already existed: {bundleGUID}");
+            if (_cacheEntries.ContainsKey(bundleGUID))
+                throw new YooInternalException($"Cache entry already exists: {bundleGUID}");
 
-            _caches.Add(bundleGUID, entry);
-            SpaceOccupied += entry.GetFileSize();
+            _cacheEntries.Add(bundleGUID, cacheEntry);
+            SpaceOccupied += cacheEntry.GetFileSize();
         }
 
         /// <summary>
@@ -221,9 +250,9 @@ namespace YooAsset
         /// </summary>
         internal void RemoveEntry(string bundleGUID)
         {
-            if (_caches.TryGetValue(bundleGUID, out SandboxFileCacheEntry entry))
+            if (_cacheEntries.TryGetValue(bundleGUID, out SandboxFileCacheEntry entry))
             {
-                _caches.Remove(bundleGUID);
+                _cacheEntries.Remove(bundleGUID);
                 _dataFilePathMapping.Remove(bundleGUID);
                 _infoFilePathMapping.Remove(bundleGUID);
                 SpaceOccupied -= entry.GetFileSize();
@@ -236,9 +265,9 @@ namespace YooAsset
             if (string.IsNullOrEmpty(fileHash))
                 throw new YooInternalException();
 
-            if (fileHash.Length <= HashFolderLength)
+            if (fileHash.Length <= HashFolderNameLength)
                 return fileHash;
-            return fileHash.Substring(0, HashFolderLength);
+            return fileHash.Substring(0, HashFolderNameLength);
         }
         #endregion
     }

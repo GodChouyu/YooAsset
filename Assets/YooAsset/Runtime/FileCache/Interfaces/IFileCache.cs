@@ -42,7 +42,7 @@ namespace YooAsset
         /// <summary>
         /// 写入缓存文件
         /// </summary>
-        FCWriteCacheOperation WriteCacheAsync(WriteCacheOptions options);
+        FCWriteCacheOperation WriteCacheAsync(FCWriteCacheOptions options);
 
         /// <summary>
         /// 清理缓存文件
@@ -52,12 +52,12 @@ namespace YooAsset
         /// <summary>
         /// 验证缓存文件
         /// </summary>
-        FCVerifyCacheOperation VerifyCacheAsync(VerifyCacheOptions options);
+        FCVerifyCacheOperation VerifyCacheAsync(FCVerifyCacheOptions options);
 
         /// <summary>
         /// 加载资源包
         /// </summary>
-        FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options);
+        FCLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options);
 
         /// <summary>
         /// 是否已缓存指定 Bundle

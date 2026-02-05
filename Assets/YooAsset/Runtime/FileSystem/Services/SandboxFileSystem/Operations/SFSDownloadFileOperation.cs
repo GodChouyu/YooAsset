@@ -14,7 +14,7 @@ namespace YooAsset
         }
 
         private readonly SandboxFileSystem _fileSystem;
-        private readonly DownloadFileOptions _options;
+        private readonly FSDownloadFileOptions _options;
         private DownloadFileBaseOperation _downloadFileOp;
         private ESteps _steps = ESteps.None;
 
@@ -23,7 +23,7 @@ namespace YooAsset
         private float _tryAgainTimer = 0;
         private int _failedTryAgain;
 
-        internal SFSDownloadFileOperation(SandboxFileSystem fileSystem, DownloadFileOptions options) : base(options.Bundle)
+        internal SFSDownloadFileOperation(SandboxFileSystem fileSystem, FSDownloadFileOptions options) : base(options.Bundle)
         {
             _fileSystem = fileSystem;
             _options = options;

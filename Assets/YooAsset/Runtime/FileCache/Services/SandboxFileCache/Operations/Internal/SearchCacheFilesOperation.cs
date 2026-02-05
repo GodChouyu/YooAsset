@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 搜索缓存文件操作，扫描缓存目录中的文件
+    /// </summary>
     internal sealed class SearchCacheFilesOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -16,7 +18,7 @@ namespace YooAsset
             Done,
         }
 
-        private readonly SandboxFileCache _cache;
+        private readonly SandboxFileCache _fileCache;
         private IEnumerator<string> _filesEnumerator = null;
         private double _verifyStartTime;
         private ESteps _steps = ESteps.None;
@@ -24,12 +26,12 @@ namespace YooAsset
         /// <summary>
         /// 需要验证的元素
         /// </summary>
-        public readonly List<VerifyFileInfo> Result = new List<VerifyFileInfo>(5000);
+        public readonly List<SearchFileInfo> Result = new List<SearchFileInfo>(5000);
 
 
-        internal SearchCacheFilesOperation(SandboxFileCache cache)
+        internal SearchCacheFilesOperation(SandboxFileCache fileCache)
         {
-            _cache = cache;
+            _fileCache = fileCache;
         }
         internal override void InternalStart()
         {
@@ -42,9 +44,9 @@ namespace YooAsset
 
             if (_steps == ESteps.Prepare)
             {
-                if (Directory.Exists(_cache.RootPath))
+                if (Directory.Exists(_fileCache.RootPath))
                 {
-                    var directories = Directory.EnumerateDirectories(_cache.RootPath);
+                    var directories = Directory.EnumerateDirectories(_fileCache.RootPath);
                     _filesEnumerator = directories.GetEnumerator();
                     _verifyStartTime = TimeUtility.RealtimeSinceStartup;
                     _steps = ESteps.SearchFiles;
@@ -80,19 +82,19 @@ namespace YooAsset
                 if (isFindItem == false)
                     break;
 
-                var rootFoder = _filesEnumerator.Current;
-                var childDirectories = Directory.EnumerateDirectories(rootFoder);
-                foreach (var chidDirectory in childDirectories)
+                var rootFolder = _filesEnumerator.Current;
+                var childDirectories = Directory.EnumerateDirectories(rootFolder);
+                foreach (var childDirectory in childDirectories)
                 {
-                    string bundleGUID = Path.GetFileName(chidDirectory);
-                    if (_cache.IsCached(bundleGUID))
+                    string bundleGUID = Path.GetFileName(childDirectory);
+                    if (_fileCache.IsCached(bundleGUID))
                         continue;
 
                     // 创建验证元素类
-                    string fileRootPath = chidDirectory;
+                    string fileRootPath = childDirectory;
                     string dataFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheDefine.BundleDataFileName);
                     string infoFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheDefine.BundleInfoFileName);
-                    var element = new VerifyFileInfo(bundleGUID, fileRootPath, dataFilePath, infoFilePath);
+                    var element = new SearchFileInfo(bundleGUID, fileRootPath, dataFilePath, infoFilePath);
                     Result.Add(element);
                 }
 

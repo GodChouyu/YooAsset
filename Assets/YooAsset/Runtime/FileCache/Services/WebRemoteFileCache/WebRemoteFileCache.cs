@@ -1,10 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// Web远端文件缓存系统，用于从远程服务器加载资源
+    /// </summary>
     internal class WebRemoteFileCache : IFileCache
     {
+        /// <summary>
+        /// Web远端文件缓存配置
+        /// </summary>
         internal struct CacheConfig
         {
             /// <summary>
@@ -16,6 +22,11 @@ namespace YooAsset
             /// 禁用Unity的网络缓存
             /// </summary>
             public bool DisableUnityWebCache { get; set; }
+
+            /// <summary>
+            /// 下载数据校验级别
+            /// </summary>
+            public EFileVerifyLevel DownloadVerifyLevel { get; set; }
 
             /// <summary>
             /// AssetBundle 解密器
@@ -33,9 +44,11 @@ namespace YooAsset
             public IDownloadBackend DownloadBackend { get; set; }
         }
 
-        private readonly Dictionary<string, WebRemoteFileCacheEntry> _caches = new Dictionary<string, WebRemoteFileCacheEntry>(10000);
+        private readonly Dictionary<string, WebRemoteFileCacheEntry> _cacheEntries = new Dictionary<string, WebRemoteFileCacheEntry>(10000);
 
-        // 缓存配置
+        /// <summary>
+        /// 缓存配置
+        /// </summary>
         internal readonly CacheConfig Config;
 
         #region 接口属性
@@ -61,7 +74,7 @@ namespace YooAsset
         {
             get
             {
-                return 0;
+                return _cacheEntries.Count;
             }
         }
 
@@ -72,6 +85,12 @@ namespace YooAsset
         public long SpaceOccupied { get; private set; }
         #endregion
 
+        /// <summary>
+        /// 创建Web远端文件缓存系统实例
+        /// </summary>
+        /// <param name="packageName">包裹名称</param>
+        /// <param name="rootPath">缓存根目录</param>
+        /// <param name="config">缓存配置</param>
         public WebRemoteFileCache(string packageName, string rootPath, CacheConfig config)
         {
             PackageName = packageName;
@@ -87,7 +106,7 @@ namespace YooAsset
             var operation = new WRFCInitializeOperation(this);
             return operation;
         }
-        public virtual FCWriteCacheOperation WriteCacheAsync(WriteCacheOptions options)
+        public virtual FCWriteCacheOperation WriteCacheAsync(FCWriteCacheOptions options)
         {
             var operation = new FCWriteCacheCompleteOperation($"{nameof(WebRemoteFileCache)} is readonly.");
             return operation;
@@ -97,12 +116,12 @@ namespace YooAsset
             var operation = new FCClearCacheCompleteOperation($"{nameof(WebRemoteFileCache)} is readonly.");
             return operation;
         }
-        public virtual FCVerifyCacheOperation VerifyCacheAsync(VerifyCacheOptions options)
+        public virtual FCVerifyCacheOperation VerifyCacheAsync(FCVerifyCacheOptions options)
         {
             var operation = new FCVerifyCacheCompleteOperation();
             return operation;
         }
-        public virtual FCLoadBundleOperation LoadBundleAsync(LoadBundleOptions options)
+        public virtual FCLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
         {
             if (options.Bundle.BundleType == (int)EBundleType.AssetBundle)
             {
@@ -111,7 +130,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(WebServerFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(WebRemoteFileCache)} not support load bundle type : {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -122,9 +141,12 @@ namespace YooAsset
         }
 
         #region 内部方法
-        public WebRemoteFileCacheEntry GetEntry(PackageBundle bundle)
+        /// <summary>
+        /// 获取或创建指定资源包的缓存条目
+        /// </summary>
+        internal WebRemoteFileCacheEntry GetEntry(PackageBundle bundle)
         {
-            if (_caches.TryGetValue(bundle.BundleGUID, out WebRemoteFileCacheEntry entry))
+            if (_cacheEntries.TryGetValue(bundle.BundleGUID, out WebRemoteFileCacheEntry entry))
             {
                 return entry;
             }
@@ -133,7 +155,7 @@ namespace YooAsset
                 string mainURL = Config.RemoteServices.GetRemoteMainURL(bundle.FileName);
                 string fallbackURL = Config.RemoteServices.GetRemoteFallbackURL(bundle.FileName);
                 var newEntry = new WebRemoteFileCacheEntry(bundle.BundleGUID, mainURL, fallbackURL);
-                _caches.Add(bundle.BundleGUID, newEntry);
+                _cacheEntries.Add(bundle.BundleGUID, newEntry);
                 return newEntry;
             }
         }

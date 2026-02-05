@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件缓存验证操作
+    /// </summary>
     internal class SFCVerifyCacheOperation : FCVerifyCacheOperation
     {
         private enum ESteps
@@ -12,11 +15,11 @@ namespace YooAsset
         }
 
         private readonly SandboxFileCache _fileCache;
-        private readonly VerifyCacheOptions _options;
-        private VerifyTempFileOperation _verifyOperation;
+        private readonly FCVerifyCacheOptions _options;
+        private VerifyTempFileOperation _verifyTempFileOp;
         private ESteps _steps = ESteps.None;
 
-        public SFCVerifyCacheOperation(SandboxFileCache cache, VerifyCacheOptions options)
+        public SFCVerifyCacheOperation(SandboxFileCache cache, FCVerifyCacheOptions options)
         {
             _fileCache = cache;
             _options = options;
@@ -36,7 +39,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "Not found cached bundle.";
+                    Error = "Cached bundle not found.";
                 }
                 else
                 {
@@ -46,23 +49,23 @@ namespace YooAsset
 
             if (_steps == ESteps.VerifyFile)
             {
-                if (_verifyOperation == null)
+                if (_verifyTempFileOp == null)
                 {
                     var entry = _fileCache.GetEntry(_options.Bundle.BundleGUID);
                     var element = new TempFileInfo(entry.DataFilePath, _options.Bundle.FileCRC, _options.Bundle.FileSize);
-                    _verifyOperation = new VerifyTempFileOperation(element);
-                    _verifyOperation.StartOperation();
-                    AddChildOperation(_verifyOperation);
+                    _verifyTempFileOp = new VerifyTempFileOperation(element);
+                    _verifyTempFileOp.StartOperation();
+                    AddChildOperation(_verifyTempFileOp);
                 }
 
                 if (IsWaitForCompletion)
-                    _verifyOperation.WaitForCompletion();
+                    _verifyTempFileOp.WaitForCompletion();
 
-                _verifyOperation.UpdateOperation();
-                if (_verifyOperation.IsDone == false)
+                _verifyTempFileOp.UpdateOperation();
+                if (_verifyTempFileOp.IsDone == false)
                     return;
 
-                if (_verifyOperation.Status == EOperationStatus.Succeeded)
+                if (_verifyTempFileOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -71,11 +74,11 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _verifyOperation.Error;
+                    Error = _verifyTempFileOp.Error;
 
-                    if (_options.FailedDeleteCache)
+                    if (_options.DeleteCacheEntryOnFailure)
                     {
-                        YooLogger.Error($"Find corrupted bundle file and remove cache entry : {_options.Bundle.BundleGUID}");
+                        YooLogger.Error($"Found corrupted bundle file. Removing cache entry: {_options.Bundle.BundleGUID}");
                         _fileCache.RemoveEntry(_options.Bundle.BundleGUID);
                     }
                 }

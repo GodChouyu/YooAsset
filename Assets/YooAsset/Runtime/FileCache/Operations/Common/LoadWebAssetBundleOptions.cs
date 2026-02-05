@@ -22,19 +22,24 @@ namespace YooAsset
         public string MainURL { get; set; }
 
         /// <summary>
-        /// 请求地址
+        /// 备用请求地址
         /// </summary>
         public string FallbackURL { get; set; }
 
         /// <summary>
-        /// 解密接口
+        /// AssetBundle 解密器
         /// </summary>
-        public IBundleDecryptor Decryptor { get; set; }
+        public IBundleDecryptor AssetBundleDecryptor { get; set; }
 
         /// <summary>
         /// 下载后台接口
         /// </summary>
         public IDownloadBackend DownloadBackend { get; set; }
+
+        /// <summary>
+        /// 下载数据校验级别
+        /// </summary>
+        public EFileVerifyLevel DownloadVerifyLevel { get; set; }
 
         /// <summary>
         /// 看门狗超时时间

@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace YooAsset
 {
-    internal class ClearCacheFilesOperation : FCClearCacheOperation
+    /// <summary>
+    /// 清理缓存文件操作
+    /// </summary>
+    internal class ClearCacheFilesOperation : AsyncOperationBase
     {
         private enum ESteps
         {
@@ -13,14 +15,14 @@ namespace YooAsset
             Done,
         }
 
-        private readonly SandboxFileCache _cache;
+        private readonly SandboxFileCache _fileCache;
         private readonly List<string> _bundleGUIDs;
-        private int _clearFileTotalCount;
+        private int _fileTotalCount;
         private ESteps _steps = ESteps.None;
 
-        public ClearCacheFilesOperation(SandboxFileCache cache, List<string> bundleGUIDs)
+        public ClearCacheFilesOperation(SandboxFileCache fileCache, List<string> bundleGUIDs)
         {
-            _cache = cache;
+            _fileCache = fileCache;
             _bundleGUIDs = bundleGUIDs;
         }
         internal override void InternalStart()
@@ -41,7 +43,7 @@ namespace YooAsset
                     return;
                 }
 
-                _clearFileTotalCount = _bundleGUIDs.Count;
+                _fileTotalCount = _bundleGUIDs.Count;
                 _steps = ESteps.ClearCache;
             }
 
@@ -50,16 +52,16 @@ namespace YooAsset
                 for (int i = _bundleGUIDs.Count - 1; i >= 0; i--)
                 {
                     string bundleGUID = _bundleGUIDs[i];
-                    _cache.RemoveEntry(bundleGUID);
+                    _fileCache.RemoveEntry(bundleGUID);
                     _bundleGUIDs.RemoveAt(i);
                     if (IsBusy)
                         break;
                 }
 
-                if (_clearFileTotalCount == 0)
+                if (_fileTotalCount == 0)
                     Progress = 1.0f;
                 else
-                    Progress = 1.0f - ((float)_bundleGUIDs.Count / _clearFileTotalCount);
+                    Progress = 1.0f - ((float)_bundleGUIDs.Count / _fileTotalCount);
 
                 if (_bundleGUIDs.Count == 0)
                 {

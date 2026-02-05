@@ -11,11 +11,11 @@ namespace YooAsset
         }
 
         private readonly WebServerFileSystem _fileSystem;
-        private readonly LoadBundleOptions _options;
+        private readonly FCLoadBundleOptions _options;
         private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-        internal WSFSLoadAssetBundleOperation(WebServerFileSystem fileSystem, LoadBundleOptions options)
+        internal WSFSLoadAssetBundleOperation(WebServerFileSystem fileSystem, FCLoadBundleOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;

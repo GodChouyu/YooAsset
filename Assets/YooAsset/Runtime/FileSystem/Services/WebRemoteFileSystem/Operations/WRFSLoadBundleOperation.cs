@@ -11,11 +11,11 @@ namespace YooAsset
         }
 
         private readonly WebRemoteFileSystem _fileSystem;
-        private readonly LoadBundleOptions _options;
+        private readonly FCLoadBundleOptions _options;
         private FCLoadBundleOperation _loadBundleOp;
         private ESteps _steps = ESteps.None;
 
-        internal WRFSLoadBundleOperation(WebRemoteFileSystem fileSystem, LoadBundleOptions options)
+        internal WRFSLoadBundleOperation(WebRemoteFileSystem fileSystem, FCLoadBundleOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;
