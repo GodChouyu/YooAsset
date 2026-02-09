@@ -1,6 +1,9 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 模拟下载并缓存文件操作
+    /// </summary>
     internal class SimulateAndCacheFileOperation : DownloadFileBaseOperation
     {
         protected enum ESteps
@@ -43,11 +46,17 @@ namespace YooAsset
             // 检测下载结果
             if (_steps == ESteps.CheckRequest)
             {
-                DownloadedBytes = _downloadRequest.DownloadedBytes;
-                DownloadProgress = _downloadRequest.DownloadProgress;
-                Progress = DownloadProgress;
+                Report.DownloadedBytes = _downloadRequest.DownloadedBytes;
+                Report.DownloadProgress = _downloadRequest.DownloadProgress;
+                Progress = _downloadRequest.DownloadProgress;
                 if (_downloadRequest.IsDone == false)
                     return;
+
+                // 更新下载报告
+                Report.DownloadedBytes = _downloadRequest.DownloadedBytes;
+                Report.DownloadProgress = _downloadRequest.DownloadProgress;
+                Report.HttpCode = _downloadRequest.HttpCode;
+                Report.HttpError = _downloadRequest.HttpError;
 
                 // 检查网络错误
                 if (_downloadRequest.Status == EDownloadRequestStatus.Succeeded)
@@ -104,8 +113,9 @@ namespace YooAsset
         {
             if (_steps != ESteps.Done)
             {
-                // 注意：不中断下载任务，保持后台继续下载
-                YooLogger.Error($"Try load bundle {Bundle.BundleName} from remote : {Url}");
+                // 注意：不中断下载任务，保持下载后台继续下载
+                // 注意：上层异步操作会被动失败
+                YooLogger.Error($"Attempting to load bundle {Bundle.BundleName} from remote: {Url}");
             }
         }
     }

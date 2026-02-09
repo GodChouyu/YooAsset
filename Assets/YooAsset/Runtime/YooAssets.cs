@@ -122,7 +122,7 @@ namespace YooAsset
             CheckInitialized(packageName);
             var package = GetPackageInternal(packageName);
             if (package == null)
-                YooLogger.Error($"Can not found resource package : {packageName}");
+                YooLogger.Error($"Cannot find resource package: {packageName}");
             return package;
         }
 
@@ -154,7 +154,7 @@ namespace YooAsset
             ResourcePackage package = GetPackageInternal(packageName);
             if (package == null)
             {
-                YooLogger.Error($"Can not found resource package : {packageName}");
+                YooLogger.Error($"Cannot find resource package: {packageName}");
                 return false;
             }
 

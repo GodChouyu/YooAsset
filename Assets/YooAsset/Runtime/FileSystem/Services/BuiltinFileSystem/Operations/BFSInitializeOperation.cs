@@ -1,11 +1,15 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 内置文件系统的初始化操作
+    /// </summary>
     internal class BFSInitializeOperation : FSInitializeOperation
     {
         private enum ESteps
         {
             None,
+            CheckPlatform,
             CheckAppFootprint,
             CopyPackageManifest,
             InitializeBuiltinFileCache,
@@ -17,7 +21,7 @@ namespace YooAsset
         private readonly BuiltinFileSystem _fileSystem;
         private FCInitializeOperation _initializeBuiltinFileCacheOp;
         private FCInitializeOperation _initializeUnpackFileCacheOp;
-        private CopyBuiltinPackageManifest _copyBuiltinPackageManifestOp;
+        private CopyBuiltinPackageManifestOperation _copyBuiltinPackageManifestOp;
         private ESteps _steps = ESteps.None;
 
         internal BFSInitializeOperation(BuiltinFileSystem fileSystem)
@@ -26,52 +30,60 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-#if UNITY_WEBGL
-            _steps = ESteps.Done;
-            Status = EOperationStatus.Failed;
-            Error = $"{nameof(DefaultBuildinFileSystem)} is not support WEBGL platform.";
-#else
-            _steps = ESteps.CheckAppFootprint;
-#endif
+            _steps = ESteps.CheckPlatform;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
+            if (_steps == ESteps.CheckPlatform)
+            {
+#if UNITY_WEBGL
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = $"{nameof(BuiltinFileSystem)} does not support the WebGL platform.";
+#else
+                _steps = ESteps.CheckAppFootprint;
+#endif
+            }
+
             if (_steps == ESteps.CheckAppFootprint)
             {
-                string footprintFilePath = _fileSystem.GetSandboxAppFootPrintFilePath();
+                string footprintFilePath = _fileSystem.GetSandboxAppFootprintFilePath();
                 var appFootprint = new ApplicationFootprint(footprintFilePath);
                 appFootprint.Load(_fileSystem.PackageName);
 
                 // 如果水印发生变化，则说明覆盖安装后首次打开游戏
                 if (appFootprint.IsDirty())
                 {
-                    if (_fileSystem.InstallClearMode == EInstallCleanupMode.None)
+                    if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.None)
                     {
-                        YooLogger.Warning("Do nothing when overwrite install application.");
+                        YooLogger.Warning("No action required on overwrite installation.");
                     }
-                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllCacheFiles)
+                    else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllCacheFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
-                        YooLogger.Warning("Delete all cache files when overwrite install application.");
+                        _fileSystem.DeleteAllManifestFiles();
+                        _fileSystem.DeleteAllTempFIles();
+                        YooLogger.Warning("Deleted all cache files on overwrite installation.");
                     }
-                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllBundleFiles)
+                    else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllBundleFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
-                        YooLogger.Warning("Delete all bundle files when overwrite install application.");
+                        YooLogger.Warning("Deleted all bundle files on overwrite installation.");
                     }
-                    else if (_fileSystem.InstallClearMode == EInstallCleanupMode.ClearAllManifestFiles)
+                    else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllManifestFiles)
                     {
-                        YooLogger.Warning("Do nothing when overwrite install application.");
+                        _fileSystem.DeleteAllManifestFiles();
+                        YooLogger.Warning("Deleted all manifest files on overwrite installation.");
                     }
                     else
                     {
-                        throw new System.NotImplementedException(_fileSystem.InstallClearMode.ToString());
+                        throw new System.NotImplementedException(_fileSystem.InstallCleanupMode.ToString());
                     }
 
-                    appFootprint.Coverage(_fileSystem.PackageName);
+                    appFootprint.Overwrite(_fileSystem.PackageName);
                 }
 
                 _steps = ESteps.CopyPackageManifest;
@@ -79,11 +91,11 @@ namespace YooAsset
 
             if (_steps == ESteps.CopyPackageManifest)
             {
-                if (_fileSystem.CopyBuildinPackageManifest)
+                if (_fileSystem.CopyBuiltinPackageManifest)
                 {
                     if (_copyBuiltinPackageManifestOp == null)
                     {
-                        _copyBuiltinPackageManifestOp = new CopyBuiltinPackageManifest(_fileSystem);
+                        _copyBuiltinPackageManifestOp = new CopyBuiltinPackageManifestOperation(_fileSystem);
                         _copyBuiltinPackageManifestOp.StartOperation();
                         AddChildOperation(_copyBuiltinPackageManifestOp);
                     }

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace YooAsset
 {
@@ -24,18 +24,16 @@ namespace YooAsset
         }
 
         protected readonly LoadWebAssetBundleOptions _options;
+        private readonly DownloadRetry _downloadRetry;
         private IDownloadAssetBundleRequest _downloadAssetBundleRequest;
         private ESteps _steps = ESteps.None;
-
-        // 失败重试
-        private int _requestCount = 0;
-        private float _tryAgainTimer = 0;
-        private int _failedTryAgain;
 
         public LoadWebNormalAssetBundleOperation(LoadWebAssetBundleOptions options)
         {
             _options = options;
-            _failedTryAgain = int.MaxValue; //注意：网络原因失败后，重新尝试直到成功
+
+            // 注意：网络原因失败后，重新尝试直到成功
+            _downloadRetry = new DownloadRetry(int.MaxValue, options.RetryPolicy);
         }
         internal override void InternalStart()
         {
@@ -63,6 +61,7 @@ namespace YooAsset
 
                 if (_downloadAssetBundleRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
+                    _options.URLPolicy.OnSuccess(_downloadAssetBundleRequest.Url);
                     var assetBundle = _downloadAssetBundleRequest.Result;
                     if (assetBundle == null)
                     {
@@ -74,13 +73,18 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Succeeded;
-                        BundleResult = new AssetBundleResult(_downloadAssetBundleRequest.Url, _options.Bundle, assetBundle, null);
+                        BundleHandle = new AssetBundleHandle(_downloadAssetBundleRequest.Url, _options.Bundle, assetBundle, null);
                     }
                 }
                 else
                 {
-                    if (_failedTryAgain > 0 && IsRetryableError(_downloadAssetBundleRequest.HttpCode))
+                    string url = _downloadAssetBundleRequest.Url;
+                    long httpCode = _downloadAssetBundleRequest.HttpCode;
+                    string httpError = _downloadAssetBundleRequest.HttpError;
+                    _options.URLPolicy.OnFailure(url, httpCode, httpError);
+                    if (IsWaitForCompletion == false && _downloadRetry.CanRetry(url, httpCode, httpError))
                     {
+                        _downloadRetry.BeginWait();
                         _steps = ESteps.TryAgain;
                     }
                     else
@@ -101,11 +105,8 @@ namespace YooAsset
                     _downloadAssetBundleRequest = null;
                 }
 
-                _tryAgainTimer += UnityEngine.Time.unscaledDeltaTime;
-                if (_tryAgainTimer > 1f)
+                if (_downloadRetry.Tick())
                 {
-                    _tryAgainTimer = 0f;
-                    _failedTryAgain--;
                     Progress = 0f;
                     _steps = ESteps.BundleRequest;
                 }
@@ -122,12 +123,7 @@ namespace YooAsset
 
         private string GetRequestURL()
         {
-            // 轮流返回请求地址
-            _requestCount++;
-            if (_requestCount % 2 == 0)
-                return _options.FallbackURL;
-            else
-                return _options.MainURL;
+            return _options.URLPolicy.SelectURL(_options.CandidateURLs);
         }
     }
 
@@ -149,20 +145,18 @@ namespace YooAsset
         }
 
         protected readonly LoadWebAssetBundleOptions _options;
+        private readonly DownloadRetry _downloadRetry;
         private IDownloadBytesRequest _downloadBytesRequest;
         private IBundleMemoryDecryptor _decryptor;
         private AssetBundleCreateRequest _createRequest;
         private ESteps _steps = ESteps.None;
 
-        // 失败重试
-        private int _requestCount = 0;
-        private float _tryAgainTimer = 0;
-        private int _failedTryAgain;
-
         public LoadWebEncryptedAssetBundleOperation(LoadWebAssetBundleOptions options)
         {
             _options = options;
-            _failedTryAgain = int.MaxValue; //注意：网络原因失败后，重新尝试直到成功
+
+            // 注意：网络原因失败后，重新尝试直到成功
+            _downloadRetry = new DownloadRetry(int.MaxValue, options.RetryPolicy);
         }
         internal override void InternalStart()
         {
@@ -197,7 +191,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"{_options.CacheName} not support {decryptor.GetType().Name}";
+                    Error = $"{_options.CacheName} does not support {decryptor.GetType().Name}";
                     return;
                 }
             }
@@ -210,12 +204,18 @@ namespace YooAsset
 
                 if (_downloadBytesRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
+                    _options.URLPolicy.OnSuccess(_downloadBytesRequest.Url);
                     _steps = ESteps.VerifyData;
                 }
                 else
                 {
-                    if (_failedTryAgain > 0 && IsRetryableError(_downloadBytesRequest.HttpCode))
+                    string url = _downloadBytesRequest.Url;
+                    long httpCode = _downloadBytesRequest.HttpCode;
+                    string httpError = _downloadBytesRequest.HttpError;
+                    _options.URLPolicy.OnFailure(url, httpCode, httpError);
+                    if (IsWaitForCompletion == false && _downloadRetry.CanRetry(url, httpCode, httpError))
                     {
+                        _downloadRetry.BeginWait();
                         _steps = ESteps.TryAgain;
                     }
                     else
@@ -247,8 +247,9 @@ namespace YooAsset
                     string error = $"[WebBundleVerify] Verify failed. Url:{_downloadBytesRequest.Url} Level: {_options.DownloadVerifyLevel} Result: {verifyResult}";
                     YooLogger.Warning(error);
 
-                    if (_failedTryAgain > 0)
+                    if (IsWaitForCompletion == false && _downloadRetry.CanRetry())
                     {
+                        _downloadRetry.BeginWait();
                         _steps = ESteps.TryAgain;
                     }
                     else
@@ -290,7 +291,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = new AssetBundleResult(_downloadBytesRequest.Url, _options.Bundle, assetBundle, null);
+                    BundleHandle = new AssetBundleHandle(_downloadBytesRequest.Url, _options.Bundle, assetBundle, null);
                 }
             }
 
@@ -303,11 +304,8 @@ namespace YooAsset
                     _downloadBytesRequest = null;
                 }
 
-                _tryAgainTimer += Time.unscaledDeltaTime;
-                if (_tryAgainTimer > 1f)
+                if (_downloadRetry.Tick())
                 {
-                    _tryAgainTimer = 0f;
-                    _failedTryAgain--;
                     Progress = 0f;
                     _steps = ESteps.DataRequest;
                 }
@@ -336,12 +334,7 @@ namespace YooAsset
         }
         private string GetRequestURL()
         {
-            // 轮流返回请求地址
-            _requestCount++;
-            if (_requestCount % 2 == 0)
-                return _options.FallbackURL;
-            else
-                return _options.MainURL;
+            return _options.URLPolicy.SelectURL(_options.CandidateURLs);
         }
     }
 }

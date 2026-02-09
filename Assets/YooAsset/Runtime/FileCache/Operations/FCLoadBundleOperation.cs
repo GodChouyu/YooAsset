@@ -6,7 +6,7 @@ namespace YooAsset
     /// </summary>
     internal abstract class FCLoadBundleOperation : AsyncOperationBase
     {
-        protected struct LoadResult
+        protected readonly struct LoadResult
         {
             /// <summary>
             /// 错误信息
@@ -14,7 +14,7 @@ namespace YooAsset
             public readonly string Error;
 
             /// <summary>
-            /// 加载成功
+            /// 是否成功
             /// </summary>
             public bool Succeeded
             {
@@ -37,46 +37,9 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 资源包加载结果
+        /// 资源包句柄
         /// </summary>
-        public IBundleResult BundleResult { get; protected set; }
-
-        /// <summary>
-        /// 检查文件路径是否支持 FileIO 读取
-        /// </summary>
-        protected bool SupportsFileIO(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return false;
-            if (filePath.StartsWith("jar:") || filePath.StartsWith("content:"))
-                return false;
-            return true;
-        }
-
-        /// <summary>
-        /// 判断是否为可重试的错误
-        /// </summary>
-        protected bool IsRetryableError(long httpCode)
-        {
-            // HTTP 状态码
-            // 1xx 信息响应
-            // 2xx 成功响应
-            // 3xx 重定向消息
-            // 4xx 客户端错误响应
-            // 5xx 服务器错误响应
-
-            if (httpCode == 0)
-                return true;
-
-            // 4xx 客户端错误不可重试
-            // 说明：408 Request Timeout
-            // 说明：429 Too Many Requests
-            if (httpCode >= 400 && httpCode < 500)
-                return httpCode == 408 || httpCode == 429;
-
-            // 其它情况可重试
-            return true;
-        }
+        public IBundleHandle BundleHandle { get; protected set; }
     }
 
     /// <summary>

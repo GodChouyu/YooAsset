@@ -44,10 +44,10 @@ namespace YooAsset
         /// 创建资源包加载器
         /// </summary>
         /// <returns>返回资源包加载操作对象</returns>
-        public FSLoadBundleOperation CreateBundleLoader()
+        public FSLoadPackageBundleOperation CreateBundleLoader()
         {
-            var options = new FCLoadBundleOptions(Bundle);
-            return _fileSystem.LoadBundleAsync(options);
+            var options = new FSLoadPackageBundleOptions(Bundle);
+            return _fileSystem.LoadPackageBundleAsync(options);
         }
 
         /// <summary>

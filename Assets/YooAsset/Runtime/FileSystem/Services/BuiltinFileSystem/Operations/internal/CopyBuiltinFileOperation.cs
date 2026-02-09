@@ -3,6 +3,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 拷贝内置文件操作
+    /// </summary>
     internal class CopyBuiltinFileOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -17,7 +20,7 @@ namespace YooAsset
         private readonly BuiltinFileSystem _fileSystem;
         private readonly string _sourceFilePath;
         private readonly string _destFilePath;
-        private IDownloadFileRequest _webFileRequestOp;
+        private IDownloadFileRequest _downloadFileRequest;
         private ESteps _steps = ESteps.None;
 
         public CopyBuiltinFileOperation(BuiltinFileSystem fileSystem, string sourceFilePath, string destFilePath)
@@ -63,7 +66,7 @@ namespace YooAsset
                     }
                     catch (Exception ex)
                     {
-                        YooLogger.Warning($"Failed copy buildin file : {ex.Message}");
+                        YooLogger.Warning($"Failed to copy builtin file: {ex.Message}");
                         _steps = ESteps.UnpackFile;
                     }
                 }
@@ -75,19 +78,19 @@ namespace YooAsset
 
             if (_steps == ESteps.UnpackFile)
             {
-                if (_webFileRequestOp == null)
+                if (_downloadFileRequest == null)
                 {
                     //TODO 团结引擎，在某些安卓机型（红米），通过UnityWebRequest拷贝包内文件会小概率失败！需要借助其它方式来拷贝包内文件。
                     string url = DownloadSystemTools.ToLocalUrl(_sourceFilePath);
                     var args = new DownloadFileRequestArgs(url, _destFilePath, 60, 0);
-                    _webFileRequestOp = _fileSystem.DownloadBackend.CreateFileRequest(args);
-                    _webFileRequestOp.SendRequest();
+                    _downloadFileRequest = _fileSystem.DownloadBackend.CreateFileRequest(args);
+                    _downloadFileRequest.SendRequest();
                 }
 
-                if (_webFileRequestOp.IsDone == false)
+                if (_downloadFileRequest.IsDone == false)
                     return;
 
-                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadFileRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -96,16 +99,16 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webFileRequestOp.Error;
+                    Error = _downloadFileRequest.Error;
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webFileRequestOp != null)
+            if (_downloadFileRequest != null)
             {
-                _webFileRequestOp.Dispose();
-                _webFileRequestOp = null;
+                _downloadFileRequest.Dispose();
+                _downloadFileRequest = null;
             }
         }
         internal override void InternalWaitForCompletion()

@@ -75,7 +75,7 @@ namespace YooAsset
                     var fileSystem = _cloneList[0];
                     _cloneList.RemoveAt(0);
 
-                    _clearCacheFilesOp = fileSystem.ClearCacheAsync(_options);
+                    _clearCacheFilesOp = fileSystem.ClearCacheAsync(_options.ConvertTo());
                     _clearCacheFilesOp.StartOperation();
                     AddChildOperation(_clearCacheFilesOp);
                     _steps = ESteps.CheckClearResult;
@@ -103,7 +103,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"ClearMode : {_options.ClearMode}";
+            return $"ClearMode: {_options.ClearMode}";
         }
     }
 }

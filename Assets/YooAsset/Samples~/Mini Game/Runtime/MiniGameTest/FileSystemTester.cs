@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 namespace YooAsset
@@ -22,8 +22,8 @@ namespace YooAsset
 
             // 请求资源版本
             Debug.Log("请求资源版本信息！");
-            var requestPackageVersionOptions = new RequestVersionOptions(true, 60);
-            var requestPackageVersionOp = fileSystem.RequestVersionAsync(requestPackageVersionOptions);
+            var requestPackageVersionOptions = new FSRequestPackageVersionOptions(true, 60);
+            var requestPackageVersionOp = fileSystem.RequestPackageVersionAsync(requestPackageVersionOptions);
             AsyncOperationSystem.StartOperation(packageName, requestPackageVersionOp);
             yield return requestPackageVersionOp;
             if (requestPackageVersionOp.Status != EOperationStatus.Succeeded)
@@ -35,8 +35,8 @@ namespace YooAsset
             // 请求资源清单
             string packageVersion = requestPackageVersionOp.PackageVersion;
             Debug.Log($"加载资源清单文件！{packageVersion}");
-            var loadPackageManifestOptions = new LoadManifestOptions(packageVersion, 60);
-            var loadPackageManifestOp = fileSystem.LoadManifestAsync(loadPackageManifestOptions);
+            var loadPackageManifestOptions = new FSLoadPackageManifestOptions(packageVersion, 60);
+            var loadPackageManifestOp = fileSystem.LoadPackageManifestAsync(loadPackageManifestOptions);
             AsyncOperationSystem.StartOperation(packageName, loadPackageManifestOp);
             yield return loadPackageManifestOp;
             if (loadPackageManifestOp.Status != EOperationStatus.Succeeded)
@@ -70,8 +70,8 @@ namespace YooAsset
             {
                 var manifest = loadPackageManifestOp.Manifest;
                 var packageBundle = GetPackageBundle(manifest, testLocation);
-                var loadBundleFileOptions = new FCLoadBundleOptions(packageBundle);
-                var loadBundleFileOp = fileSystem.LoadBundleAsync(loadBundleFileOptions);
+                var loadBundleFileOptions = new FSLoadPackageBundleOptions(packageBundle);
+                var loadBundleFileOp = fileSystem.LoadPackageBundleAsync(loadBundleFileOptions);
                 AsyncOperationSystem.StartOperation(packageName, loadBundleFileOp);
                 yield return loadBundleFileOp;
                 if (loadBundleFileOp.Status != EOperationStatus.Succeeded)
@@ -85,7 +85,7 @@ namespace YooAsset
                 }
 
                 // 卸载资源包
-                loadBundleFileOp.Result.UnloadBundleFile();
+                loadBundleFileOp.BundleHandle.UnloadBundleFile();
             }
 
             Debug.Log("完整测试成功！");

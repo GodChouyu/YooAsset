@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载内置包裹清单文件操作
+    /// </summary>
     internal class LoadBuiltinPackageManifestOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -17,15 +20,15 @@ namespace YooAsset
         private readonly BuiltinFileSystem _fileSystem;
         private readonly string _packageVersion;
         private readonly string _packageHash;
-        private IDownloadBytesRequest _webDataRequestOp;
-        private DeserializeManifestOperation _deserializer;
+        private IDownloadBytesRequest _downloadBytesRequest;
+        private DeserializeManifestOperation _deserializeManifestOp;
         private byte[] _fileData;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹清单
         /// </summary>
-        public PackageManifest Manifest { private set; get; }
+        public PackageManifest Manifest { get; private set; }
 
 
         internal LoadBuiltinPackageManifestOperation(BuiltinFileSystem fileSystem, string packageVersion, string packageHash)
@@ -59,28 +62,28 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestFileData)
             {
-                if (_webDataRequestOp == null)
+                if (_downloadBytesRequest == null)
                 {
                     string filePath = _fileSystem.GetBuiltinPackageManifestFilePath(_packageVersion);
                     string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, 60, 0);
-                    _webDataRequestOp = _fileSystem.DownloadBackend.CreateBytesRequest(args);
-                    _webDataRequestOp.SendRequest();
+                    _downloadBytesRequest = _fileSystem.DownloadBackend.CreateBytesRequest(args);
+                    _downloadBytesRequest.SendRequest();
                 }
 
-                if (_webDataRequestOp.IsDone == false)
+                if (_downloadBytesRequest.IsDone == false)
                     return;
 
-                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadBytesRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    _fileData = _webDataRequestOp.Result;
+                    _fileData = _downloadBytesRequest.Result;
                     _steps = ESteps.VerifyFileData;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webDataRequestOp.Error;
+                    Error = _downloadBytesRequest.Error;
                 }
             }
 
@@ -94,49 +97,49 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "Failed to verify buildin package manifest file.";
+                    Error = "Failed to verify builtin package manifest file.";
                 }
             }
 
             if (_steps == ESteps.LoadManifest)
             {
-                if (_deserializer == null)
+                if (_deserializeManifestOp == null)
                 {
-                    _deserializer = new DeserializeManifestOperation(_fileSystem.ManifestDecryptor, _fileData);
-                    _deserializer.StartOperation();
-                    AddChildOperation(_deserializer);
+                    _deserializeManifestOp = new DeserializeManifestOperation(_fileSystem.ManifestDecryptor, _fileData);
+                    _deserializeManifestOp.StartOperation();
+                    AddChildOperation(_deserializeManifestOp);
                 }
 
-                _deserializer.UpdateOperation();
-                Progress = _deserializer.Progress;
-                if (_deserializer.IsDone == false)
+                _deserializeManifestOp.UpdateOperation();
+                Progress = _deserializeManifestOp.Progress;
+                if (_deserializeManifestOp.IsDone == false)
                     return;
 
-                if (_deserializer.Status == EOperationStatus.Succeeded)
+                if (_deserializeManifestOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
-                    Manifest = _deserializer.Manifest;
+                    Manifest = _deserializeManifestOp.Manifest;
                     Status = EOperationStatus.Succeeded;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _deserializer.Error;
+                    Error = _deserializeManifestOp.Error;
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webDataRequestOp != null)
+            if (_downloadBytesRequest != null)
             {
-                _webDataRequestOp.Dispose();
-                _webDataRequestOp = null;
+                _downloadBytesRequest.Dispose();
+                _downloadBytesRequest = null;
             }
         }
         internal override string InternalGetDescription()
         {
-            return $"PackageVersion : {_packageVersion} PackageHash : {_packageHash}";
+            return $"PackageVersion: {_packageVersion} PackageHash: {_packageHash}";
         }
     }
 }

@@ -31,7 +31,7 @@ namespace YooAsset.Editor
 
             // 创建新补丁清单
             PackageManifest manifest = new PackageManifest();
-            manifest.FileVersion = PackageManifestDefine.FileVersion;
+            manifest.FileVersion = PackageManifestConsts.FileVersion;
             manifest.EnableAddressable = buildMapContext.Command.EnableAddressable;
             manifest.SupportExtensionless = buildMapContext.Command.SupportExtensionless;
             manifest.LocationToLower = buildMapContext.Command.LocationToLower;

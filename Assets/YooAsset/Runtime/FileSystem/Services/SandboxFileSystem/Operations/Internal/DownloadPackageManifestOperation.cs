@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 下载包裹清单文件操作
+    /// </summary>
     internal class DownloadPackageManifestOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -9,14 +12,16 @@ namespace YooAsset
             None,
             CheckExist,
             DownloadFile,
+            VerifyFile,
             Done,
         }
 
         private readonly SandboxFileSystem _fileSystem;
         private readonly string _packageVersion;
         private readonly int _timeout;
-        private IDownloadFileRequest _webFileRequestOp;
-        private int _requestCount = 0;
+        private IDownloadFileRequest _downloadFileRequest;
+        private string _savePath;
+        private string _tempPath;
         private ESteps _steps = ESteps.None;
 
 
@@ -28,7 +33,8 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _requestCount = DownloadFailureCounter.GetFailureCount(_fileSystem.PackageName, nameof(DownloadPackageManifestOperation));
+            _savePath = _fileSystem.GetCachePackageManifestFilePath(_packageVersion);
+            _tempPath = _savePath + ".tmp";
             _steps = ESteps.CheckExist;
         }
         internal override void InternalUpdate()
@@ -38,8 +44,7 @@ namespace YooAsset
 
             if (_steps == ESteps.CheckExist)
             {
-                string filePath = _fileSystem.GetCachePackageManifestFilePath(_packageVersion);
-                if (File.Exists(filePath))
+                if (File.Exists(_savePath))
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
@@ -52,50 +57,86 @@ namespace YooAsset
 
             if (_steps == ESteps.DownloadFile)
             {
-                if (_webFileRequestOp == null)
+                if (_downloadFileRequest == null)
                 {
-                    string savePath = _fileSystem.GetCachePackageManifestFilePath(_packageVersion);
+                    // 删除历史临时文件
+                    if (File.Exists(_tempPath))
+                        File.Delete(_tempPath);
+
                     string fileName = YooAssetSettingsData.GetManifestBinaryFileName(_fileSystem.PackageName, _packageVersion);
                     string webURL = GetDownloadRequestURL(fileName);
-                    int watchdogTime = _fileSystem.DownloadWatchDogTimeout;
-                    var args = new DownloadFileRequestArgs(webURL, savePath, _timeout, watchdogTime);
-                    _webFileRequestOp = _fileSystem.DownloadBackend.CreateFileRequest(args);
-                    _webFileRequestOp.SendRequest();
+                    int watchdogTime = _fileSystem.DownloadWatchdogTimeout;
+                    var args = new DownloadFileRequestArgs(webURL, _tempPath, _timeout, watchdogTime);
+                    _downloadFileRequest = _fileSystem.DownloadBackend.CreateFileRequest(args);
+                    _downloadFileRequest.SendRequest();
                 }
 
-                if (_webFileRequestOp.IsDone == false)
+                if (_downloadFileRequest.IsDone == false)
                     return;
 
-                if (_webFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadFileRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Succeeded;
+                    _steps = ESteps.VerifyFile;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webFileRequestOp.Error;
-                    DownloadFailureCounter.RecordFailure(_fileSystem.PackageName, nameof(DownloadPackageManifestOperation));
+                    Error = _downloadFileRequest.Error;
+                    _fileSystem.DownloadURLPolicy.OnFailure(_downloadFileRequest.Url, _downloadFileRequest.HttpCode, _downloadFileRequest.HttpError);
+                    DeleteTempFile();
+                }
+            }
+
+            if (_steps == ESteps.VerifyFile)
+            {
+                // 验证临时文件存在且大小有效
+                FileInfo fileInfo = new FileInfo(_tempPath);
+                if (fileInfo.Exists == false || fileInfo.Length == 0)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = "Downloaded package manifest temp file is invalid.";
+                    DeleteTempFile();
+                    return;
+                }
+
+                // 原子移动到最终缓存路径
+                try
+                {
+                    if (File.Exists(_savePath))
+                        File.Delete(_savePath);
+                    File.Move(_tempPath, _savePath);
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Succeeded;
+                }
+                catch (System.Exception ex)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"Failed to move manifest temp file to cache path: {ex.Message}";
+                    DeleteTempFile();
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webFileRequestOp != null)
+            if (_downloadFileRequest != null)
             {
-                _webFileRequestOp.Dispose();
-                _webFileRequestOp = null;
+                _downloadFileRequest.Dispose();
+                _downloadFileRequest = null;
             }
         }
 
+        private void DeleteTempFile()
+        {
+            if (File.Exists(_tempPath))
+                File.Delete(_tempPath);
+        }
         private string GetDownloadRequestURL(string fileName)
         {
-            // 轮流返回请求地址
-            if (_requestCount % 2 == 0)
-                return _fileSystem.RemoteServices.GetRemoteMainURL(fileName);
-            else
-                return _fileSystem.RemoteServices.GetRemoteFallbackURL(fileName);
+            var urls = _fileSystem.RemoteServices.GetRemoteURLs(fileName);
+            return _fileSystem.DownloadURLPolicy.SelectURL(urls);
         }
     }
 }

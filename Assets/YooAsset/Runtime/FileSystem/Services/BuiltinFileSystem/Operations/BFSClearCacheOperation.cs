@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 内置文件系统的清理缓存操作
+    /// </summary>
     internal class BFSClearCacheOperation : FSClearCacheOperation
     {
         private enum ESteps
@@ -11,11 +14,11 @@ namespace YooAsset
         }
 
         private readonly BuiltinFileSystem _fileSystem;
-        private readonly ClearCacheOptions _options;
+        private readonly FSClearCacheOptions _options;
         private FCClearCacheOperation _clearCacheOp;
         private ESteps _steps = ESteps.None;
 
-        internal BFSClearCacheOperation(BuiltinFileSystem fileSystem, ClearCacheOptions options)
+        internal BFSClearCacheOperation(BuiltinFileSystem fileSystem, FSClearCacheOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;
@@ -33,7 +36,7 @@ namespace YooAsset
             {
                 if (_clearCacheOp == null)
                 {
-                    _clearCacheOp = _fileSystem.UnpackFileCache.ClearCacheAsync(_options);
+                    _clearCacheOp = _fileSystem.UnpackFileCache.ClearCacheAsync(_options.ConvertTo());
                     _clearCacheOp.StartOperation();
                     AddChildOperation(_clearCacheOp);
                 }

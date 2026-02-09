@@ -75,7 +75,7 @@ namespace YooAsset
 
                 // 读取文件标记
                 uint fileSign = _buffer.ReadUInt32();
-                if (fileSign != PackageManifestDefine.FileSignature)
+                if (fileSign != PackageManifestConsts.FileSignature)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
@@ -86,13 +86,13 @@ namespace YooAsset
                 // 读取文件版本
                 string fileVersion = _buffer.ReadUTF8();
                 Version fileVer = new Version(fileVersion);
-                Version ver2025_8_28 = new Version(PackageManifestDefine.VERSION_2025_8_28);
-                Version ver2025_9_30 = new Version(PackageManifestDefine.VERSION_2025_9_30);
+                Version ver2025_8_28 = new Version(PackageManifestConsts.VERSION_2025_8_28);
+                Version ver2025_9_30 = new Version(PackageManifestConsts.VERSION_2025_9_30);
                 if (fileVer < ver2025_8_28)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"The manifest version is lower than the minimum compatible version : {fileVer} < {ver2025_8_28}";
+                    Error = $"The manifest version is lower than the minimum compatible version: {fileVer} < {ver2025_8_28}";
                     return;
                 }
 
@@ -116,9 +116,9 @@ namespace YooAsset
 
                 // 检测配置
                 if (Manifest.EnableAddressable && Manifest.LocationToLower)
-                    throw new YooManifestException("Addressable not support location to lower.");
+                    throw new YooManifestException("Addressable mode does not support converting locations to lowercase.");
                 if (Manifest.EnableAddressable == false && Manifest.ReplaceAssetPathWithAddress)
-                    throw new YooManifestException("Replace asset path with address need enable Addressable.");
+                    throw new YooManifestException("Replacing asset path with address requires Addressable to be enabled.");
 
                 _steps = ESteps.PrepareAssetList;
             }

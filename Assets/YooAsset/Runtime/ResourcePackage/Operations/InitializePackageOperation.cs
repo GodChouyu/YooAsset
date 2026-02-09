@@ -12,7 +12,6 @@ namespace YooAsset
             None,
             SetPlayMode,
             CheckOptions,
-            CheckPlatform,
             CreateCore,
             InitFileSystem,
             Done,
@@ -68,50 +67,6 @@ namespace YooAsset
                     YooLogger.Error(Error);
                     return;
                 }
-
-                _steps = ESteps.CheckPlatform;
-            }
-
-            if (_steps == ESteps.CheckPlatform)
-            {
-#if !UNITY_EDITOR
-                if (_playMode == EPlayMode.EditorSimulateMode)
-                {
-                    _steps = ESteps.Done;
-                    Status = EOperationStatus.Failed;
-                    Error = $"Editor simulate mode only support unity editor.";
-                    YooLogger.Error(Error);
-                    return;
-                }
-#endif
-
-#if UNITY_WEBGL
-                if (_playMode != EPlayMode.EditorSimulateMode)
-                {
-                    if (_playMode != EPlayMode.WebPlayMode)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = $"{_playMode} does not support WebGL platform.";
-                        YooLogger.Error(Error);
-                        return;
-                    }
-                }
-#endif
-
-#if !UNITY_WEBGL
-                if (_playMode != EPlayMode.EditorSimulateMode)
-                {
-                    if (_playMode == EPlayMode.WebPlayMode)
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = $"{nameof(EPlayMode.WebPlayMode)} only supports WebGL platform.";
-                        YooLogger.Error(Error);
-                        return;
-                    }
-                }
-#endif
 
                 _steps = ESteps.CreateCore;
             }
@@ -186,7 +141,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"PlayMode : {_playMode}";
+            return $"PlayMode: {_playMode}";
         }
     }
 }

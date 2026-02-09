@@ -32,22 +32,22 @@ namespace YooAsset
         /// <summary>
         /// 自定义参数：UnityWebRequest 创建委托
         /// </summary>
-        public UnityWebRequestCreator WebRequestCreator { private set; get; }
+        public UnityWebRequestCreator WebRequestCreator { get; private set; }
 
         /// <summary>
-        /// 禁用Unity的网络缓存
+        /// 自定义参数：禁用Unity的网络缓存
         /// </summary>
-        public bool DisableUnityWebCache { private set; get; } = false;
+        public bool DisableUnityWebCache { get; private set; } = false;
 
         /// <summary>
         /// 自定义参数：下载任务的看门狗机制超时时间
         /// </summary>
-        public int DownloadWatchDogTimeout { private set; get; } = 0;
+        public int DownloadWatchdogTimeout { get; private set; } = 0;
 
         /// <summary>
         /// 自定义参数：下载的资源包数据的校验级别
         /// </summary>
-        public EFileVerifyLevel DownloadVerifyLevel { private set; get; } = EFileVerifyLevel.Middle;
+        public EFileVerifyLevel DownloadVerifyLevel { get; private set; } = EFileVerifyLevel.Middle;
 
         /// <summary>
         /// 自定义参数：AssetBundle 解密器
@@ -57,7 +57,17 @@ namespace YooAsset
         /// <summary>
         /// 自定义参数：资源清单解密器
         /// </summary>
-        public IManifestDecryptor ManifestDecryptor { private set; get; }
+        public IManifestDecryptor ManifestDecryptor { get; private set; }
+
+        /// <summary>
+        /// 自定义参数：下载重试判定策略
+        /// </summary>
+        public IDownloadRetryPolicy DownloadRetryPolicy { get; private set; }
+
+        /// <summary>
+        /// 自定义参数：URL 选择策略
+        /// </summary>
+        public IDownloadURLPolicy DownloadURLPolicy { get; private set; }
         #endregion
 
 
@@ -69,65 +79,73 @@ namespace YooAsset
             var operation = new WSFSInitializeOperation(this);
             return operation;
         }
-        public virtual FSRequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
+        public virtual FSRequestPackageVersionOperation RequestPackageVersionAsync(FSRequestPackageVersionOptions options)
         {
-            var operation = new WSFSRequestVersionOperation(this, options.Timeout);
+            var operation = new WSFSRequestPackageVersionOperation(this, options.Timeout);
             return operation;
         }
-        public virtual FSLoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
+        public virtual FSLoadPackageManifestOperation LoadPackageManifestAsync(FSLoadPackageManifestOptions options)
         {
-            var operation = new WSFSLoadManifestOperation(this, options.PackageVersion, options.Timeout);
+            var operation = new WSFSLoadPackageManifestOperation(this, options.PackageVersion, options.Timeout);
             return operation;
         }
-        public virtual FSClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FSLoadPackageBundleOperation LoadPackageBundleAsync(FSLoadPackageBundleOptions options)
         {
-            var operation = new FSClearCacheCompleteOperation();
+            var operation = new WSFSLoadPackageBundleOperation(this, options);
             return operation;
         }
         public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
         {
             throw new System.NotImplementedException();
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
+        public virtual FSClearCacheOperation ClearCacheAsync(FSClearCacheOptions options)
         {
-            var operation = new WSFSLoadAssetBundleOperation(this, options);
+            var operation = new FSClearCacheCompleteOperation();
             return operation;
         }
 
         public virtual void SetParameter(string name, object value)
         {
-            if (name == FileSystemParametersDefine.DOWNLOAD_BACKEND)
+            if (name == FileSystemConsts.DOWNLOAD_BACKEND)
             {
                 DownloadBackend = (IDownloadBackend)value;
             }
-            else if (name == FileSystemParametersDefine.UNITY_WEB_REQUEST_CREATOR)
+            else if (name == FileSystemConsts.UNITY_WEB_REQUEST_CREATOR)
             {
                 WebRequestCreator = (UnityWebRequestCreator)value;
             }
-            else if (name == FileSystemParametersDefine.DISABLE_UNITY_WEB_CACHE)
+            else if (name == FileSystemConsts.DISABLE_UNITY_WEB_CACHE)
             {
                 DisableUnityWebCache = Convert.ToBoolean(value);
             }
-            else if (name == FileSystemParametersDefine.DOWNLOAD_WATCH_DOG_TIME)
+            else if (name == FileSystemConsts.DOWNLOAD_WATCHDOG_TIMEOUT)
             {
                 int convertValue = Convert.ToInt32(value);
-                DownloadWatchDogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
+                DownloadWatchdogTimeout = Mathf.Clamp(convertValue, 0, int.MaxValue);
             }
-            else if (name == FileSystemParametersDefine.FILE_VERIFY_LEVEL)
+            else if (name == FileSystemConsts.FILE_VERIFY_LEVEL)
             {
                 DownloadVerifyLevel = (EFileVerifyLevel)value;
             }
-            else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
+            else if (name == FileSystemConsts.ASSETBUNDLE_DECRYPTOR)
             {
                 AssetBundleDecryptor = (IBundleDecryptor)value;
             }
-            else if (name == FileSystemParametersDefine.MANIFEST_DECRYPTOR)
+            else if (name == FileSystemConsts.MANIFEST_DECRYPTOR)
             {
                 ManifestDecryptor = (IManifestDecryptor)value;
             }
+            else if (name == FileSystemConsts.DOWNLOAD_RETRY_POLICY)
+            {
+                DownloadRetryPolicy = (IDownloadRetryPolicy)value;
+            }
+            else if (name == FileSystemConsts.DOWNLOAD_URL_POLICY)
+            {
+                DownloadURLPolicy = (IDownloadURLPolicy)value;
+            }
             else
             {
-                YooLogger.Warning($"Invalid parameter : {name}");
+                YooLogger.Warning($"Invalid parameter: {name}");
             }
         }
         public virtual void OnCreate(string packageName, string packageRoot)
@@ -143,13 +161,23 @@ namespace YooAsset
             if (DownloadBackend == null)
                 DownloadBackend = new UnityWebRequestBackend(WebRequestCreator);
 
+            // 创建默认的下载重试策略
+            if (DownloadRetryPolicy == null)
+                DownloadRetryPolicy = new DefaultDownloadRetryPolicy();
+
+            // 创建默认的 URL 选择策略
+            if (DownloadURLPolicy == null)
+                DownloadURLPolicy = new DefaultDownloadURLPolicy();
+
             // 创建Web文件缓存系统
             var cacheConfig = new WebServerFileCache.CacheConfig();
-            cacheConfig.WatchdogTimeout = DownloadWatchDogTimeout;
+            cacheConfig.WatchdogTimeout = DownloadWatchdogTimeout;
             cacheConfig.DisableUnityWebCache = DisableUnityWebCache;
             cacheConfig.DownloadVerifyLevel = DownloadVerifyLevel;
             cacheConfig.AssetBundleDecryptor = AssetBundleDecryptor;
             cacheConfig.DownloadBackend = DownloadBackend;
+            cacheConfig.RetryPolicy = DownloadRetryPolicy;
+            cacheConfig.URLPolicy = DownloadURLPolicy;
             FileCache = new WebServerFileCache(packageName, _packageRoot, cacheConfig);
         }
         public virtual void OnDestroy()
@@ -187,19 +215,30 @@ namespace YooAsset
         #region 内部方法
         protected string GetDefaultWebPackageRoot(string packageName)
         {
-            string rootDirectory = YooAssetSettingsData.GetYooDefaultBuildinRoot();
+            string rootDirectory = YooAssetSettingsData.GetYooDefaultBuiltinRoot();
             return PathUtility.Combine(rootDirectory, packageName);
         }
+        /// <summary>
+        /// 获取Web包裹版本文件路径
+        /// </summary>
         public string GetWebPackageVersionFilePath()
         {
             string fileName = YooAssetSettingsData.GetPackageVersionFileName(PackageName);
             return PathUtility.Combine(_packageRoot, fileName);
         }
+
+        /// <summary>
+        /// 获取Web包裹哈希文件路径
+        /// </summary>
         public string GetWebPackageHashFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetPackageHashFileName(PackageName, packageVersion);
             return PathUtility.Combine(_packageRoot, fileName);
         }
+
+        /// <summary>
+        /// 获取Web包裹清单文件路径
+        /// </summary>
         public string GetWebPackageManifestFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetManifestBinaryFileName(PackageName, packageVersion);

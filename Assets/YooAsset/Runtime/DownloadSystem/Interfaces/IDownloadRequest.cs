@@ -42,9 +42,14 @@ namespace YooAsset
         /// HTTP 返回码
         /// </summary>
         /// <remarks>
-        /// 非 HTTP 协议可返回 0。使用 long 类型以兼容各种协议的返回码。
+        /// 非 HTTP 协议可返回 0
         /// </remarks>
         long HttpCode { get; }
+
+        /// <summary>
+        /// HTTP 错误信息
+        /// </summary>
+        string HttpError { get; }
 
         /// <summary>
         /// 错误信息

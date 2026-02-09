@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件系统的清理缓存操作
+    /// </summary>
     internal class SFSClearCacheOperation : FSClearCacheOperation
     {
         private enum ESteps
@@ -13,11 +16,11 @@ namespace YooAsset
         }
 
         private readonly SandboxFileSystem _fileSystem;
-        private readonly ClearCacheOptions _options;
+        private readonly FSClearCacheOptions _options;
         private FCClearCacheOperation _clearCacheOp;
         private ESteps _steps = ESteps.None;
 
-        internal SFSClearCacheOperation(SandboxFileSystem fileSystem, ClearCacheOptions options)
+        internal SFSClearCacheOperation(SandboxFileSystem fileSystem, FSClearCacheOptions options)
         {
             _fileSystem = fileSystem;
             _options = options;
@@ -35,7 +38,7 @@ namespace YooAsset
             {
                 if (_clearCacheOp == null)
                 {
-                    _clearCacheOp = _fileSystem.FileCache.ClearCacheAsync(_options);
+                    _clearCacheOp = _fileSystem.FileCache.ClearCacheAsync(_options.ConvertTo());
                     _clearCacheOp.StartOperation();
                     AddChildOperation(_clearCacheOp);
                 }
@@ -59,7 +62,10 @@ namespace YooAsset
         }
     }
 
-    internal class CFSClearAllCacheManifestOperation : FSClearCacheOperation
+    /// <summary>
+    /// 沙盒文件系统的清理所有缓存清单操作
+    /// </summary>
+    internal class SFSClearAllCacheManifestOperation : FSClearCacheOperation
     {
         private enum ESteps
         {
@@ -71,7 +77,7 @@ namespace YooAsset
         private readonly SandboxFileSystem _fileSystem;
         private ESteps _steps = ESteps.None;
 
-        internal CFSClearAllCacheManifestOperation(SandboxFileSystem fileSystem)
+        internal SFSClearAllCacheManifestOperation(SandboxFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
         }
@@ -96,7 +102,7 @@ namespace YooAsset
                         foreach (FileInfo fileInfo in directoryInfo.GetFiles())
                         {
                             string fileName = fileInfo.Name;
-                            if (fileName == SandboxFileSystemDefine.AppFootPrintFileName)
+                            if (fileName == SandboxFileSystemConsts.AppFootprintFileName)
                                 continue;
 
                             fileInfo.Delete();
@@ -109,14 +115,17 @@ namespace YooAsset
                 catch (Exception ex)
                 {
                     _steps = ESteps.Done;
-                    Error = ex.Message;
                     Status = EOperationStatus.Failed;
+                    Error = ex.Message;
                 }
             }
         }
     }
 
-    internal class CFSClearUnusedCacheManifestOperation : FSClearCacheOperation
+    /// <summary>
+    /// 沙盒文件系统的清理未使用缓存清单操作
+    /// </summary>
+    internal class SFSClearUnusedCacheManifestOperation : FSClearCacheOperation
     {
         private enum ESteps
         {
@@ -130,7 +139,7 @@ namespace YooAsset
         private readonly PackageManifest _manifest;
         private ESteps _steps = ESteps.None;
 
-        internal CFSClearUnusedCacheManifestOperation(SandboxFileSystem fileSystem, PackageManifest manifest)
+        internal SFSClearUnusedCacheManifestOperation(SandboxFileSystem fileSystem, PackageManifest manifest)
         {
             _fileSystem = fileSystem;
             _manifest = manifest;
@@ -150,7 +159,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "Can not found active package manifest.";
+                    Error = "Cannot find active package manifest.";
                 }
                 else
                 {
@@ -173,7 +182,7 @@ namespace YooAsset
                         foreach (FileInfo fileInfo in directoryInfo.GetFiles())
                         {
                             string fileName = fileInfo.Name;
-                            if (fileName == SandboxFileSystemDefine.AppFootPrintFileName)
+                            if (fileName == SandboxFileSystemConsts.AppFootprintFileName)
                                 continue;
                             if (fileName == activeManifestFileName || fileName == activeHashFileName)
                                 continue;
@@ -188,8 +197,8 @@ namespace YooAsset
                 catch (Exception ex)
                 {
                     _steps = ESteps.Done;
-                    Error = ex.Message;
                     Status = EOperationStatus.Failed;
+                    Error = ex.Message;
                 }
             }
         }

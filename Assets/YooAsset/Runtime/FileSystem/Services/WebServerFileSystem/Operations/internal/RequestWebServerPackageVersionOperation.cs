@@ -1,6 +1,9 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 请求Web服务端包裹版本操作
+    /// </summary>
     internal class RequestWebServerPackageVersionOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -12,13 +15,13 @@ namespace YooAsset
 
         private readonly WebServerFileSystem _fileSystem;
         private readonly int _timeout;
-        private IDownloadTextRequest _webTextRequestOp;
+        private IDownloadTextRequest _downloadTextRequest;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹版本
         /// </summary>
-        public string PackageVersion { private set; get; }
+        public string PackageVersion { get; private set; }
 
 
         internal RequestWebServerPackageVersionOperation(WebServerFileSystem fileSystem, int timeout)
@@ -37,26 +40,26 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestPackageVersion)
             {
-                if (_webTextRequestOp == null)
+                if (_downloadTextRequest == null)
                 {
                     string filePath = _fileSystem.GetWebPackageVersionFilePath();
                     string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, _timeout, 0);
-                    _webTextRequestOp = _fileSystem.DownloadBackend.CreateTextRequest(args);
-                    _webTextRequestOp.SendRequest();
+                    _downloadTextRequest = _fileSystem.DownloadBackend.CreateTextRequest(args);
+                    _downloadTextRequest.SendRequest();
                 }
 
-                if (_webTextRequestOp.IsDone == false)
+                if (_downloadTextRequest.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadTextRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    PackageVersion = _webTextRequestOp.Result;
-                    if (string.IsNullOrEmpty(PackageVersion))
+                    PackageVersion = _downloadTextRequest.Result;
+                    if (TextUtility.ValidateContent(PackageVersion, out string validateError) == false)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Web server package version file content is empty.";
+                        Error = $"Web server package version file validate failed: {validateError}";
                     }
                     else
                     {
@@ -68,16 +71,16 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webTextRequestOp.Error;
+                    Error = _downloadTextRequest.Error;
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webTextRequestOp != null)
+            if (_downloadTextRequest != null)
             {
-                _webTextRequestOp.Dispose();
-                _webTextRequestOp = null;
+                _downloadTextRequest.Dispose();
+                _downloadTextRequest = null;
             }
         }
     }

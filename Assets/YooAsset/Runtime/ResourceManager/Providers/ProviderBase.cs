@@ -16,7 +16,7 @@ namespace YooAsset
             None = 0,
             StartBundleLoader,
             WaitBundleLoader,
-            ProcessBundleResult,
+            ProcessBundleHandle,
             Done,
         }
 
@@ -51,9 +51,9 @@ namespace YooAsset
         public UnityEngine.SceneManagement.Scene SceneObject { protected set; get; }
 
         /// <summary>
-        /// 加载的资源包结果
+        /// 加载的资源包句柄
         /// </summary>
-        public IBundleResult LoadedBundleResult { protected set; get; }
+        public IBundleHandle LoadedBundleHandle { protected set; get; }
 
         /// <summary>
         /// 加载的场景名称
@@ -77,7 +77,7 @@ namespace YooAsset
         {
             get
             {
-                return _steps == ESteps.WaitBundleLoader || _steps == ESteps.ProcessBundleResult;
+                return _steps == ESteps.WaitBundleLoader || _steps == ESteps.ProcessBundleHandle;
             }
         }
 
@@ -174,20 +174,20 @@ namespace YooAsset
                 }
 
                 // 检测加载结果
-                LoadedBundleResult = _mainBundleLoader.Result;
-                if (LoadedBundleResult == null)
+                LoadedBundleHandle = _mainBundleLoader.BundleHandle;
+                if (LoadedBundleHandle == null)
                 {
-                    string error = $"Loaded bundle result is null.";
+                    string error = $"Loaded bundle handle is null.";
                     InvokeCompletion(error, EOperationStatus.Failed);
                     return;
                 }
 
-                _steps = ESteps.ProcessBundleResult;
+                _steps = ESteps.ProcessBundleHandle;
             }
 
-            if (_steps == ESteps.ProcessBundleResult)
+            if (_steps == ESteps.ProcessBundleHandle)
             {
-                ProcessBundleResult();
+                ProcessBundleHandle();
             }
         }
         internal override void InternalWaitForCompletion()
@@ -196,13 +196,13 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"AssetPath : {MainAssetInfo.AssetPath}";
+            return $"AssetPath: {MainAssetInfo.AssetPath}";
         }
 
         /// <summary>
-        /// 处理资源包加载结果，由子类实现具体逻辑
+        /// 处理资源包句柄，由子类实现具体逻辑
         /// </summary>
-        protected abstract void ProcessBundleResult();
+        protected abstract void ProcessBundleHandle();
 
         /// <summary>
         /// 销毁资源提供者
@@ -314,26 +314,6 @@ namespace YooAsset
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// 获取下载报告
-        /// </summary>
-        public DownloadStatus GetDownloadStatus()
-        {
-            DownloadStatus status = new DownloadStatus();
-            foreach (var bundleLoader in _bundleLoaders)
-            {
-                status.TotalBytes += bundleLoader.LoadBundleInfo.Bundle.FileSize;
-                status.DownloadedBytes += bundleLoader.DownloadedBytes;
-            }
-
-            if (status.TotalBytes == 0)
-                throw new YooInternalException("Download total size cannot be zero.");
-
-            status.IsDone = status.DownloadedBytes == status.TotalBytes;
-            status.Progress = (float)status.DownloadedBytes / status.TotalBytes;
-            return status;
         }
 
         #region 调试信息

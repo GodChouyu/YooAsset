@@ -92,8 +92,8 @@ namespace YooAsset
 
                     // 创建验证元素类
                     string fileRootPath = childDirectory;
-                    string dataFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheDefine.BundleDataFileName);
-                    string infoFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheDefine.BundleInfoFileName);
+                    string dataFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheConsts.BundleDataFileName);
+                    string infoFilePath = PathUtility.Combine(fileRootPath, SandboxFileCacheConsts.BundleInfoFileName);
                     var element = new SearchFileInfo(bundleGUID, fileRootPath, dataFilePath, infoFilePath);
                     Result.Add(element);
                 }

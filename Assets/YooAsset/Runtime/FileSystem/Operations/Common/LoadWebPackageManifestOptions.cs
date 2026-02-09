@@ -10,5 +10,6 @@ namespace YooAsset
         public IRemoteServices RemoteServices { get; set; }
         public IManifestDecryptor ManifestDecryptor { get; set; }
         public IDownloadBackend DownloadBackend { get; set; }
+        public IDownloadURLPolicy URLPolicy { get; set; }
     }
 }

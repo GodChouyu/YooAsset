@@ -11,6 +11,18 @@ namespace YooAsset
     internal static class FileUtility
     {
         /// <summary>
+        /// 检查文件路径是否支持 FileIO 读取
+        /// </summary>
+        public static bool SupportsFileIO(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return false;
+            if (filePath.StartsWith("jar:") || filePath.StartsWith("content:"))
+                return false;
+            return true;
+        }
+
+        /// <summary>
         /// 读取文件的文本数据
         /// </summary>
         public static string ReadAllText(string filePath)

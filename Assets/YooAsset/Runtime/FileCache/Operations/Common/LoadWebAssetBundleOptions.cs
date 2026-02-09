@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 
 namespace YooAsset
 {
@@ -17,14 +18,9 @@ namespace YooAsset
         public PackageBundle Bundle { get; set; }
 
         /// <summary>
-        /// 请求地址
+        /// 候选下载地址列表
         /// </summary>
-        public string MainURL { get; set; }
-
-        /// <summary>
-        /// 备用请求地址
-        /// </summary>
-        public string FallbackURL { get; set; }
+        public IReadOnlyList<string> CandidateURLs { get; set; }
 
         /// <summary>
         /// AssetBundle 解密器
@@ -50,5 +46,15 @@ namespace YooAsset
         /// 禁用Unity的网络缓存
         /// </summary>
         public bool DisableUnityWebCache { get; set; }
+
+        /// <summary>
+        /// 下载重试判定策略
+        /// </summary>
+        public IDownloadRetryPolicy RetryPolicy { get; set; }
+
+        /// <summary>
+        /// URL 选择策略
+        /// </summary>
+        public IDownloadURLPolicy URLPolicy { get; set; }
     }
 }

@@ -70,6 +70,11 @@ namespace YooAsset
         public long HttpCode { get; private set; }
 
         /// <summary>
+        /// HTTP 错误信息
+        /// </summary>
+        public string HttpError { get; private set; }
+
+        /// <summary>
         /// 错误信息
         /// </summary>
         public string Error { get; private set; }

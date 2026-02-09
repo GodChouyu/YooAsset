@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 解压并缓存文件操作
+    /// </summary>
     internal sealed class UnpackAndCacheFileOperation : DownloadFileBaseOperation
     {
         private enum ESteps
@@ -64,6 +67,10 @@ namespace YooAsset
                 _copyBuiltinFileOp.UpdateOperation();
                 if (_copyBuiltinFileOp.IsDone == false)
                     return;
+
+                // 更新下载报告
+                Report.DownloadedBytes = Bundle.FileSize;
+                Report.DownloadProgress = 1f;
 
                 if (_copyBuiltinFileOp.Status == EOperationStatus.Succeeded)
                 {

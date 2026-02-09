@@ -18,7 +18,7 @@ public class GetBuildinPackageVersionOperation : AsyncOperationBase
 
     private readonly string _packageName;
     private readonly IDownloadBackend _backend;
-    private IDownloadTextRequest _versionFileRequestOp;
+    private IDownloadTextRequest _downloadTextRequest;
     private ESteps _steps = ESteps.None;
 
     /// <summary>
@@ -42,36 +42,36 @@ public class GetBuildinPackageVersionOperation : AsyncOperationBase
 
         if (_steps == ESteps.GetPackageVersion)
         {
-            if (_versionFileRequestOp == null)
+            if (_downloadTextRequest == null)
             {
                 string filePath = GetBuildinPackageVersionFilePath();
                 string url = DownloadSystemTools.ToLocalUrl(filePath);
                 var args = new DownloadDataRequestArgs(url, 60, 0);
-                _versionFileRequestOp = _backend.CreateTextRequest(args);
-                _versionFileRequestOp.SendRequest();
+                _downloadTextRequest = _backend.CreateTextRequest(args);
+                _downloadTextRequest.SendRequest();
             }
 
-            if (_versionFileRequestOp.IsDone == false)
+            if (_downloadTextRequest.IsDone == false)
                 return;
 
-            if (_versionFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
+            if (_downloadTextRequest.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeeded;
-                PackageVersion = _versionFileRequestOp.Result;
+                PackageVersion = _downloadTextRequest.Result;
             }
             else
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = _versionFileRequestOp.Error;
+                Error = _downloadTextRequest.Error;
             }
         }
     }
 
     private string GetBuildinYooRoot()
     {
-        return YooAssetSettingsData.GetYooDefaultBuildinRoot();
+        return YooAssetSettingsData.GetYooDefaultBuiltinRoot();
     }
     private string GetBuildinPackageVersionFilePath()
     {

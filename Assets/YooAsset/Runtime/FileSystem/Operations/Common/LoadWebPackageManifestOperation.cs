@@ -1,5 +1,8 @@
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载Web远端包裹清单文件操作
+    /// </summary>
     internal class LoadWebPackageManifestOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -12,15 +15,14 @@ namespace YooAsset
         }
 
         private readonly LoadWebPackageManifestOptions _options;
-        private IDownloadBytesRequest _webDataRequestOp;
-        private DeserializeManifestOperation _deserializer;
-        private int _requestCount = 0;
+        private IDownloadBytesRequest _downloadBytesRequest;
+        private DeserializeManifestOperation _deserializeManifestOp;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹清单
         /// </summary>
-        public PackageManifest Manifest { private set; get; }
+        public PackageManifest Manifest { get; private set; }
 
 
         internal LoadWebPackageManifestOperation(LoadWebPackageManifestOptions options)
@@ -29,7 +31,6 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _requestCount = DownloadFailureCounter.GetFailureCount(_options.PackageName, nameof(LoadWebPackageManifestOperation));
             _steps = ESteps.RequestFileData;
         }
         internal override void InternalUpdate()
@@ -39,20 +40,20 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestFileData)
             {
-                if (_webDataRequestOp == null)
+                if (_downloadBytesRequest == null)
                 {
                     string fileName = YooAssetSettingsData.GetManifestBinaryFileName(_options.PackageName, _options.PackageVersion);
                     string url = GetRequestURL(fileName);
                     var args = new DownloadDataRequestArgs(url, _options.Timeout, 0);
-                    _webDataRequestOp = _options.DownloadBackend.CreateBytesRequest(args);
-                    _webDataRequestOp.SendRequest();
+                    _downloadBytesRequest = _options.DownloadBackend.CreateBytesRequest(args);
+                    _downloadBytesRequest.SendRequest();
                 }
 
-                Progress = _webDataRequestOp.DownloadProgress;
-                if (_webDataRequestOp.IsDone == false)
+                Progress = _downloadBytesRequest.DownloadProgress;
+                if (_downloadBytesRequest.IsDone == false)
                     return;
 
-                if (_webDataRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadBytesRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.VerifyFileData;
                 }
@@ -60,14 +61,14 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webDataRequestOp.Error;
-                    DownloadFailureCounter.RecordFailure(_options.PackageName, nameof(LoadWebPackageManifestOperation));
+                    Error = _downloadBytesRequest.Error;
+                    _options.URLPolicy.OnFailure(_downloadBytesRequest.Url, _downloadBytesRequest.HttpCode, _downloadBytesRequest.HttpError);
                 }
             }
 
             if (_steps == ESteps.VerifyFileData)
             {
-                if (PackageManifestTools.VerifyManifestData(_webDataRequestOp.Result, _options.PackageHash))
+                if (PackageManifestTools.VerifyManifestData(_downloadBytesRequest.Result, _options.PackageHash))
                 {
                     _steps = ESteps.LoadManifest;
                 }
@@ -81,52 +82,49 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadManifest)
             {
-                if (_deserializer == null)
+                if (_deserializeManifestOp == null)
                 {
-                    _deserializer = new DeserializeManifestOperation(_options.ManifestDecryptor, _webDataRequestOp.Result);
-                    _deserializer.StartOperation();
-                    AddChildOperation(_deserializer);
+                    _deserializeManifestOp = new DeserializeManifestOperation(_options.ManifestDecryptor, _downloadBytesRequest.Result);
+                    _deserializeManifestOp.StartOperation();
+                    AddChildOperation(_deserializeManifestOp);
                 }
 
-                _deserializer.UpdateOperation();
-                Progress = _deserializer.Progress;
-                if (_deserializer.IsDone == false)
+                _deserializeManifestOp.UpdateOperation();
+                Progress = _deserializeManifestOp.Progress;
+                if (_deserializeManifestOp.IsDone == false)
                     return;
 
-                if (_deserializer.Status == EOperationStatus.Succeeded)
+                if (_deserializeManifestOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
-                    Manifest = _deserializer.Manifest;
+                    Manifest = _deserializeManifestOp.Manifest;
                     Status = EOperationStatus.Succeeded;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _deserializer.Error;
+                    Error = _deserializeManifestOp.Error;
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webDataRequestOp != null)
+            if (_downloadBytesRequest != null)
             {
-                _webDataRequestOp.Dispose();
-                _webDataRequestOp = null;
+                _downloadBytesRequest.Dispose();
+                _downloadBytesRequest = null;
             }
         }
         internal override string InternalGetDescription()
         {
-            return $"PackageVersion : {_options.PackageVersion} PackageHash : {_options.PackageHash}";
+            return $"PackageVersion: {_options.PackageVersion} PackageHash: {_options.PackageHash}";
         }
 
         private string GetRequestURL(string fileName)
         {
-            // 轮流返回请求地址
-            if (_requestCount % 2 == 0)
-                return _options.RemoteServices.GetRemoteMainURL(fileName);
-            else
-                return _options.RemoteServices.GetRemoteFallbackURL(fileName);
+            var urls = _options.RemoteServices.GetRemoteURLs(fileName);
+            return _options.URLPolicy.SelectURL(urls);
         }
     }
 }

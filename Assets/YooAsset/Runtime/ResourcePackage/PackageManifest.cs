@@ -134,7 +134,7 @@ namespace YooAsset
                 }
                 else
                 {
-                    throw new YooManifestException($"Invalid bundle ID : {bundleID}. Valid range is 0 to {BundleList.Count - 1}");
+                    throw new YooManifestException($"Invalid bundle ID: {bundleID}. Valid range is 0 to {BundleList.Count - 1}");
                 }
             }
 
@@ -207,7 +207,7 @@ namespace YooAsset
             }
             else
             {
-                throw new YooManifestException($"Invalid bundle ID : {bundleID}. Valid range is 0 to {BundleList.Count - 1}");
+                throw new YooManifestException($"Invalid bundle ID: {bundleID}. Valid range is 0 to {BundleList.Count - 1}");
             }
         }
 
@@ -367,7 +367,7 @@ namespace YooAsset
                 if (string.IsNullOrEmpty(location))
                     error = $"The location is null or empty.";
                 else
-                    error = $"The location is invalid : {location}";
+                    error = $"The location is invalid: {location}";
                 AssetInfo assetInfo = new AssetInfo(PackageName, error);
                 return assetInfo;
             }
@@ -418,7 +418,7 @@ namespace YooAsset
                 if (string.IsNullOrEmpty(assetGUID))
                     error = $"The assetGUID is null or empty.";
                 else
-                    error = $"The assetGUID is invalid : {assetGUID}";
+                    error = $"The asset GUID is invalid: {assetGUID}";
                 AssetInfo assetInfo = new AssetInfo(PackageName, error);
                 return assetInfo;
             }
@@ -453,11 +453,11 @@ namespace YooAsset
                 if (index != -1)
                 {
                     if (location.Length == index + 1)
-                        YooLogger.Warning($"Found blank character in location : \"{location}\"");
+                        YooLogger.Warning($"Found blank character in location: \"{location}\"");
                 }
 
                 if (location.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0)
-                    YooLogger.Warning($"Found illegal character in location : \"{location}\"");
+                    YooLogger.Warning($"Found illegal character in location: \"{location}\"");
             }
         }
         #endregion

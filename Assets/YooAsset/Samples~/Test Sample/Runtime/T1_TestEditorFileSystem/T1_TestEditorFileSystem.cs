@@ -68,15 +68,15 @@ public class T1_TestEditorFileSystem : IPrebuildSetup, IPostBuildCleanup
             Assert.AreEqual(EOperationStatus.Succeeded, initializeOp.Status);
 
             // 请求资源版本
-            var requetVersionOp = package.RequestVersionAsync();
+            var requetVersionOp = package.RequestPackageVersionAsync();
             yield return requetVersionOp;
             if (requetVersionOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(requetVersionOp.Error);
             Assert.AreEqual(EOperationStatus.Succeeded, requetVersionOp.Status);
 
             // 更新资源清单
-            var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
-            var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
+            var loadPackageManifestOptions = new LoadPackageManifestOptions(requetVersionOp.PackageVersion, 60);
+            var loadPackageManifestOp = package.LoadPackageManifestAsync(loadPackageManifestOptions);
             yield return loadPackageManifestOp;
             if (loadPackageManifestOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(loadPackageManifestOp.Error);
@@ -104,15 +104,15 @@ public class T1_TestEditorFileSystem : IPrebuildSetup, IPostBuildCleanup
             Assert.AreEqual(EOperationStatus.Succeeded, initializeOp.Status);
 
             // 请求资源版本
-            var requetVersionOp = package.RequestVersionAsync();
+            var requetVersionOp = package.RequestPackageVersionAsync();
             yield return requetVersionOp;
             if (requetVersionOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(requetVersionOp.Error);
             Assert.AreEqual(EOperationStatus.Succeeded, requetVersionOp.Status);
 
             // 更新资源清单
-            var loadPackageManifestOptions = new LoadManifestOptions(requetVersionOp.PackageVersion, 60);
-            var loadPackageManifestOp = package.LoadManifestAsync(loadPackageManifestOptions);
+            var loadPackageManifestOptions = new LoadPackageManifestOptions(requetVersionOp.PackageVersion, 60);
+            var loadPackageManifestOp = package.LoadPackageManifestAsync(loadPackageManifestOptions);
             yield return loadPackageManifestOp;
             if (loadPackageManifestOp.Status != EOperationStatus.Succeeded)
                 Debug.LogError(loadPackageManifestOp.Error);

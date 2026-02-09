@@ -78,5 +78,17 @@ namespace YooAsset
             ClearParam = clearParam;
             Manifest = null;
         }
+
+        /// <summary>
+        /// 转换为 FileSystem 的清理缓存选项
+        /// </summary>
+        internal FSClearCacheOptions ConvertTo()
+        {
+            var options = new FSClearCacheOptions();
+            options.ClearMode = ClearMode;
+            options.ClearParam = ClearParam;
+            options.Manifest = Manifest;
+            return options;
+        }
     }
 }

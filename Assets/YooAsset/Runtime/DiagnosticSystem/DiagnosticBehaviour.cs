@@ -31,7 +31,7 @@ namespace YooAsset
         private void OnEnable()
         {
 #if UNITY_EDITOR
-            MockPlayerConnection.Instance.Register(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
+            MockPlayerConnection.Instance.Register(DiagnosticSystemConsts.EditorToPlayerMessageId, HandleEditorMessage);
 #else
             PlayerConnection.instance.Register(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
 #endif
@@ -39,7 +39,7 @@ namespace YooAsset
         private void OnDisable()
         {
 #if UNITY_EDITOR
-            MockPlayerConnection.Instance.Unregister(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
+            MockPlayerConnection.Instance.Unregister(DiagnosticSystemConsts.EditorToPlayerMessageId, HandleEditorMessage);
 #else
             PlayerConnection.instance.Unregister(DiagnosticSystemDefine.EditorToPlayerMessageId, HandleEditorMessage);
 #endif
@@ -53,7 +53,7 @@ namespace YooAsset
                 var data = DiagnosticReport.Serialize(debugReport);
 
 #if UNITY_EDITOR
-                MockPlayerConnection.Instance.Send(DiagnosticSystemDefine.PlayerToEditorMessageId, data);
+                MockPlayerConnection.Instance.Send(DiagnosticSystemConsts.PlayerToEditorMessageId, data);
 #else
                 PlayerConnection.instance.Send(DiagnosticSystemDefine.PlayerToEditorMessageId, data);
 #endif

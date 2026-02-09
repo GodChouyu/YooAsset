@@ -1,4 +1,4 @@
-﻿
+
 namespace YooAsset
 {
     internal abstract class DownloadFileBaseOperation : AsyncOperationBase
@@ -14,19 +14,14 @@ namespace YooAsset
         public readonly string Url;
 
         /// <summary>
-        /// 下载进度
-        /// </summary>
-        public float DownloadProgress { get; protected set; }
-
-        /// <summary>
-        /// 下载字节
-        /// </summary>
-        public long DownloadedBytes { get; protected set; }
-
-        /// <summary>
         /// 引用计数
         /// </summary>
         public int RefCount { private set; get; }
+
+        /// <summary>
+        /// 下载报告
+        /// </summary>
+        public DownloadReport Report;
 
         public DownloadFileBaseOperation(PackageBundle bundle, string url)
         {
@@ -35,7 +30,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"RefCount : {RefCount}";
+            return $"RefCount: {RefCount}";
         }
 
         /// <summary>

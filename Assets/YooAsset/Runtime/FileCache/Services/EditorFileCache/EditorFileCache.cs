@@ -101,9 +101,9 @@ namespace YooAsset
             var operation = new EFCWriteCacheOperation(this, options);
             return operation;
         }
-        public virtual FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options)
         {
-            var operation = new FCClearCacheCompleteOperation();
+            var operation = new EFCClearCacheOperation(this, options);
             return operation;
         }
         public virtual FCVerifyCacheOperation VerifyCacheAsync(FCVerifyCacheOptions options)
@@ -120,7 +120,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(EditorFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(EditorFileCache)} does not support bundle type: {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -135,7 +135,15 @@ namespace YooAsset
 
         #region 内部方法
         /// <summary>
-        /// 添加指定缓存
+        /// 获取所有缓存条目
+        /// </summary>
+        internal IReadOnlyCollection<EditorFileCacheEntry> GetAllEntries()
+        {
+            return _cacheEntries.Values;
+        }
+
+        /// <summary>
+        /// 添加指定缓存条目
         /// </summary>
         internal void AddEntry(string bundleGUID, EditorFileCacheEntry cacheEntry)
         {
@@ -143,6 +151,17 @@ namespace YooAsset
                 throw new YooInternalException($"Cache entry already exists: {bundleGUID}");
 
             _cacheEntries.Add(bundleGUID, cacheEntry);
+        }
+
+        /// <summary>
+        /// 删除指定缓存条目
+        /// </summary>
+        internal void RemoveEntry(string bundleGUID)
+        {
+            if (_cacheEntries.TryGetValue(bundleGUID, out EditorFileCacheEntry entry))
+            {
+                _cacheEntries.Remove(bundleGUID);
+            }
         }
         #endregion
     }

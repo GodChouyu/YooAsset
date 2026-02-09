@@ -1,7 +1,10 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载编辑器包裹版本文件操作
+    /// </summary>
     internal class LoadEditorPackageVersionOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -17,7 +20,7 @@ namespace YooAsset
         /// <summary>
         /// 包裹版本
         /// </summary>
-        public string PackageVersion { private set; get; }
+        public string PackageVersion { get; private set; }
 
 
         internal LoadEditorPackageVersionOperation(EditorFileSystem fileSystem)
@@ -38,15 +41,24 @@ namespace YooAsset
                 string versionFilePath = _fileSystem.GetEditorPackageVersionFilePath();
                 if (File.Exists(versionFilePath))
                 {
-                    _steps = ESteps.Done;
                     PackageVersion = FileUtility.ReadAllText(versionFilePath);
-                    Status = EOperationStatus.Succeeded;
+                    if (TextUtility.ValidateContent(PackageVersion, out string validateError) == false)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = $"Simulation package version file validate failed: {validateError}";
+                    }
+                    else
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Succeeded;
+                    }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Can not found simulation package version file : {versionFilePath}";
+                    Error = $"Cannot find simulation package version file: {versionFilePath}";
                 }
             }
         }

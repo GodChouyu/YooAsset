@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 
 namespace YooAsset
 {
@@ -12,26 +13,19 @@ namespace YooAsset
         public string BundleGUID { get; private set; }
 
         /// <summary>
-        /// 主下载地址
+        /// 候选下载地址列表
         /// </summary>
-        public string MainURL { get; private set; }
-
-        /// <summary>
-        /// 备用下载地址
-        /// </summary>
-        public string FallbackURL { get; private set; }
+        public IReadOnlyList<string> URLs { get; private set; }
 
         /// <summary>
         /// 创建Web远端文件缓存条目
         /// </summary>
         /// <param name="bundleGUID">资源包唯一标识</param>
-        /// <param name="mainURL">主下载地址</param>
-        /// <param name="fallbackURL">备用下载地址</param>
-        public WebRemoteFileCacheEntry(string bundleGUID, string mainURL, string fallbackURL)
+        /// <param name="urls">候选下载地址列表</param>
+        public WebRemoteFileCacheEntry(string bundleGUID, IReadOnlyList<string> urls)
         {
             BundleGUID = bundleGUID;
-            MainURL = mainURL;
-            FallbackURL = fallbackURL;
+            URLs = urls;
         }
     }
 }

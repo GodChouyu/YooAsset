@@ -87,6 +87,11 @@ namespace YooAsset
         public long HttpCode { get; private set; }
 
         /// <summary>
+        /// HTTP 错误信息
+        /// </summary>
+        public string HttpError { get; private set; }
+
+        /// <summary>
         /// 错误信息
         /// </summary>
         public string Error { get; protected set; }
@@ -255,6 +260,8 @@ namespace YooAsset
                 return;
 
             HttpCode = _webRequest.responseCode;
+            HttpError = _webRequest.error;
+
 #if UNITY_2020_3_OR_NEWER
             bool isSuccess = _webRequest.result == UnityWebRequest.Result.Success;
 #else
@@ -269,7 +276,7 @@ namespace YooAsset
             else
             {
                 Status = EDownloadRequestStatus.Failed;
-                Error = $"[{GetType().Name}] Request failed. URL: {Url}, Error: {_webRequest.error}";
+                Error = $"[{GetType().Name}] Request failed. URL: {Url}, HttpCode={HttpCode} HttpError={HttpError}";
                 OnRequestFailed();
             }
 

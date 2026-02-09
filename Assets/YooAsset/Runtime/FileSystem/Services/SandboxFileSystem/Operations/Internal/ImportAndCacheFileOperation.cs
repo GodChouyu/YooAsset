@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 导入并缓存文件操作
+    /// </summary>
     internal sealed class ImportAndCacheFileOperation : DownloadFileBaseOperation
     {
         private enum ESteps
@@ -51,13 +54,17 @@ namespace YooAsset
                 try
                 {
                     File.Copy(_sourceFilePath, _tempFilePath, true);
+
+                    // 更新下载报告
+                    Report.DownloadedBytes = Bundle.FileSize;
+                    Report.DownloadProgress = 1f;
                     _steps = ESteps.CacheFile;
                 }
                 catch (System.Exception ex)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Failed copy local file : {ex.Message}";
+                    Error = $"Failed to copy local file: {ex.Message}";
                 }
             }
 

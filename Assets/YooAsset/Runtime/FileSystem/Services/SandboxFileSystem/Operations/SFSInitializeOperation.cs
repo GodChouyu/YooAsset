@@ -1,11 +1,16 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件系统的初始化操作
+    /// </summary>
     internal class SFSInitializeOperation : FSInitializeOperation
     {
         private enum ESteps
         {
             None,
+            CheckPlatform,
+            CheckParameter,
             CheckAppFootprint,
             InitializeFileCache,
             CreateScheduler,
@@ -23,22 +28,40 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-#if UNITY_WEBGL
-            _steps = ESteps.Done;
-            Status = EOperationStatus.Failed;
-            Error = $"{nameof(DefaultCacheFileSystem)} is not support WEBGL platform.";
-#else
-            _steps = ESteps.CheckAppFootprint;
-#endif
+            _steps = ESteps.CheckPlatform;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
+            if (_steps == ESteps.CheckPlatform)
+            {
+#if UNITY_WEBGL
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = $"{nameof(SandboxFileSystem)} does not support the WebGL platform.";
+#else
+                _steps = ESteps.CheckParameter;
+#endif
+            }
+
+            if (_steps == ESteps.CheckParameter)
+            {
+                if (_fileSystem.RemoteServices == null)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"{nameof(IRemoteServices)} is null.";
+                    return;
+                }
+
+                _steps = ESteps.CheckAppFootprint;
+            }
+
             if (_steps == ESteps.CheckAppFootprint)
             {
-                string footprintFilePath = _fileSystem.GetSandboxAppFootPrintFilePath();
+                string footprintFilePath = _fileSystem.GetSandboxAppFootprintFilePath();
                 var appFootprint = new ApplicationFootprint(footprintFilePath);
                 appFootprint.Load(_fileSystem.PackageName);
 
@@ -47,30 +70,31 @@ namespace YooAsset
                 {
                     if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.None)
                     {
-                        YooLogger.Warning("Do nothing when overwrite install application.");
+                        YooLogger.Warning("No action required on overwrite installation.");
                     }
                     else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllCacheFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
                         _fileSystem.DeleteAllManifestFiles();
-                        YooLogger.Warning("Delete all cache files when overwrite install application.");
+                        _fileSystem.DeleteAllTempFiles();
+                        YooLogger.Warning("Deleted all cache files on overwrite installation.");
                     }
                     else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllBundleFiles)
                     {
                         _fileSystem.DeleteAllBundleFiles();
-                        YooLogger.Warning("Delete all bundle files when overwrite install application.");
+                        YooLogger.Warning("Deleted all bundle files on overwrite installation.");
                     }
                     else if (_fileSystem.InstallCleanupMode == EInstallCleanupMode.ClearAllManifestFiles)
                     {
                         _fileSystem.DeleteAllManifestFiles();
-                        YooLogger.Warning("Delete all manifest files when overwrite install application.");
+                        YooLogger.Warning("Deleted all manifest files on overwrite installation.");
                     }
                     else
                     {
                         throw new System.NotImplementedException(_fileSystem.InstallCleanupMode.ToString());
                     }
 
-                    appFootprint.Coverage(_fileSystem.PackageName);
+                    appFootprint.Overwrite(_fileSystem.PackageName);
                 }
 
                 _steps = ESteps.InitializeFileCache;

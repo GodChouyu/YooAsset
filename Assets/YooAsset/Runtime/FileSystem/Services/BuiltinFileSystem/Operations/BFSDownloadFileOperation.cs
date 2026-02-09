@@ -1,15 +1,17 @@
-using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 内置文件系统的解压文件操作
+    /// </summary>
     internal class BFSDownloadFileOperation : FSDownloadFileOperation
     {
         private enum ESteps
         {
             None,
             CheckExists,
-            UnpackAndCache,
-            TryAgain,
+            CreateUnpack,
+            CheckUnpack,
             Done,
         }
 
@@ -18,15 +20,10 @@ namespace YooAsset
         private DownloadFileBaseOperation _downloadFileOp;
         private ESteps _steps = ESteps.None;
 
-        // 失败重试
-        private float _tryAgainTimer = 0;
-        private int _failedTryAgain;
-
         internal BFSDownloadFileOperation(BuiltinFileSystem fileSystem, FSDownloadFileOptions options) : base(options.Bundle)
         {
             _fileSystem = fileSystem;
             _options = options;
-            _failedTryAgain = options.RetryCount;
         }
         internal override void InternalStart()
         {
@@ -47,31 +44,33 @@ namespace YooAsset
                 }
                 else
                 {
-                    _steps = ESteps.UnpackAndCache;
+                    _steps = ESteps.CreateUnpack;
                 }
             }
 
-            // 下载并缓存文件
-            if (_steps == ESteps.UnpackAndCache)
+            // 创建解压器
+            if (_steps == ESteps.CreateUnpack)
             {
+                _downloadFileOp = _fileSystem.UnpackScheduler.TryGetDownloadFile(Bundle);
                 if (_downloadFileOp == null)
                 {
-                    _downloadFileOp = _fileSystem.UnpackScheduler.TryGetDownloadFile(Bundle);
-                    if (_downloadFileOp == null)
-                    {
-                        string builtinFilePath = _fileSystem.GetBuiltinFileLoadPath(Bundle);
-                        _downloadFileOp = new UnpackAndCacheFileOperation(_fileSystem, Bundle, builtinFilePath);
-                        _fileSystem.UnpackScheduler.AddDownloadFile(_downloadFileOp);
-                    }
+                    string builtinFilePath = _fileSystem.GetBuiltinBundleFilePath(Bundle);
+                    _downloadFileOp = new UnpackAndCacheFileOperation(_fileSystem, Bundle, builtinFilePath);
+                    _fileSystem.UnpackScheduler.AddDownloadFile(_downloadFileOp);
                 }
 
+                _steps = ESteps.CheckUnpack;
+            }
+
+            // 检测结果
+            if (_steps == ESteps.CheckUnpack)
+            {
                 if (IsWaitForCompletion)
                     _downloadFileOp.WaitForCompletion();
 
                 _downloadFileOp.UpdateOperation();
                 Progress = _downloadFileOp.Progress;
-                DownloadedBytes = _downloadFileOp.DownloadedBytes;
-                DownloadProgress = _downloadFileOp.DownloadProgress;
+                Report = _downloadFileOp.Report;
                 if (_downloadFileOp.IsDone == false)
                     return;
 
@@ -82,33 +81,10 @@ namespace YooAsset
                 }
                 else
                 {
-                    if (IsWaitForCompletion == false && _failedTryAgain > 0)
-                    {
-                        _steps = ESteps.TryAgain;
-                        YooLogger.Warning($"Failed download : {_downloadFileOp.Url} Try again.");
-                    }
-                    else
-                    {
-                        _steps = ESteps.Done;
-                        Status = EOperationStatus.Failed;
-                        Error = _downloadFileOp.Error;
-                        YooLogger.Error(Error);
-                    }
-                }
-            }
-
-            // 重新尝试下载
-            if (_steps == ESteps.TryAgain)
-            {
-                _tryAgainTimer += Time.unscaledDeltaTime;
-                if (_tryAgainTimer > 1f)
-                {
-                    _tryAgainTimer = 0f;
-                    _failedTryAgain--;
-                    Progress = 0f;
-                    DownloadProgress = 0f;
-                    DownloadedBytes = 0;
-                    _steps = ESteps.UnpackAndCache;
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = _downloadFileOp.Error;
+                    YooLogger.Error(Error);
                 }
             }
         }

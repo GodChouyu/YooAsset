@@ -109,34 +109,10 @@ namespace YooAsset
             var operation = new SFCWriteCacheOperation(this, options);
             return operation;
         }
-        public virtual FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options)
         {
-            if (options.ClearMode == EFileClearMode.ClearAllBundleFiles.ToString())
-            {
-                var operation = new SFCClearAllCacheOperation(this, options);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearUnusedBundleFiles.ToString())
-            {
-                var operation = new SFCClearUnusedCacheOperation(this, options);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearBundleFilesByLocations.ToString())
-            {
-                var operation = new SFCClearCacheByLocationsOperation(this, options);
-                return operation;
-            }
-            else if (options.ClearMode == EFileClearMode.ClearBundleFilesByTags.ToString())
-            {
-                var operation = new SFCClearCacheByTagsOperation(this, options);
-                return operation;
-            }
-            else
-            {
-                string error = $"Invalid clear mode : {options.ClearMode}";
-                var operation = new FCClearCacheCompleteOperation(error);
-                return operation;
-            }
+            var operation = new SFCClearCacheOperation(this, options);
+            return operation;
         }
         public virtual FCVerifyCacheOperation VerifyCacheAsync(FCVerifyCacheOptions options)
         {
@@ -157,7 +133,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(SandboxFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(SandboxFileCache)} does not support bundle type: {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -176,7 +152,7 @@ namespace YooAsset
             if (_dataFilePathMapping.TryGetValue(bundle.BundleGUID, out string filePath) == false)
             {
                 string folderName = GetHashFolderName(bundle.FileHash);
-                filePath = PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleDataFileName);
+                filePath = PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheConsts.BundleDataFileName);
                 _dataFilePathMapping.Add(bundle.BundleGUID, filePath);
             }
             return filePath;
@@ -190,7 +166,7 @@ namespace YooAsset
             if (_infoFilePathMapping.TryGetValue(bundle.BundleGUID, out string filePath) == false)
             {
                 string folderName = GetHashFolderName(bundle.FileHash);
-                filePath = PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleInfoFileName);
+                filePath = PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheConsts.BundleInfoFileName);
                 _infoFilePathMapping.Add(bundle.BundleGUID, filePath);
             }
             return filePath;
@@ -202,7 +178,7 @@ namespace YooAsset
         internal string GetDataTempFilePath(PackageBundle bundle)
         {
             string folderName = GetHashFolderName(bundle.FileHash);
-            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleDataTempFileName);
+            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheConsts.BundleDataTempFileName);
         }
 
         /// <summary>
@@ -211,11 +187,11 @@ namespace YooAsset
         internal string GetInfoTempFilePath(PackageBundle bundle)
         {
             string folderName = GetHashFolderName(bundle.FileHash);
-            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheDefine.BundleInfoTempFileName);
+            return PathUtility.Combine(RootPath, folderName, bundle.BundleGUID, SandboxFileCacheConsts.BundleInfoTempFileName);
         }
 
         /// <summary>
-        /// 获取指定缓存
+        /// 获取指定缓存条目
         /// </summary>
         internal SandboxFileCacheEntry GetEntry(string bundleGUID)
         {
@@ -226,7 +202,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取所有缓存
+        /// 获取所有缓存条目
         /// </summary>
         internal IReadOnlyCollection<SandboxFileCacheEntry> GetAllEntries()
         {
@@ -234,7 +210,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 添加指定缓存
+        /// 添加指定缓存条目
         /// </summary>
         internal void AddEntry(string bundleGUID, SandboxFileCacheEntry cacheEntry)
         {
@@ -246,7 +222,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 删除指定缓存
+        /// 删除指定缓存条目
         /// </summary>
         internal void RemoveEntry(string bundleGUID)
         {

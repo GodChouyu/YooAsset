@@ -1,46 +1,74 @@
-using System.Collections.Generic;
 
 namespace YooAsset
 {
     /// <summary>
     /// 清理沙盒文件缓存操作
     /// </summary>
-    internal abstract class SFCClearCacheOperation : FCClearCacheOperation
+    internal class SFCClearCacheOperation : FCClearCacheOperation
     {
-        protected enum ESteps
+        private enum ESteps
         {
             None,
-            ParseOptions,
+            GetResult,
             ClearCacheFiles,
             Done,
         }
 
-        protected readonly SandboxFileCache _fileCache;
-        protected readonly ClearCacheOptions _options;
-        protected ClearCacheFilesOperation _clearCacheFilesOp;
-        protected List<string> _bundleGUIDs;
-        protected ESteps _steps = ESteps.None;
+        private readonly SandboxFileCache _fileCache;
+        private readonly FCClearCacheOptions _options;
+        private ClearCacheFilesOperation _clearCacheFilesOp;
+        private ESteps _steps = ESteps.None;
 
-        internal SFCClearCacheOperation(SandboxFileCache fileCache, ClearCacheOptions options)
+        internal SFCClearCacheOperation(SandboxFileCache fileCache, FCClearCacheOptions options)
         {
             _fileCache = fileCache;
             _options = options;
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.ParseOptions;
+            _steps = ESteps.GetResult;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
 
-            if (_steps == ESteps.ParseOptions)
+            if (_steps == ESteps.GetResult)
             {
-                if (ParseOptionsStep() == false)
+                ClearResult clearResult;
+                if (_options.ClearMode == EFileClearMode.ClearAllBundleFiles.ToString())
+                {
+                    clearResult = GetAllCache(_fileCache.GetAllEntries());
+                }
+                else if (_options.ClearMode == EFileClearMode.ClearUnusedBundleFiles.ToString())
+                {
+                    clearResult = GetUnusedCache(_options, _fileCache.GetAllEntries());
+                }
+                else if (_options.ClearMode == EFileClearMode.ClearBundleFilesByLocations.ToString())
+                {
+                    clearResult = GetCacheByLocations(_options, _fileCache.GetAllEntries());
+                }
+                else if (_options.ClearMode == EFileClearMode.ClearBundleFilesByTags.ToString())
+                {
+                    clearResult = GetCacheByTags(_options, _fileCache.GetAllEntries());
+                }
+                else
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"Invalid clear mode: {_options.ClearMode}";
                     return;
+                }
 
-                _clearCacheFilesOp = new ClearCacheFilesOperation(_fileCache, _bundleGUIDs);
+                if (clearResult.Succeeded == false)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = clearResult.Error;
+                    return;
+                }
+
+                _clearCacheFilesOp = new ClearCacheFilesOperation(_fileCache, clearResult.BundleGUIDs);
                 _clearCacheFilesOp.StartOperation();
                 AddChildOperation(_clearCacheFilesOp);
                 _steps = ESteps.ClearCacheFiles;
@@ -72,166 +100,6 @@ namespace YooAsset
         internal override void InternalWaitForCompletion()
         {
             ExecuteBatch();
-        }
-
-        protected abstract bool ParseOptionsStep();
-    }
-
-    /// <summary>
-    /// 清理所有沙盒缓存操作
-    /// </summary>
-    internal sealed class SFCClearAllCacheOperation : SFCClearCacheOperation
-    {
-        internal SFCClearAllCacheOperation(SandboxFileCache fileCache, ClearCacheOptions options)
-            : base(fileCache, options) { }
-
-        protected override bool ParseOptionsStep()
-        {
-            var allEntries = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntries.Count);
-            foreach (var entry in allEntries)
-            {
-                _bundleGUIDs.Add(entry.BundleGUID);
-            }
-            return true;
-        }
-    }
-    /// <summary>
-    /// 清理未使用的沙盒缓存操作
-    /// </summary>
-    internal sealed class SFCClearUnusedCacheOperation : SFCClearCacheOperation
-    {
-        internal SFCClearUnusedCacheOperation(SandboxFileCache fileCache, ClearCacheOptions options)
-            : base(fileCache, options) { }
-
-        protected override bool ParseOptionsStep()
-        {
-            if (_options.Manifest == null)
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = "Active package manifest not found.";
-                return false;
-            }
-
-            var allEntries = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntries.Count);
-            foreach (var entry in allEntries)
-            {
-                if (_options.Manifest.IsIncludeBundleFile(entry.BundleGUID) == false)
-                {
-                    _bundleGUIDs.Add(entry.BundleGUID);
-                }
-            }
-            return true;
-        }
-    }
-    /// <summary>
-    /// 按资源地址清理沙盒缓存操作
-    /// </summary>
-    internal sealed class SFCClearCacheByLocationsOperation : SFCClearCacheOperation
-    {
-        internal SFCClearCacheByLocationsOperation(SandboxFileCache fileCache, ClearCacheOptions options)
-            : base(fileCache, options) { }
-
-        protected override bool ParseOptionsStep()
-        {
-            if (_options.Manifest == null)
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = "Active package manifest not found.";
-                return false;
-            }
-
-            if (_options.ClearParam == null)
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = "Clear param is null.";
-                return false;
-            }
-
-            string[] locations;
-            if (_options.ClearParam is string str)
-                locations = new string[] { str };
-            else if (_options.ClearParam is List<string> list)
-                locations = list.ToArray();
-            else if (_options.ClearParam is string[] array)
-                locations = array;
-            else
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = $"Invalid clear param: {_options.ClearParam.GetType().FullName}";
-                return false;
-            }
-
-            _bundleGUIDs = new List<string>(locations.Length);
-            foreach (var location in locations)
-            {
-                string assetPath = _options.Manifest.TryMappingToAssetPath(location);
-                if (_options.Manifest.TryGetPackageAsset(assetPath, out PackageAsset packageAsset))
-                {
-                    PackageBundle bundle = _options.Manifest.GetMainPackageBundle(packageAsset.BundleID);
-                    _bundleGUIDs.Add(bundle.BundleGUID);
-                }
-            }
-            return true;
-        }
-    }
-    /// <summary>
-    /// 按标签清理沙盒缓存操作
-    /// </summary>
-    internal sealed class SFCClearCacheByTagsOperation : SFCClearCacheOperation
-    {
-        internal SFCClearCacheByTagsOperation(SandboxFileCache fileCache, ClearCacheOptions options)
-            : base(fileCache, options) { }
-
-        protected override bool ParseOptionsStep()
-        {
-            if (_options.Manifest == null)
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = "Active package manifest not found.";
-                return false;
-            }
-
-            if (_options.ClearParam == null)
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = "Clear param is null.";
-                return false;
-            }
-
-            string[] tags;
-            if (_options.ClearParam is string str)
-                tags = new string[] { str };
-            else if (_options.ClearParam is List<string> list)
-                tags = list.ToArray();
-            else if (_options.ClearParam is string[] array)
-                tags = array;
-            else
-            {
-                _steps = ESteps.Done;
-                Status = EOperationStatus.Failed;
-                Error = $"Invalid clear param: {_options.ClearParam.GetType().FullName}";
-                return false;
-            }
-
-            var allEntries = _fileCache.GetAllEntries();
-            _bundleGUIDs = new List<string>(allEntries.Count);
-            foreach (var entry in allEntries)
-            {
-                if (_options.Manifest.TryGetPackageBundleByBundleGUID(entry.BundleGUID, out PackageBundle bundle))
-                {
-                    if (bundle.HasTag(tags))
-                        _bundleGUIDs.Add(bundle.BundleGUID);
-                }
-            }
-            return true;
         }
     }
 }

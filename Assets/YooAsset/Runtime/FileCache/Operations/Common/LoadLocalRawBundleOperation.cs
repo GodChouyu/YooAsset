@@ -37,11 +37,11 @@ namespace YooAsset
             {
                 if (_options.Bundle.IsEncrypted == false)
                 {
-                    if (SupportsFileIO(_options.FilePath) == false)
+                    if (FileUtility.SupportsFileIO(_options.FilePath) == false)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"FileIO not supported for builtin path : {_options.FilePath}";
+                        Error = $"FileIO is not supported for builtin path: {_options.FilePath}";
                         return;
                     }
 
@@ -67,7 +67,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"{_options.CacheName} not support {decryptor.GetType().Name}";
+                        Error = $"{_options.CacheName} does not support {decryptor.GetType().Name}";
                         return;
                     }
 
@@ -95,7 +95,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = new RawBundleResult(_options.FilePath, _options.Bundle, _rawBundle);
+                    BundleHandle = new RawBundleHandle(_options.FilePath, _options.Bundle, _rawBundle);
                 }
             }
         }

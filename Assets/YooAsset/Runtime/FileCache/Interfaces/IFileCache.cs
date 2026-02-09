@@ -47,7 +47,7 @@ namespace YooAsset
         /// <summary>
         /// 清理缓存文件
         /// </summary>
-        FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options);
+        FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options);
 
         /// <summary>
         /// 验证缓存文件

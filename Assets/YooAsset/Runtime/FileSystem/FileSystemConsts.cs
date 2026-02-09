@@ -1,0 +1,139 @@
+
+namespace YooAsset
+{
+    /// <summary>
+    /// 文件系统参数常量定义
+    /// </summary>
+    public class FileSystemConsts
+    {
+        /// <summary>
+        /// 初始化的时候缓存文件校验级别 <see cref=EFileVerifyLevel>
+        /// </summary>
+        public const string FILE_VERIFY_LEVEL = "FILE_VERIFY_LEVEL";
+
+        /// <summary>
+        /// 初始化的时候缓存文件校验最大并发数 <see cref=int>
+        /// </summary>
+        public const string FILE_VERIFY_MAX_CONCURRENCY = "FILE_VERIFY_MAX_CONCURRENCY";
+
+        /// <summary>
+        /// 覆盖安装缓存清理模式 <see cref=EInstallCleanupMode>
+        /// </summary>
+        public const string INSTALL_CLEANUP_MODE = "INSTALL_CLEANUP_MODE";
+
+        /// <summary>
+        /// 远端资源地址查询服务类 <see cref=IRemoteServices>
+        /// </summary>
+        public const string REMOTE_SERVICES = "REMOTE_SERVICES";
+
+        /// <summary>
+        /// AssetBundle 解密器 <see cref=IBundleDecryptor>
+        /// </summary>
+        public const string ASSETBUNDLE_DECRYPTOR = "ASSETBUNDLE_DECRYPTOR";
+
+        /// <summary>
+        /// 禁用Unity的网络缓存 <see cref=bool>
+        /// </summary>
+        public const string DISABLE_UNITY_WEB_CACHE = "DISABLE_UNITY_WEB_CACHE";
+
+        /// <summary>
+        /// UnityWebRequest 创建委托 <see cref=UnityWebRequestCreator>
+        /// </summary>
+        public const string UNITY_WEB_REQUEST_CREATOR = "UNITY_WEB_REQUEST_CREATOR";
+
+        /// <summary>
+        /// 禁用边玩边下机制 <see cref=bool>
+        /// </summary>
+        public const string DOWNLOAD_DISABLE_ONDEMAND = "DOWNLOAD_DISABLE_ONDEMAND";
+
+        /// <summary>
+        /// 下载后台接口 <see cref=IDownloadBackend>
+        /// </summary>
+        public const string DOWNLOAD_BACKEND = "DOWNLOAD_BACKEND";
+
+        /// <summary>
+        /// 最大并发连接数 默认值：10（推荐范围 1-32） <see cref=int>
+        /// </summary>
+        public const string DOWNLOAD_MAX_CONCURRENCY = "DOWNLOAD_MAX_CONCURRENCY";
+
+        /// <summary>
+        /// 每帧发起的最大请求数 默认值：5（推荐范围 1-10）<see cref=int>
+        /// </summary>
+        public const string DOWNLOAD_MAX_REQUEST_PER_FRAME = "DOWNLOAD_MAX_REQUEST_PER_FRAME";
+
+        /// <summary>
+        /// 下载任务的看门狗机制超时时间 <see cref=int>
+        /// </summary>
+        public const string DOWNLOAD_WATCHDOG_TIMEOUT = "DOWNLOAD_WATCHDOG_TIMEOUT";
+
+        /// <summary>
+        /// 启用断点续传的最小尺寸 <see cref=long>
+        /// </summary>
+        public const string DOWNLOAD_RESUME_MINIMUM_SIZE = "DOWNLOAD_RESUME_MINIMUM_SIZE";
+
+        /// <summary>
+        /// 模拟WebGL平台模式 <see cref=bool>
+        /// </summary>
+        public const string VIRTUAL_WEBGL_MODE = "VIRTUAL_WEBGL_MODE";
+
+        /// <summary>
+        /// 模拟虚拟下载模式 <see cref=bool>
+        /// </summary>
+        public const string VIRTUAL_DOWNLOAD_MODE = "VIRTUAL_DOWNLOAD_MODE";
+
+        /// <summary>
+        /// 模拟虚拟下载的网速（单位：字节） <see cref=int>
+        /// </summary>
+        public const string VIRTUAL_DOWNLOAD_SPEED = "VIRTUAL_DOWNLOAD_SPEED";
+
+        /// <summary>
+        /// 异步模拟加载最小帧数 <see cref=int>
+        /// </summary>
+        public const string ASYNC_SIMULATE_MIN_FRAME = "ASYNC_SIMULATE_MIN_FRAME";
+
+        /// <summary>
+        /// 异步模拟加载最大帧数 <see cref=int>
+        /// </summary>
+        public const string ASYNC_SIMULATE_MAX_FRAME = "ASYNC_SIMULATE_MAX_FRAME";
+
+        /// <summary>
+        /// 拷贝内置清单 <see cref=bool>
+        /// </summary>
+        public const string COPY_BUILTIN_PACKAGE_MANIFEST = "COPY_BUILTIN_PACKAGE_MANIFEST";
+
+        /// <summary>
+        /// 拷贝内置清单的目标目录 <see cref=string>
+        /// </summary>
+        public const string COPY_BUILTIN_PACKAGE_MANIFEST_DEST_ROOT = "COPY_BUILTIN_PACKAGE_MANIFEST_DEST_ROOT";
+
+        /// <summary>
+        /// 解压文件系统的根目录 <see cref=string>
+        /// </summary>
+        public const string UNPACK_FILE_SYSTEM_ROOT = "UNPACK_FILE_SYSTEM_ROOT";
+
+        /// <summary>
+        /// RawBundle 解密器 <see cref=IBundleDecryptor>
+        /// </summary>
+        public const string RAWBUNDLE_DECRYPTOR = "RAWBUNDLE_DECRYPTOR";
+
+        /// <summary>
+        /// AssetBundle 备用解密器 <see cref=IBundleMemoryDecryptor>
+        /// </summary>
+        public const string ASSETBUNDLE_FALLBACK_DECRYPTOR = "ASSETBUNDLE_FALLBACK_DECRYPTOR";
+
+        /// <summary>
+        /// 资源清单解密器 <see cref=IManifestDecryptor>
+        /// </summary>
+        public const string MANIFEST_DECRYPTOR = "MANIFEST_DECRYPTOR";
+
+        /// <summary>
+        /// 下载重试判定策略 <see cref=IDownloadRetryPolicy>
+        /// </summary>
+        public const string DOWNLOAD_RETRY_POLICY = "DOWNLOAD_RETRY_POLICY";
+
+        /// <summary>
+        /// URL 选择策略 <see cref=IDownloadURLPolicy>
+        /// </summary>
+        public const string DOWNLOAD_URL_POLICY = "DOWNLOAD_URL_POLICY";
+    }
+}

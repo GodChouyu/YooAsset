@@ -1,11 +1,16 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// Web远端文件系统的初始化操作
+    /// </summary>
     internal class WRFSInitializeOperation : FSInitializeOperation
     {
         private enum ESteps
         {
             None,
+            CheckPlatform,
+            CheckParameter,
             InitializeFileCache,
             Done,
         }
@@ -20,12 +25,36 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.InitializeFileCache;
+            _steps = ESteps.CheckPlatform;
         }
         internal override void InternalUpdate()
         {
             if (_steps == ESteps.None || _steps == ESteps.Done)
                 return;
+
+            if (_steps == ESteps.CheckPlatform)
+            {
+#if !UNITY_WEBGL
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = $"{nameof(WebRemoteFileSystem)} only support the WebGL platform.";
+#else
+                _steps = ESteps.CheckParameter;
+#endif
+            }
+
+            if (_steps == ESteps.CheckParameter)
+            {
+                if (_fileSystem.RemoteServices == null)
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"{nameof(IRemoteServices)} is null.";
+                    return;
+                }
+
+                _steps = ESteps.InitializeFileCache;
+            }
 
             if (_steps == ESteps.InitializeFileCache)
             {

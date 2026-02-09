@@ -1,26 +1,24 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 下载文件操作的抽象基类
+    /// </summary>
     internal abstract class FSDownloadFileOperation : AsyncOperationBase
     {
-        public PackageBundle Bundle { private set; get; }
+        /// <summary>
+        /// 关联的资源包信息
+        /// </summary>
+        public PackageBundle Bundle { get; private set; }
 
         /// <summary>
-        /// 当前下载的字节数
+        /// 下载报告
         /// </summary>
-        public long DownloadedBytes { protected set; get; }
-
-        /// <summary>
-        /// 当前下载进度（0f - 1f）
-        /// </summary>
-        public float DownloadProgress { protected set; get; }
-
+        public DownloadReport Report { get; protected set; }
 
         public FSDownloadFileOperation(PackageBundle bundle)
         {
             Bundle = bundle;
-            DownloadedBytes = 0;
-            DownloadProgress = 0;
         }
     }
 }

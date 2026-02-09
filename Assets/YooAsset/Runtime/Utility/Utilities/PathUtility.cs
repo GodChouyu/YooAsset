@@ -50,7 +50,8 @@ namespace YooAsset
         /// </summary>
         public static string Combine(string path1, string path2)
         {
-            return StringUtility.Format("{0}/{1}", path1, path2);
+            // 注意：某些静态服务器的规则可能不接受双斜杠路径
+            return StringUtility.Format("{0}/{1}", path1.TrimEnd('/'), path2.Trim('/'));
         }
 
         /// <summary>
@@ -58,7 +59,8 @@ namespace YooAsset
         /// </summary>
         public static string Combine(string path1, string path2, string path3)
         {
-            return StringUtility.Format("{0}/{1}/{2}", path1, path2, path3);
+            // 注意：某些静态服务器的规则可能不接受双斜杠路径
+            return StringUtility.Format("{0}/{1}/{2}", path1.TrimEnd('/'), path2.Trim('/'), path3.Trim('/'));
         }
 
         /// <summary>
@@ -66,7 +68,8 @@ namespace YooAsset
         /// </summary>
         public static string Combine(string path1, string path2, string path3, string path4)
         {
-            return StringUtility.Format("{0}/{1}/{2}/{3}", path1, path2, path3, path4);
+            // 注意：某些静态服务器的规则可能不接受双斜杠路径
+            return StringUtility.Format("{0}/{1}/{2}/{3}", path1.TrimEnd('/'), path2.Trim('/'), path3.Trim('/'), path4.Trim('/'));
         }
     }
 }

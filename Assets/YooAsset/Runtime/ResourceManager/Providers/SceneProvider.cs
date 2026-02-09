@@ -11,21 +11,21 @@ namespace YooAsset
     /// </summary>
     internal sealed class SceneProvider : ProviderBase
     {
-        private readonly LoadSceneParameters _loadParams;
+        private readonly LoadSceneParameters _loadSceneParams;
         private bool _suspendLoad;
-        private FSLoadSceneOperation _loadSceneOp;
+        private BHLoadSceneOperation _loadSceneOp;
 
-        public SceneProvider(ResourceManager manager, string providerGUID, AssetInfo assetInfo, LoadSceneParameters loadParams, bool suspendLoad) : base(manager, providerGUID, assetInfo)
+        public SceneProvider(ResourceManager manager, string providerGUID, AssetInfo assetInfo, LoadSceneParameters loadSceneParams, bool suspendLoad) : base(manager, providerGUID, assetInfo)
         {
-            _loadParams = loadParams;
+            _loadSceneParams = loadSceneParams;
             _suspendLoad = suspendLoad;
             LoadedSceneName = Path.GetFileNameWithoutExtension(assetInfo.AssetPath);
         }
-        protected override void ProcessBundleResult()
+        protected override void ProcessBundleHandle()
         {
             if (_loadSceneOp == null)
             {
-                _loadSceneOp = LoadedBundleResult.LoadSceneOperation(MainAssetInfo, _loadParams, _suspendLoad);
+                _loadSceneOp = LoadedBundleHandle.LoadSceneAsync(MainAssetInfo, _loadSceneParams, _suspendLoad);
                 _loadSceneOp.StartOperation();
                 AddChildOperation(_loadSceneOp);
             }
@@ -35,7 +35,7 @@ namespace YooAsset
 
             // 注意：场景加载中途可以取消挂起
             if (_suspendLoad == false)
-                _loadSceneOp.UnSuspendLoad();
+                _loadSceneOp.ResumeLoad();
 
             _loadSceneOp.UpdateOperation();
             Progress = _loadSceneOp.Progress;

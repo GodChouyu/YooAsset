@@ -126,11 +126,11 @@ namespace YooAsset
         /// 请求最新的资源版本
         /// 说明：超时时间默认60秒
         /// </summary>
-        public RequestVersionOperation RequestVersionAsync()
+        public RequestPackageVersionOperation RequestPackageVersionAsync()
         {
             int defaultTimeout = 60;
-            var options = new RequestVersionOptions(true, defaultTimeout);
-            return RequestVersionAsync(options);
+            var options = new RequestPackageVersionOptions(true, defaultTimeout);
+            return RequestPackageVersionAsync(options);
         }
 
         /// <summary>
@@ -138,10 +138,10 @@ namespace YooAsset
         /// </summary>
         /// <param name="options">请求版本选项</param>
         /// <returns>返回请求版本操作对象</returns>
-        public RequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
+        public RequestPackageVersionOperation RequestPackageVersionAsync(RequestPackageVersionOptions options)
         {
             CheckInitialized(false);
-            var operation = new RequestVersionOperation(_fileSystemHost, options);
+            var operation = new RequestPackageVersionOperation(_fileSystemHost, options);
             AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
@@ -151,7 +151,7 @@ namespace YooAsset
         /// </summary>
         /// <param name="options">加载清单选项</param>
         /// <returns>返回加载清单操作对象</returns>
-        public LoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
+        public LoadPackageManifestOperation LoadPackageManifestAsync(LoadPackageManifestOptions options)
         {
             CheckInitialized(false);
 
@@ -161,20 +161,20 @@ namespace YooAsset
                 YooLogger.Warning($"Found loaded bundles before updating the manifest. It is recommended to call the {nameof(UnloadAllAssetsAsync)} method to release loaded bundles.");
             }
 
-            var operation = new LoadManifestOperation(_fileSystemHost, options);
+            var operation = new LoadPackageManifestOperation(_fileSystemHost, options);
             AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
 
         /// <summary>
-        /// 预下载指定版本的包裹资源
+        /// 预取指定版本的包裹资源清单
         /// </summary>
-        /// <param name="options">预下载选项</param>
-        /// <returns>返回预下载操作对象</returns>
-        public PreDownloaderOperation PreDownloaderAsync(PreDownloaderOptions options)
+        /// <param name="options">预取清单选项</param>
+        /// <returns>返回预取清单操作对象</returns>
+        public PrefetchManifestOperation PrefetchManifestAsync(PrefetchManifestOptions options)
         {
             CheckInitialized(false);
-            var operation = new PreDownloaderOperation(_fileSystemHost, options);
+            var operation = new PrefetchManifestOperation(_fileSystemHost, options);
             AsyncOperationSystem.StartOperation(PackageName, operation);
             return operation;
         }
@@ -933,10 +933,10 @@ namespace YooAsset
                 return;
 
             if (typeof(UnityEngine.Behaviour).IsAssignableFrom(type))
-                throw new YooLoadException($"Load asset type is invalid : {type.FullName}");
+                throw new YooLoadException($"Load asset type is invalid: {type.FullName}");
 
             if (typeof(UnityEngine.Object).IsAssignableFrom(type) == false)
-                throw new YooLoadException($"Load asset type is invalid : {type.FullName}");
+                throw new YooLoadException($"Load asset type is invalid: {type.FullName}");
         }
         #endregion
 

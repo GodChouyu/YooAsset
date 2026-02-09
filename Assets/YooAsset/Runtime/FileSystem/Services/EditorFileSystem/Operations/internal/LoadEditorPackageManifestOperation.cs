@@ -1,7 +1,10 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载编辑器包裹清单文件操作
+    /// </summary>
     internal class LoadEditorPackageManifestOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -16,14 +19,14 @@ namespace YooAsset
         private readonly EditorFileSystem _fileSystem;
         private readonly string _packageVersion;
         private readonly string _packageHash;
-        private DeserializeManifestOperation _deserializer;
+        private DeserializeManifestOperation _deserializeManifestOp;
         private byte[] _fileData;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹清单
         /// </summary>
-        public PackageManifest Manifest { private set; get; }
+        public PackageManifest Manifest { get; private set; }
 
 
         internal LoadEditorPackageManifestOperation(EditorFileSystem fileSystem, string packageVersion, string packageHash)
@@ -53,7 +56,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Can not found simulation package manifest file : {manifestFilePath}";
+                    Error = $"Cannot find simulation package manifest file: {manifestFilePath}";
                 }
             }
 
@@ -73,35 +76,35 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadManifest)
             {
-                if (_deserializer == null)
+                if (_deserializeManifestOp == null)
                 {
-                    _deserializer = new DeserializeManifestOperation(null, _fileData);
-                    _deserializer.StartOperation();
-                    AddChildOperation(_deserializer);
+                    _deserializeManifestOp = new DeserializeManifestOperation(null, _fileData);
+                    _deserializeManifestOp.StartOperation();
+                    AddChildOperation(_deserializeManifestOp);
                 }
 
-                _deserializer.UpdateOperation();
-                Progress = _deserializer.Progress;
-                if (_deserializer.IsDone == false)
+                _deserializeManifestOp.UpdateOperation();
+                Progress = _deserializeManifestOp.Progress;
+                if (_deserializeManifestOp.IsDone == false)
                     return;
 
-                if (_deserializer.Status == EOperationStatus.Succeeded)
+                if (_deserializeManifestOp.Status == EOperationStatus.Succeeded)
                 {
                     _steps = ESteps.Done;
-                    Manifest = _deserializer.Manifest;
+                    Manifest = _deserializeManifestOp.Manifest;
                     Status = EOperationStatus.Succeeded;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _deserializer.Error;
+                    Error = _deserializeManifestOp.Error;
                 }
             }
         }
         internal override string InternalGetDescription()
         {
-            return $"PackageVersion : {_packageVersion} PackageHash : {_packageHash}";
+            return $"PackageVersion: {_packageVersion} PackageHash: {_packageHash}";
         }
     }
 }

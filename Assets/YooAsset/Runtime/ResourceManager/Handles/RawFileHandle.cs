@@ -55,7 +55,7 @@ namespace YooAsset
         {
             if (IsValidWithWarning == false)
                 return string.Empty;
-            return Provider.LoadedBundleResult.GetBundleFilePath();
+            return Provider.LoadedBundleHandle.GetBundleFilePath();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEngine;
 
 namespace YooAsset
@@ -74,7 +74,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"{_options.CacheName} not support {decryptor.GetType().Name}";
+                        Error = $"{_options.CacheName} does not support {decryptor.GetType().Name}";
                         return;
                     }
 
@@ -94,6 +94,7 @@ namespace YooAsset
             {
                 if (_createRequest != null)
                 {
+                    // 注意: 异步加载过程中，业务逻辑可能会强制转换为同步加载
                     if (IsWaitForCompletion)
                     {
                         // 强制挂起主线程（注意：该操作会很耗时）
@@ -120,7 +121,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = new AssetBundleResult(_options.FilePath, _options.Bundle, _assetBundle, _loadStream);
+                    BundleHandle = new AssetBundleHandle(_options.FilePath, _options.Bundle, _assetBundle, _loadStream);
                 }
             }
         }

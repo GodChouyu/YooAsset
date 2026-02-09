@@ -72,12 +72,12 @@ namespace YooAsset
 
                 if (_loadLocalAssetBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadLocalAssetBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded bundle result is null.");
+                    if (_loadLocalAssetBundleOp.BundleHandle == null)
+                        throw new YooInternalException("Loaded bundle handle is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = _loadLocalAssetBundleOp.BundleResult;
+                    BundleHandle = _loadLocalAssetBundleOp.BundleHandle;
                 }
                 else
                 {
@@ -164,12 +164,12 @@ namespace YooAsset
 
                 if(_loadLocalRawBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadLocalRawBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded bundle result is null.");
+                    if (_loadLocalRawBundleOp.BundleHandle == null)
+                        throw new YooInternalException("Loaded bundle handle is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = _loadLocalRawBundleOp.BundleResult;
+                    BundleHandle = _loadLocalRawBundleOp.BundleHandle;
                 }
                 else
                 {

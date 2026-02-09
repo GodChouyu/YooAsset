@@ -13,19 +13,19 @@ namespace YooAsset
         protected readonly Dictionary<string, string> _builtinFilePathMapping = new Dictionary<string, string>(10000);
         protected readonly Dictionary<string, string> _tempFilePathMapping = new Dictionary<string, string>(10000);
         protected string _packageRoot;
-        protected string _unpackTempFilesRoot;
+        protected string _tempFilesRoot;
         protected string _unpackManifestFilesRoot;
         protected string _unpackBundleFilesRoot;
 
         /// <summary>
         /// 内置文件缓存系统
         /// </summary>
-        public IFileCache BuiltinFileCache { private set; get; }
+        public IFileCache BuiltinFileCache { get; private set; }
 
         /// <summary>
         /// 沙盒文件缓存系统
         /// </summary>
-        public IFileCache UnpackFileCache { private set; get; }
+        public IFileCache UnpackFileCache { get; private set; }
 
         /// <summary>
         /// 解压调度器
@@ -35,62 +35,64 @@ namespace YooAsset
         /// <summary>
         /// 下载后台接口
         /// </summary>
-        public IDownloadBackend DownloadBackend { private set; get; }
+        public IDownloadBackend DownloadBackend { get; private set; }
 
         /// <summary>
         /// 包裹名称
         /// </summary>
-        public string PackageName { private set; get; }
+        public string PackageName { get; private set; }
 
         #region 自定义参数
         /// <summary>
         /// 自定义参数：UnityWebRequest 创建委托
         /// </summary>
-        public UnityWebRequestCreator WebRequestCreator { private set; get; }
+        public UnityWebRequestCreator WebRequestCreator { get; private set; }
 
         /// <summary>
         /// 自定义参数：覆盖安装缓存清理模式
         /// </summary>
-        public EInstallCleanupMode InstallClearMode { private set; get; } = EInstallCleanupMode.ClearAllManifestFiles;
+        public EInstallCleanupMode InstallCleanupMode { get; private set; } = EInstallCleanupMode.None;
 
         /// <summary>
         /// 自定义参数：初始化的时候缓存文件校验级别
         /// </summary>
-        public EFileVerifyLevel FileVerifyLevel { private set; get; } = EFileVerifyLevel.Middle;
+        public EFileVerifyLevel FileVerifyLevel { get; private set; } = EFileVerifyLevel.Low;
 
         /// <summary>
         /// 自定义参数：初始化的时候缓存文件校验最大并发数
+        /// 默认值：8（推荐值为处理器数两倍）
+        /// 说明：过大的值可能导致线程池任务过多，影响系统稳定性 
         /// </summary>
-        public int FileVerifyMaxConcurrency { private set; get; } = 32;
+        public int FileVerifyMaxConcurrency { get; private set; } = 8;
 
         /// <summary>
         /// 自定义参数：拷贝内置清单
         /// </summary>
-        public bool CopyBuildinPackageManifest { private set; get; } = false;
+        public bool CopyBuiltinPackageManifest { get; private set; } = false;
 
         /// <summary>
         /// 自定义参数：拷贝内置清单的目标目录
         /// 注意：该参数为空的时候，会获取默认的沙盒目录！
         /// </summary>
-        public string CopyBuildinPackageManifestDestRoot { private set; get; }
+        public string CopyBuiltinPackageManifestDestRoot { get; private set; }
 
         /// <summary>
         /// 自定义参数：解压文件系统的根目录
         /// </summary>
-        public string UnpackFileSystemRoot { private set; get; }
+        public string UnpackFileSystemRoot { get; private set; }
 
         /// <summary>
         /// 自定义参数：最大并发连接数
         /// 默认值：8（推荐范围 1-32）
         /// </summary>
-        public int UnpackMaxConcurrency { private set; get; }
+        public int UnpackMaxConcurrency { get; private set; } = 8;
 
         /// <summary>
         /// 自定义参数：每帧发起的最大请求数
         /// 默认值：8（推荐范围 1-32） 
         /// 说明：避免单帧发起过多请求导致卡顿 
         /// </summary>
-        public int UnpackMaxRequestPerFrame { private set; get; }
+        public int UnpackMaxRequestPerFrame { get; private set; } = 8;
 
         /// <summary>
         /// 自定义参数：AssetBundle 解密器
@@ -110,7 +112,7 @@ namespace YooAsset
         /// <summary>
         /// 自定义参数：资源清单解密器
         /// </summary>
-        public IManifestDecryptor ManifestDecryptor { private set; get; }
+        public IManifestDecryptor ManifestDecryptor { get; private set; }
         #endregion
 
 
@@ -122,19 +124,19 @@ namespace YooAsset
             var operation = new BFSInitializeOperation(this);
             return operation;
         }
-        public virtual FSRequestVersionOperation RequestVersionAsync(RequestVersionOptions options)
+        public virtual FSRequestPackageVersionOperation RequestPackageVersionAsync(FSRequestPackageVersionOptions options)
         {
-            var operation = new BFSRequestVersionOperation(this);
+            var operation = new BFSRequestPackageVersionOperation(this);
             return operation;
         }
-        public virtual FSLoadManifestOperation LoadManifestAsync(LoadManifestOptions options)
+        public virtual FSLoadPackageManifestOperation LoadPackageManifestAsync(FSLoadPackageManifestOptions options)
         {
-            var operation = new BFSLoadManifestOperation(this, options.PackageVersion);
+            var operation = new BFSLoadPackageManifestOperation(this, options.PackageVersion);
             return operation;
         }
-        public virtual FSClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FSLoadPackageBundleOperation LoadPackageBundleAsync(FSLoadPackageBundleOptions options)
         {
-            var operation = new BFSClearCacheOperation(this, options);
+            var operation = new BFSLoadPackageBundleOperation(this, options);
             return operation;
         }
         public virtual FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options)
@@ -142,48 +144,61 @@ namespace YooAsset
             var operation = new BFSDownloadFileOperation(this, options);
             return operation;
         }
-        public virtual FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options)
+        public virtual FSClearCacheOperation ClearCacheAsync(FSClearCacheOptions options)
         {
-            var operation = new BFSLoadBundleOperation(this, options);
-            return operation;
+            if (options.ClearMode == EManifestClearMode.ClearAllManifestFiles.ToString())
+            {
+                var operation = new FSClearCacheCompleteOperation();
+                return operation;
+            }
+            else if (options.ClearMode == EManifestClearMode.ClearUnusedManifestFiles.ToString())
+            {
+                var operation = new FSClearCacheCompleteOperation();
+                return operation;
+            }
+            else
+            {
+                var operation = new BFSClearCacheOperation(this, options);
+                return operation;
+            }
         }
 
         public virtual void SetParameter(string name, object value)
         {
-            if (name == FileSystemParametersDefine.DOWNLOAD_BACKEND)
+            if (name == FileSystemConsts.DOWNLOAD_BACKEND)
             {
                 DownloadBackend = (IDownloadBackend)value;
             }
-            else if (name == FileSystemParametersDefine.UNITY_WEB_REQUEST_CREATOR)
+            else if (name == FileSystemConsts.UNITY_WEB_REQUEST_CREATOR)
             {
                 WebRequestCreator = (UnityWebRequestCreator)value;
             }
-            else if (name == FileSystemParametersDefine.INSTALL_CLEAR_MODE)
+            else if (name == FileSystemConsts.INSTALL_CLEANUP_MODE)
             {
-                InstallClearMode = (EInstallCleanupMode)value;
+                InstallCleanupMode = (EInstallCleanupMode)value;
             }
-            else if (name == FileSystemParametersDefine.FILE_VERIFY_LEVEL)
+            else if (name == FileSystemConsts.FILE_VERIFY_LEVEL)
             {
                 FileVerifyLevel = (EFileVerifyLevel)value;
             }
-            else if (name == FileSystemParametersDefine.FILE_VERIFY_MAX_CONCURRENCY)
+            else if (name == FileSystemConsts.FILE_VERIFY_MAX_CONCURRENCY)
             {
                 int convertValue = Convert.ToInt32(value);
                 FileVerifyMaxConcurrency = Mathf.Clamp(convertValue, 1, int.MaxValue);
             }
-            else if (name == FileSystemParametersDefine.COPY_BUILDIN_PACKAGE_MANIFEST)
+            else if (name == FileSystemConsts.COPY_BUILTIN_PACKAGE_MANIFEST)
             {
-                CopyBuildinPackageManifest = Convert.ToBoolean(value);
+                CopyBuiltinPackageManifest = Convert.ToBoolean(value);
             }
-            else if (name == FileSystemParametersDefine.COPY_BUILDIN_PACKAGE_MANIFEST_DEST_ROOT)
+            else if (name == FileSystemConsts.COPY_BUILTIN_PACKAGE_MANIFEST_DEST_ROOT)
             {
-                CopyBuildinPackageManifestDestRoot = (string)value;
+                CopyBuiltinPackageManifestDestRoot = (string)value;
             }
-            else if (name == FileSystemParametersDefine.UNPACK_FILE_SYSTEM_ROOT)
+            else if (name == FileSystemConsts.UNPACK_FILE_SYSTEM_ROOT)
             {
                 UnpackFileSystemRoot = (string)value;
             }
-            else if (name == FileSystemParametersDefine.DOWNLOAD_MAX_CONCURRENCY)
+            else if (name == FileSystemConsts.DOWNLOAD_MAX_CONCURRENCY)
             {
                 int convertValue = Convert.ToInt32(value);
                 if (convertValue > 32)
@@ -194,7 +209,7 @@ namespace YooAsset
                 // 限制在合理范围内：1-32          
                 UnpackMaxConcurrency = Mathf.Clamp(convertValue, 1, 32);
             }
-            else if (name == FileSystemParametersDefine.DOWNLOAD_MAX_REQUEST_PER_FRAME)
+            else if (name == FileSystemConsts.DOWNLOAD_MAX_REQUEST_PER_FRAME)
             {
                 int convertValue = Convert.ToInt32(value);
                 if (convertValue > 32)
@@ -205,25 +220,25 @@ namespace YooAsset
                 // 限制在合理范围内：1-32          
                 UnpackMaxRequestPerFrame = Mathf.Clamp(convertValue, 1, 32);
             }
-            else if (name == FileSystemParametersDefine.ASSETBUNDLE_DECRYPTOR)
+            else if (name == FileSystemConsts.ASSETBUNDLE_DECRYPTOR)
             {
                 AssetBundleDecryptor = (IBundleDecryptor)value;
             }
-            else if (name == FileSystemParametersDefine.RAWBUNDLE_DECRYPTOR)
+            else if (name == FileSystemConsts.RAWBUNDLE_DECRYPTOR)
             {
                 RawBundleDecryptor = (IBundleDecryptor)value;
             }
-            else if (name == FileSystemParametersDefine.ASSETBUNDLE_FALLBACK_DECRYPTOR)
+            else if (name == FileSystemConsts.ASSETBUNDLE_FALLBACK_DECRYPTOR)
             {
                 AssetBundleFallbackDecryptor = (IBundleMemoryDecryptor)value;
             }
-            else if (name == FileSystemParametersDefine.MANIFEST_DECRYPTOR)
+            else if (name == FileSystemConsts.MANIFEST_DECRYPTOR)
             {
                 ManifestDecryptor = (IManifestDecryptor)value;
             }
             else
             {
-                YooLogger.Warning($"Invalid parameter : {name}");
+                YooLogger.Warning($"Invalid parameter: {name}");
             }
         }
         public virtual void OnCreate(string packageName, string packageRoot)
@@ -238,12 +253,12 @@ namespace YooAsset
             // 设置根目录
             string unpackRoot;
             if (string.IsNullOrEmpty(UnpackFileSystemRoot))
-                unpackRoot = GetDefaultUnpackPathRoot(packageName);
+                unpackRoot = GetDefaultUnpackPackageRoot(packageName);
             else
                 unpackRoot = UnpackFileSystemRoot;
-            _unpackManifestFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackManifestFilesFolderName);
-            _unpackBundleFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackBundleFilesFolderName);
-            _unpackTempFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemDefine.UnpackTempFilesFolderName);
+            _unpackManifestFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConsts.UnpackManifestFilesFolderName);
+            _unpackBundleFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConsts.UnpackBundleFilesFolderName);
+            _tempFilesRoot = PathUtility.Combine(unpackRoot, BuiltinFileSystemConsts.UnpackTempFilesFolderName);
 
             // 创建默认的下载后台接口
             if (DownloadBackend == null)
@@ -285,7 +300,7 @@ namespace YooAsset
 
             if (UnpackScheduler != null)
             {
-                UnpackScheduler.Dispose();
+                UnpackScheduler.AbortOperation();
                 UnpackScheduler = null;
             }
 
@@ -342,12 +357,19 @@ namespace YooAsset
         }
 
         #region 内部方法
+        /// <summary>
+        /// 获取默认的内置包裹根目录
+        /// </summary>
         public string GetDefaultBuiltinPackageRoot(string packageName)
         {
-            string rootDirectory = YooAssetSettingsData.GetYooDefaultBuildinRoot();
+            string rootDirectory = YooAssetSettingsData.GetYooDefaultBuiltinRoot();
             return PathUtility.Combine(rootDirectory, packageName);
         }
-        public string GetBuiltinFileLoadPath(PackageBundle bundle)
+
+        /// <summary>
+        /// 获取内置文件路径
+        /// </summary>
+        public string GetBuiltinBundleFilePath(PackageBundle bundle)
         {
             if (_builtinFilePathMapping.TryGetValue(bundle.BundleGUID, out string filePath) == false)
             {
@@ -356,28 +378,44 @@ namespace YooAsset
             }
             return filePath;
         }
+
+        /// <summary>
+        /// 获取内置包裹版本文件路径
+        /// </summary>
         public string GetBuiltinPackageVersionFilePath()
         {
             string fileName = YooAssetSettingsData.GetPackageVersionFileName(PackageName);
             return PathUtility.Combine(_packageRoot, fileName);
         }
+
+        /// <summary>
+        /// 获取内置包裹哈希文件路径
+        /// </summary>
         public string GetBuiltinPackageHashFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetPackageHashFileName(PackageName, packageVersion);
             return PathUtility.Combine(_packageRoot, fileName);
         }
+
+        /// <summary>
+        /// 获取内置包裹清单文件路径
+        /// </summary>
         public string GetBuiltinPackageManifestFilePath(string packageVersion)
         {
             string fileName = YooAssetSettingsData.GetManifestBinaryFileName(PackageName, packageVersion);
             return PathUtility.Combine(_packageRoot, fileName);
         }
-        public string GetSandboxAppFootPrintFilePath()
+
+        /// <summary>
+        /// 获取沙盒应用程序水印文件路径
+        /// </summary>
+        public string GetSandboxAppFootprintFilePath()
         {
-            return PathUtility.Combine(_unpackManifestFilesRoot, SandboxFileSystemDefine.AppFootPrintFileName);
+            return PathUtility.Combine(_unpackManifestFilesRoot, SandboxFileSystemConsts.AppFootprintFileName);
         }
 
         /// <summary>
-        /// 删除所有解压的资源文件
+        /// 删除所有缓存的资源文件
         /// </summary>
         public void DeleteAllBundleFiles()
         {
@@ -388,9 +426,31 @@ namespace YooAsset
         }
 
         /// <summary>
+        /// 删除所有缓存的清单文件
+        /// </summary>
+        public void DeleteAllManifestFiles()
+        {
+            if (Directory.Exists(_unpackManifestFilesRoot))
+            {
+                Directory.Delete(_unpackManifestFilesRoot, true);
+            }
+        }
+
+        /// <summary>
+        /// 删除所有缓存的临时文件
+        /// </summary>
+        public void DeleteAllTempFIles()
+        {
+            if (Directory.Exists(_tempFilesRoot))
+            {
+                Directory.Delete(_tempFilesRoot, true);
+            }
+        }
+
+        /// <summary>
         /// 获取默认的解压根目录
         /// </summary>
-        public string GetDefaultUnpackPathRoot(string packageName)
+        public string GetDefaultUnpackPackageRoot(string packageName)
         {
             string rootDirectory = YooAssetSettingsData.GetYooDefaultCacheRoot();
             return PathUtility.Combine(rootDirectory, packageName);
@@ -403,7 +463,7 @@ namespace YooAsset
         {
             if (_tempFilePathMapping.TryGetValue(bundle.BundleGUID, out string filePath) == false)
             {
-                filePath = PathUtility.Combine(_unpackTempFilesRoot, bundle.BundleGUID);
+                filePath = PathUtility.Combine(_tempFilesRoot, bundle.BundleGUID);
                 _tempFilePathMapping.Add(bundle.BundleGUID, filePath);
             }
             return filePath;

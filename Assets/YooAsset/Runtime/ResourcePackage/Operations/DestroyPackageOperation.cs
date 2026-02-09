@@ -104,7 +104,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"PackageVersion : {_resourcePackage.GetPackageVersion()}";
+            return $"PackageVersion: {_resourcePackage.GetPackageVersion()}";
         }
     }
 }

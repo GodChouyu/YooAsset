@@ -1,5 +1,8 @@
 namespace YooAsset
 {
+    /// <summary>
+    /// 请求Web远端包裹版本操作
+    /// </summary>
     internal class RequestWebPackageVersionOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -10,14 +13,13 @@ namespace YooAsset
         }
 
         private readonly RequestWebPackageVersionOptions _options;
-        private IDownloadTextRequest _webTextRequestOp;
-        private int _requestCount = 0;
+        private IDownloadTextRequest _downloadTextRequest;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹版本
         /// </summary>
-        public string PackageVersion { private set; get; }
+        public string PackageVersion { get; private set; }
 
 
         public RequestWebPackageVersionOperation(RequestWebPackageVersionOptions options)
@@ -26,7 +28,6 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _requestCount = DownloadFailureCounter.GetFailureCount(_options.PackageName, nameof(RequestWebPackageVersionOperation));
             _steps = ESteps.RequestPackageVersion;
         }
         internal override void InternalUpdate()
@@ -36,27 +37,27 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestPackageVersion)
             {
-                if (_webTextRequestOp == null)
+                if (_downloadTextRequest == null)
                 {
                     string fileName = YooAssetSettingsData.GetPackageVersionFileName(_options.PackageName);
                     string url = GetRequestURL(fileName);
                     var args = new DownloadDataRequestArgs(url, _options.Timeout, 0);
-                    _webTextRequestOp = _options.DownloadBackend.CreateTextRequest(args);
-                    _webTextRequestOp.SendRequest();
+                    _downloadTextRequest = _options.DownloadBackend.CreateTextRequest(args);
+                    _downloadTextRequest.SendRequest();
                 }
 
-                Progress = _webTextRequestOp.DownloadProgress;
-                if (_webTextRequestOp.IsDone == false)
+                Progress = _downloadTextRequest.DownloadProgress;
+                if (_downloadTextRequest.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadTextRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    PackageVersion = _webTextRequestOp.Result;
-                    if (string.IsNullOrEmpty(PackageVersion))
+                    PackageVersion = _downloadTextRequest.Result;
+                    if (TextUtility.ValidateContent(PackageVersion, out string validateError) == false)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Web package version file content is empty.";
+                        Error = $"Web package version file validate failed: {validateError}";
                     }
                     else
                     {
@@ -68,29 +69,24 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webTextRequestOp.Error;
-                    DownloadFailureCounter.RecordFailure(_options.PackageName, nameof(RequestWebPackageVersionOperation));
+                    Error = _downloadTextRequest.Error;
+                    _options.URLPolicy.OnFailure(_downloadTextRequest.Url, _downloadTextRequest.HttpCode, _downloadTextRequest.HttpError);
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webTextRequestOp != null)
+            if (_downloadTextRequest != null)
             {
-                _webTextRequestOp.Dispose();
-                _webTextRequestOp = null;
+                _downloadTextRequest.Dispose();
+                _downloadTextRequest = null;
             }
         }
 
         private string GetRequestURL(string fileName)
         {
-            string url;
-
-            // 轮流返回请求地址
-            if (_requestCount % 2 == 0)
-                url = _options.RemoteServices.GetRemoteMainURL(fileName);
-            else
-                url = _options.RemoteServices.GetRemoteFallbackURL(fileName);
+            var urls = _options.RemoteServices.GetRemoteURLs(fileName);
+            string url = _options.URLPolicy.SelectURL(urls);
 
             // 在URL末尾添加时间戳
             if (_options.AppendTimeTicks)

@@ -147,9 +147,9 @@ namespace YooAsset.Editor
                 EditorConnection.instance.Initialize();
                 EditorConnection.instance.RegisterConnection(OnHandleConnectionEvent);
                 EditorConnection.instance.RegisterDisconnection(OnHandleDisconnectionEvent);
-                EditorConnection.instance.Register(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
+                EditorConnection.instance.Register(DiagnosticSystemConsts.PlayerToEditorMessageId, OnHandlePlayerMessage);
                 MockEditorConnection.Instance.Initialize();
-                MockEditorConnection.Instance.Register(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
+                MockEditorConnection.Instance.Register(DiagnosticSystemConsts.PlayerToEditorMessageId, OnHandlePlayerMessage);
             }
             catch (Exception e)
             {
@@ -161,8 +161,8 @@ namespace YooAsset.Editor
             // 远程调试
             EditorConnection.instance.UnregisterConnection(OnHandleConnectionEvent);
             EditorConnection.instance.UnregisterDisconnection(OnHandleDisconnectionEvent);
-            EditorConnection.instance.Unregister(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
-            MockEditorConnection.Instance.Unregister(DiagnosticSystemDefine.PlayerToEditorMessageId, OnHandlePlayerMessage);
+            EditorConnection.instance.Unregister(DiagnosticSystemConsts.PlayerToEditorMessageId, OnHandlePlayerMessage);
+            MockEditorConnection.Instance.Unregister(DiagnosticSystemConsts.PlayerToEditorMessageId, OnHandlePlayerMessage);
             _playerSessions.Clear();
         }
         public void Update()
@@ -194,9 +194,9 @@ namespace YooAsset.Editor
             int playerId = args.playerId;
             var debugReport = DiagnosticReport.Deserialize(args.data);
 
-            if (debugReport.ProtocolVersion != DiagnosticSystemDefine.ProtocolVersion)
+            if (debugReport.ProtocolVersion != DiagnosticSystemConsts.ProtocolVersion)
             {
-                Debug.LogWarning($"Debugger versions are inconsistent : {debugReport.ProtocolVersion} != {DiagnosticSystemDefine.ProtocolVersion}");
+                Debug.LogWarning($"Debugger versions are inconsistent : {debugReport.ProtocolVersion} != {DiagnosticSystemConsts.ProtocolVersion}");
                 return;
             }
 
@@ -258,8 +258,8 @@ namespace YooAsset.Editor
             command.CommandType = (int)EDiagnosticCommandType.AutoSampling;
             command.Parameter = evt.newValue ? "open" : "close";
             byte[] data = DiagnosticCommand.Serialize(command);
-            EditorConnection.instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
-            MockEditorConnection.Instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
+            EditorConnection.instance.Send(DiagnosticSystemConsts.EditorToPlayerMessageId, data);
+            MockEditorConnection.Instance.Send(DiagnosticSystemConsts.EditorToPlayerMessageId, data);
         }
 
         private void SampleBtn_onClick()
@@ -269,8 +269,8 @@ namespace YooAsset.Editor
             command.CommandType = (int)EDiagnosticCommandType.SampleOnce;
             command.Parameter = string.Empty;
             byte[] data = DiagnosticCommand.Serialize(command);
-            EditorConnection.instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
-            MockEditorConnection.Instance.Send(DiagnosticSystemDefine.EditorToPlayerMessageId, data);
+            EditorConnection.instance.Send(DiagnosticSystemConsts.EditorToPlayerMessageId, data);
+            MockEditorConnection.Instance.Send(DiagnosticSystemConsts.EditorToPlayerMessageId, data);
         }
         private void ExportBtn_clicked()
         {

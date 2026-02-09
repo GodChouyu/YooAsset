@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEngine;
 
 namespace YooAsset
@@ -27,7 +27,7 @@ namespace YooAsset
             }
             else
             {
-                Coverage(packageName);
+                Overwrite(packageName);
             }
         }
 
@@ -46,7 +46,7 @@ namespace YooAsset
         /// <summary>
         /// 覆盖掉水印
         /// </summary>
-        public void Coverage(string packageName)
+        public void Overwrite(string packageName)
         {
 #if UNITY_EDITOR
             _footprint = Application.version;
@@ -54,7 +54,7 @@ namespace YooAsset
 			_footprint = Application.buildGUID;
 #endif
             FileUtility.WriteAllText(_filePath, _footprint);
-            YooLogger.Log($"Save application footprint : {_footprint}");
+            YooLogger.Log($"Save application footprint: {_footprint}");
         }
     }
 }

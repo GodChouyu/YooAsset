@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace YooAsset
@@ -112,7 +112,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"SceneName : {_provider.LoadedSceneName}";
+            return $"SceneName: {_provider.LoadedSceneName}";
         }
     }
 }

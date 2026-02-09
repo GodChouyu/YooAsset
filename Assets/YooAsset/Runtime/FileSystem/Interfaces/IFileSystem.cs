@@ -1,6 +1,9 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 文件系统接口
+    /// </summary>
     internal interface IFileSystem
     {
         /// <summary>
@@ -16,17 +19,17 @@ namespace YooAsset
         /// <summary>
         /// 查询包裹版本
         /// </summary>
-        FSRequestVersionOperation RequestVersionAsync(RequestVersionOptions options);
+        FSRequestPackageVersionOperation RequestPackageVersionAsync(FSRequestPackageVersionOptions options);
 
         /// <summary>
         /// 加载包裹清单
         /// </summary>
-        FSLoadManifestOperation LoadManifestAsync(LoadManifestOptions options);
+        FSLoadPackageManifestOperation LoadPackageManifestAsync(FSLoadPackageManifestOptions options);
 
         /// <summary>
-        /// 清理缓存文件
+        /// 加载Bundle文件
         /// </summary>
-        FSClearCacheOperation ClearCacheAsync(ClearCacheOptions options);
+        FSLoadPackageBundleOperation LoadPackageBundleAsync(FSLoadPackageBundleOptions options);
 
         /// <summary>
         /// 下载Bundle文件
@@ -34,9 +37,9 @@ namespace YooAsset
         FSDownloadFileOperation DownloadFileAsync(FSDownloadFileOptions options);
 
         /// <summary>
-        /// 加载Bundle文件
+        /// 清理缓存文件
         /// </summary>
-        FSLoadBundleOperation LoadBundleAsync(FCLoadBundleOptions options);
+        FSClearCacheOperation ClearCacheAsync(FSClearCacheOptions options);
 
 
         /// <summary>

@@ -59,7 +59,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"LoopCount : {_options.LoopCount}";
+            return $"LoopCount: {_options.LoopCount}";
         }
 
         /// <summary>

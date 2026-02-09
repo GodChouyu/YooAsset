@@ -57,7 +57,7 @@ namespace YooAsset
 
             // 创建内置清单实例
             var buildinCatalog = new BuiltinCatalog();
-            buildinCatalog.FileVersion = BuiltinCatalogDefine.FileVersion;
+            buildinCatalog.FileVersion = BuiltinCatalogConsts.FileVersion;
             buildinCatalog.PackageName = packageName;
             buildinCatalog.PackageVersion = packageVersion;
 
@@ -66,8 +66,8 @@ namespace YooAsset
             {
                 "link.xml",
                 "buildlogtep.json",
-                BuiltinCatalogDefine.JsonFileName,
-                BuiltinCatalogDefine.BinaryFileName
+                BuiltinCatalogConsts.JsonFileName,
+                BuiltinCatalogConsts.BinaryFileName
             };
             string packageVersionFileName = YooAssetSettingsData.GetPackageVersionFileName(packageName);
             string packageHashFileName = YooAssetSettingsData.GetPackageHashFileName(packageName, packageVersion);
@@ -106,13 +106,13 @@ namespace YooAsset
             }
 
             // 创建输出文件
-            string jsonFilePath = $"{packageDirectory}/{BuiltinCatalogDefine.JsonFileName}";
+            string jsonFilePath = $"{packageDirectory}/{BuiltinCatalogConsts.JsonFileName}";
             if (File.Exists(jsonFilePath))
                 File.Delete(jsonFilePath);
             SerializeToJson(jsonFilePath, buildinCatalog);
 
             // 创建输出文件
-            string binaryFilePath = $"{packageDirectory}/{BuiltinCatalogDefine.BinaryFileName}";
+            string binaryFilePath = $"{packageDirectory}/{BuiltinCatalogConsts.BinaryFileName}";
             if (File.Exists(binaryFilePath))
                 File.Delete(binaryFilePath);
             SerializeToBinary(binaryFilePath, buildinCatalog);
@@ -129,18 +129,18 @@ namespace YooAsset
         {
             // 创建内置清单实例
             var buildinFileCatalog = new BuiltinCatalog();
-            buildinFileCatalog.FileVersion = BuiltinCatalogDefine.FileVersion;
+            buildinFileCatalog.FileVersion = BuiltinCatalogConsts.FileVersion;
             buildinFileCatalog.PackageName = packageName;
             buildinFileCatalog.PackageVersion = packageVersion;
 
             // 创建输出文件
-            string jsonFilePath = $"{outputPath}/{BuiltinCatalogDefine.JsonFileName}";
+            string jsonFilePath = $"{outputPath}/{BuiltinCatalogConsts.JsonFileName}";
             if (File.Exists(jsonFilePath))
                 File.Delete(jsonFilePath);
             SerializeToJson(jsonFilePath, buildinFileCatalog);
 
             // 创建输出文件
-            string binaryFilePath = $"{outputPath}/{BuiltinCatalogDefine.BinaryFileName}";
+            string binaryFilePath = $"{outputPath}/{BuiltinCatalogConsts.BinaryFileName}";
             if (File.Exists(binaryFilePath))
                 File.Delete(binaryFilePath);
             SerializeToBinary(binaryFilePath, buildinFileCatalog);
@@ -167,13 +167,13 @@ namespace YooAsset
             using (FileStream fs = new FileStream(savePath, FileMode.Create))
             {
                 // 创建缓存器
-                BufferWriter buffer = new BufferWriter(BuiltinCatalogDefine.MaxFileSize);
+                BufferWriter buffer = new BufferWriter(BuiltinCatalogConsts.MaxFileSize);
 
                 // 写入文件标记
-                buffer.WriteUInt32(BuiltinCatalogDefine.FileHeader);
+                buffer.WriteUInt32(BuiltinCatalogConsts.FileHeader);
 
                 // 写入文件版本
-                buffer.WriteUTF8(BuiltinCatalogDefine.FileVersion);
+                buffer.WriteUTF8(BuiltinCatalogConsts.FileVersion);
 
                 // 写入文件头信息
                 buffer.WriteUTF8(catalog.PackageName);
@@ -216,13 +216,13 @@ namespace YooAsset
 
             // 读取文件标记
             uint fileHeader = buffer.ReadUInt32();
-            if (fileHeader != BuiltinCatalogDefine.FileHeader)
+            if (fileHeader != BuiltinCatalogConsts.FileHeader)
                 throw new Exception("Invalid catalog file.");
 
             // 读取文件版本
             string fileVersion = buffer.ReadUTF8();
-            if (fileVersion != BuiltinCatalogDefine.FileVersion)
-                throw new Exception($"The catalog file version is not compatible: {fileVersion} != {BuiltinCatalogDefine.FileVersion}");
+            if (fileVersion != BuiltinCatalogConsts.FileVersion)
+                throw new Exception($"The catalog file version is not compatible: {fileVersion} != {BuiltinCatalogConsts.FileVersion}");
 
             BuiltinCatalog catalog = new BuiltinCatalog();
             {

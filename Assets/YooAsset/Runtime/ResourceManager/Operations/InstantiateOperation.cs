@@ -138,7 +138,7 @@ namespace YooAsset
         internal override string InternalGetDescription()
         {
             var assetInfo = _handle.GetAssetInfo();
-            return $"AssetPath : {assetInfo.AssetPath}";
+            return $"AssetPath: {assetInfo.AssetPath}";
         }
 
         /// <summary>

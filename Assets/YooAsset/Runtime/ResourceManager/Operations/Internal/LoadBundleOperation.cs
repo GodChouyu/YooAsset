@@ -20,7 +20,7 @@ namespace YooAsset
         private readonly ResourceManager _resourceManager;
         private readonly List<ProviderBase> _providers = new List<ProviderBase>(100);
         private readonly List<ProviderBase> _removeList = new List<ProviderBase>(100);
-        private FSLoadBundleOperation _loadBundleOp;
+        private FSLoadPackageBundleOperation _loadPackageBundleOp;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
@@ -39,20 +39,9 @@ namespace YooAsset
         public int RefCount { private set; get; } = 0;
 
         /// <summary>
-        /// 下载进度
+        /// 资源包句柄
         /// </summary>
-        public float DownloadProgress { set; get; } = 0;
-
-        /// <summary>
-        /// 下载大小
-        /// </summary>
-        public long DownloadedBytes { set; get; } = 0;
-
-        /// <summary>
-        /// 加载结果
-        /// </summary>
-        public IBundleResult Result { set; get; }
-
+        public IBundleHandle BundleHandle { set; get; }
 
         internal LoadBundleOperation(ResourceManager resourceManager, BundleInfo bundleInfo)
         {
@@ -84,36 +73,34 @@ namespace YooAsset
 
             if (_steps == ESteps.LoadBundleFile)
             {
-                if (_loadBundleOp == null)
+                if (_loadPackageBundleOp == null)
                 {
                     // 统计计数增加
                     _resourceManager.IncrementBundleLoadingCounter();
-                    _loadBundleOp = LoadBundleInfo.CreateBundleLoader();
-                    _loadBundleOp.StartOperation();
-                    AddChildOperation(_loadBundleOp);
+                    _loadPackageBundleOp = LoadBundleInfo.CreateBundleLoader();
+                    _loadPackageBundleOp.StartOperation();
+                    AddChildOperation(_loadPackageBundleOp);
                 }
 
                 if (IsWaitForCompletion)
-                    _loadBundleOp.WaitForCompletion();
+                    _loadPackageBundleOp.WaitForCompletion();
 
-                _loadBundleOp.UpdateOperation();
-                DownloadProgress = _loadBundleOp.DownloadProgress;
-                DownloadedBytes = _loadBundleOp.DownloadedBytes;
-                if (_loadBundleOp.IsDone == false)
+                _loadPackageBundleOp.UpdateOperation();
+                if (_loadPackageBundleOp.IsDone == false)
                     return;
 
-                if (_loadBundleOp.Status == EOperationStatus.Succeeded)
+                if (_loadPackageBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadBundleOp.Result == null)
+                    if (_loadPackageBundleOp.BundleHandle == null)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"The bundle loader result is null. Bundle: {LoadBundleInfo.Bundle.BundleName}";
+                        Error = $"The bundle handle is null. Bundle: {LoadBundleInfo.Bundle.BundleName}";
                     }
                     else
                     {
                         _steps = ESteps.Done;
-                        Result = _loadBundleOp.Result;
+                        BundleHandle = _loadPackageBundleOp.BundleHandle;
                         Status = EOperationStatus.Succeeded;
                     }
                 }
@@ -121,7 +108,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _loadBundleOp.Error;
+                    Error = _loadPackageBundleOp.Error;
                 }
 
                 // 统计计数减少
@@ -134,7 +121,7 @@ namespace YooAsset
         }
         internal override string InternalGetDescription()
         {
-            return $"BundleName : {LoadBundleInfo.Bundle.BundleName}";
+            return $"BundleName: {LoadBundleInfo.Bundle.BundleName}";
         }
 
         /// <summary>
@@ -167,8 +154,8 @@ namespace YooAsset
             if (RefCount > 0)
                 throw new YooInternalException($"Cannot destroy loader with non-zero ref count {RefCount}: {LoadBundleInfo.Bundle.BundleName}");
 
-            if (Result != null)
-                Result.UnloadBundleFile();
+            if (BundleHandle != null)
+                BundleHandle.UnloadBundleFile();
 
             if (IsDone == false)
             {
@@ -277,8 +264,8 @@ namespace YooAsset
                 if (_steps == ESteps.LoadBundleFile)
                 {
                     // 注意：终止下载器
-                    if (_loadBundleOp != null)
-                        _loadBundleOp.AbortDownloadFile = true;
+                    if (_loadPackageBundleOp != null)
+                        _loadPackageBundleOp.AbortDownloadFile = true;
                 }
             }
         }

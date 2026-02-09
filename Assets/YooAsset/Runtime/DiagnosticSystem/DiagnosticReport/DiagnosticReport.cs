@@ -34,7 +34,7 @@ namespace YooAsset
         public static DiagnosticReport Create()
         {
             var report = new DiagnosticReport();
-            report.ProtocolVersion = DiagnosticSystemDefine.ProtocolVersion;
+            report.ProtocolVersion = DiagnosticSystemConsts.ProtocolVersion;
             report.FrameCount = Time.frameCount;
             return report;
         }

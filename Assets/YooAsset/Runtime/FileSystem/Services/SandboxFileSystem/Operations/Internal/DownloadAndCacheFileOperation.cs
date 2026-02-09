@@ -18,10 +18,10 @@ namespace YooAsset
 
         private readonly SandboxFileSystem _fileSystem;
         private readonly string _tempFilePath;
-        private bool _enableResume = false;
-        private long _fileOriginLength = 0;
-        private IDownloadRequest _downloadRequest;
+        private IDownloadFileRequest _downloadFileRequest;
         private FCWriteCacheOperation _writeCacheOp;
+        private bool _enableResume;
+        private long _fileOriginLength = 0;
         private ESteps _steps = ESteps.None;
 
         internal DownloadAndCacheFileOperation(SandboxFileSystem fileSystem, PackageBundle bundle, string url) : base(bundle, url)
@@ -42,18 +42,17 @@ namespace YooAsset
             if (_steps == ESteps.CreateRequest)
             {
                 FileUtility.EnsureFileDirectory(_tempFilePath);
-
                 _enableResume = Bundle.FileSize >= _fileSystem.ResumeDownloadMinimumSize;
                 if (_enableResume)
                 {
-                    _downloadRequest = CreateResumeRequest();
-                    _downloadRequest.SendRequest();
+                    _downloadFileRequest = CreateResumeRequest();
+                    _downloadFileRequest.SendRequest();
                     _steps = ESteps.CheckRequest;
                 }
                 else
                 {
-                    _downloadRequest = CreateNormalRequest();
-                    _downloadRequest.SendRequest();
+                    _downloadFileRequest = CreateNormalRequest();
+                    _downloadFileRequest.SendRequest();
                     _steps = ESteps.CheckRequest;
                 }
             }
@@ -61,14 +60,28 @@ namespace YooAsset
             // 检测下载结果
             if (_steps == ESteps.CheckRequest)
             {
-                DownloadProgress = _downloadRequest.DownloadProgress;
-                DownloadedBytes = _fileOriginLength + _downloadRequest.DownloadedBytes;
-                Progress = DownloadProgress;
-                if (_downloadRequest.IsDone == false)
+                bool isDone = _downloadFileRequest.IsDone;
+                if (_enableResume)
+                {
+                    Report.DownloadedBytes = _fileOriginLength + _downloadFileRequest.DownloadedBytes;
+                    Report.DownloadProgress = (float)((double)Report.DownloadedBytes / Bundle.FileSize);
+                    Progress = Report.DownloadProgress;
+                }
+                else
+                {
+                    Report.DownloadedBytes = _downloadFileRequest.DownloadedBytes;
+                    Report.DownloadProgress = _downloadFileRequest.DownloadProgress;
+                    Progress = Report.DownloadProgress;
+                }
+                if (isDone == false)
                     return;
 
+                // 更新下载报告
+                Report.HttpCode = _downloadFileRequest.HttpCode;
+                Report.HttpError = _downloadFileRequest.HttpError;
+
                 // 检查网络错误
-                if (_downloadRequest.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadFileRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
                     _steps = ESteps.CacheFile;
                 }
@@ -76,12 +89,19 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _downloadRequest.Error;
-                }
+                    Error = _downloadFileRequest.Error;
 
-                // 在遇到特殊错误的时候删除文件
-                if (_enableResume)
-                    ClearTempFileWhenError(_downloadRequest.HttpCode);
+                    if (_enableResume)
+                    {
+                        // 注意: HTTP 416 Range Not Satisfiable 表示服务器无法满足客户端在 Range 请求头中指定的字节范围请求。
+                        if (_downloadFileRequest.HttpCode == 416)
+                            DeleteTempFile();
+                    }
+                    else
+                    {
+                        DeleteTempFile();
+                    }
+                }
             }
 
             // 缓存文件
@@ -114,28 +134,28 @@ namespace YooAsset
                 }
 
                 // 注意：缓存完成后直接删除临时文件
-                if (File.Exists(_tempFilePath))
-                    File.Delete(_tempFilePath);
+                DeleteTempFile();
             }
         }
         internal override void InternalDispose()
         {
-            if (_downloadRequest != null)
+            if (_downloadFileRequest != null)
             {
-                _downloadRequest.Dispose();
-                _downloadRequest = null;
+                _downloadFileRequest.Dispose();
+                _downloadFileRequest = null;
             }
         }
         internal override void InternalWaitForCompletion()
         {
             if (_steps != ESteps.Done)
             {
-                // 注意：不中断下载任务，保持后台继续下载
-                YooLogger.Error($"Try load bundle {Bundle.BundleName} from remote : {Url}");
+                // 注意：不中断下载任务，保持下载后台继续下载
+                // 注意：上层异步操作会被动失败
+                YooLogger.Error($"Attempting to load bundle {Bundle.BundleName} from remote: {Url}");
             }
         }
 
-        private IDownloadRequest CreateResumeRequest()
+        private IDownloadFileRequest CreateResumeRequest()
         {
             // 获取下载起始位置
             if (File.Exists(_tempFilePath))
@@ -143,7 +163,7 @@ namespace YooAsset
                 FileInfo fileInfo = new FileInfo(_tempFilePath);
                 if (fileInfo.Length >= Bundle.FileSize)
                 {
-                    File.Delete(_tempFilePath);
+                    DeleteTempFile();
                 }
                 else
                 {
@@ -151,7 +171,7 @@ namespace YooAsset
                 }
             }
 
-            int watchdogTime = _fileSystem.DownloadWatchDogTimeout;
+            int watchdogTime = _fileSystem.DownloadWatchdogTimeout;
             int timeout = 0; //注意：文件下载不做超时检测
             bool appendToFile = true;
             bool removeFileOnAbort = false;
@@ -159,28 +179,19 @@ namespace YooAsset
             var args = new DownloadFileRequestArgs(Url, _tempFilePath, timeout, watchdogTime, appendToFile, removeFileOnAbort, resumeOffset);
             return _fileSystem.DownloadBackend.CreateFileRequest(args);
         }
-        private IDownloadRequest CreateNormalRequest()
+        private IDownloadFileRequest CreateNormalRequest()
         {
-            // 删除历史缓存文件
-            if (File.Exists(_tempFilePath))
-                File.Delete(_tempFilePath);
+            DeleteTempFile();
 
-            int watchdogTime = _fileSystem.DownloadWatchDogTimeout;
+            int watchdogTime = _fileSystem.DownloadWatchdogTimeout;
             int timeout = 0; //注意：文件下载不做超时检测
             var args = new DownloadFileRequestArgs(Url, _tempFilePath, timeout, watchdogTime);
             return _fileSystem.DownloadBackend.CreateFileRequest(args);
         }
-        private void ClearTempFileWhenError(long httpCode)
+        private void DeleteTempFile()
         {
-            if (_fileSystem.ResumeDownloadResponseCodes == null)
-                return;
-
-            //说明：如果遇到以下错误返回码，验证失败直接删除文件
-            if (_fileSystem.ResumeDownloadResponseCodes.Contains(httpCode))
-            {
-                if (File.Exists(_tempFilePath))
-                    File.Delete(_tempFilePath);
-            }
+            if (File.Exists(_tempFilePath))
+                File.Delete(_tempFilePath);
         }
     }
 }

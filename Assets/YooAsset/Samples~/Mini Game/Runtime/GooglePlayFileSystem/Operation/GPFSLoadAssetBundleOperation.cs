@@ -67,7 +67,7 @@ internal class GPFSLoadAssetBundleOperation : FSLoadBundleOperation
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeed;
-                Result = new AssetBundleResult(_fileSystem, _bundle, _bundleRequest.AssetBundle, null);
+                Result = new AssetBundleHandle(_fileSystem, _bundle, _bundleRequest.AssetBundle, null);
             }
         }
     }

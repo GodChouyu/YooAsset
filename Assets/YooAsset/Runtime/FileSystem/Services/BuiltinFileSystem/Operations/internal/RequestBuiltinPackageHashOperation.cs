@@ -2,6 +2,9 @@ using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 请求内置包裹哈希操作
+    /// </summary>
     internal class RequestBuiltinPackageHashOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -15,13 +18,13 @@ namespace YooAsset
 
         private readonly BuiltinFileSystem _fileSystem;
         private readonly string _packageVersion;
-        private IDownloadTextRequest _webTextRequestOp;
+        private IDownloadTextRequest _downloadTextRequest;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹哈希值
         /// </summary>
-        public string PackageHash { private set; get; }
+        public string PackageHash { get; private set; }
 
 
         internal RequestBuiltinPackageHashOperation(BuiltinFileSystem fileSystem, string packageVersion)
@@ -54,38 +57,38 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestPackageHash)
             {
-                if (_webTextRequestOp == null)
+                if (_downloadTextRequest == null)
                 {
                     string filePath = _fileSystem.GetBuiltinPackageHashFilePath(_packageVersion);
                     string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, 60, 0);
-                    _webTextRequestOp = _fileSystem.DownloadBackend.CreateTextRequest(args);
-                    _webTextRequestOp.SendRequest();
+                    _downloadTextRequest = _fileSystem.DownloadBackend.CreateTextRequest(args);
+                    _downloadTextRequest.SendRequest();
                 }
 
-                if (_webTextRequestOp.IsDone == false)
+                if (_downloadTextRequest.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadTextRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    PackageHash = _webTextRequestOp.Result;
+                    PackageHash = _downloadTextRequest.Result;
                     _steps = ESteps.CheckResult;
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webTextRequestOp.Error;
+                    Error = _downloadTextRequest.Error;
                 }
             }
 
             if (_steps == ESteps.CheckResult)
             {
-                if (string.IsNullOrEmpty(PackageHash))
+                if (TextUtility.ValidateContent(PackageHash, out string validateError) == false)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Builtin package hash file content is empty.";
+                    Error = $"Builtin package hash file validate failed: {validateError}";
                 }
                 else
                 {
@@ -96,10 +99,10 @@ namespace YooAsset
         }
         internal override void InternalDispose()
         {
-            if (_webTextRequestOp != null)
+            if (_downloadTextRequest != null)
             {
-                _webTextRequestOp.Dispose();
-                _webTextRequestOp = null;
+                _downloadTextRequest.Dispose();
+                _downloadTextRequest = null;
             }
         }
     }

@@ -6,16 +6,16 @@ namespace YooAsset
     /// </summary>
     internal sealed class AssetProvider : ProviderBase
     {
-        private FSLoadAssetOperation _loadAssetOp;
+        private BHLoadAssetOperation _loadAssetOp;
 
         public AssetProvider(ResourceManager manager, string providerGUID, AssetInfo assetInfo) : base(manager, providerGUID, assetInfo)
         {
         }
-        protected override void ProcessBundleResult()
+        protected override void ProcessBundleHandle()
         {
             if (_loadAssetOp == null)
             {
-                _loadAssetOp = LoadedBundleResult.LoadAssetAsync(MainAssetInfo);
+                _loadAssetOp = LoadedBundleHandle.LoadAssetAsync(MainAssetInfo);
                 _loadAssetOp.StartOperation();
                 AddChildOperation(_loadAssetOp);
 

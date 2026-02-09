@@ -9,7 +9,7 @@ namespace YooAsset
     /// <remarks>
     /// 管理所有活跃的下载任务，控制并发数量。
     /// </remarks>
-    internal class DownloadSchedulerOperation : AsyncOperationBase, IDisposable
+    internal class DownloadSchedulerOperation : AsyncOperationBase
     {
         public struct SchedulerConfig
         {
@@ -44,9 +44,6 @@ namespace YooAsset
             }
         }
 
-        /// <summary>
-        /// 构造下载中心
-        /// </summary>
         public DownloadSchedulerOperation(SchedulerConfig config)
         {
             _config = config;
@@ -123,19 +120,6 @@ namespace YooAsset
         internal override string InternalGetDescription()
         {
             return _config.SchedulerName;
-        }
-
-        /// <summary>
-        /// 释放下载资源
-        /// </summary>
-        public void Dispose()
-        {
-            foreach (var valuePair in _downloaders)
-            {
-                var operation = valuePair.Value;
-                operation.AbortOperation();
-            }
-            _downloaders.Clear();
         }
 
         /// <summary>

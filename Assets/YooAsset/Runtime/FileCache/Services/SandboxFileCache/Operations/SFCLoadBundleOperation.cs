@@ -78,12 +78,12 @@ namespace YooAsset
 
                 if (_loadLocalAssetBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadLocalAssetBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded asset bundle result is null.");
+                    if (_loadLocalAssetBundleOp.BundleHandle == null)
+                        throw new YooInternalException("Loaded asset bundle handle is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = _loadLocalAssetBundleOp.BundleResult;
+                    BundleHandle = _loadLocalAssetBundleOp.BundleHandle;
                 }
                 else
                 {
@@ -173,7 +173,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = new AssetBundleResult(_cacheEntry.DataFilePath, _bundle, assetBundle, null);
+                    BundleHandle = new AssetBundleHandle(_cacheEntry.DataFilePath, _bundle, assetBundle, null);
                 }
             }
         }
@@ -269,12 +269,12 @@ namespace YooAsset
 
                 if (_loadLocalRawBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadLocalRawBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded raw bundle result is null.");
+                    if (_loadLocalRawBundleOp.BundleHandle == null)
+                        throw new YooInternalException("Loaded raw bundle handle is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = _loadLocalRawBundleOp.BundleResult;
+                    BundleHandle = _loadLocalRawBundleOp.BundleHandle;
                 }
                 else
                 {
@@ -289,4 +289,26 @@ namespace YooAsset
             ExecuteBatch();
         }
     }
+
+#if TUANJIE_1_7_OR_NEWER
+    internal class SFCLoadInstantBundleOperation : FCLoadBundleOperation
+    {
+        private enum ESteps
+        {
+            None,
+            GetEntry,
+            LoadBundle,
+            Done,
+        }
+
+        internal override void InternalStart()
+        {
+            throw new NotImplementedException();
+        }
+        internal override void InternalUpdate()
+        {
+            throw new NotImplementedException();
+        }
+    }
+#endif
 }

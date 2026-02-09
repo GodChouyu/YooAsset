@@ -16,9 +16,9 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 处理资源包加载结果（空实现）
+        /// 处理资源包句柄（空实现）
         /// </summary>
-        protected override void ProcessBundleResult()
+        protected override void ProcessBundleHandle()
         {
         }
 

@@ -55,16 +55,6 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 获取下载报告
-        /// </summary>
-        public DownloadStatus GetDownloadStatus()
-        {
-            if (IsValidWithWarning == false)
-                return DownloadStatus.CreateDefault();
-            return Provider.GetDownloadStatus();
-        }
-
-        /// <summary>
         /// 当前状态
         /// </summary>
         public EOperationStatus Status

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using YooAsset;
 
@@ -121,9 +121,9 @@ public class DestroyOperation : AsyncOperationBase
 public class UpdatePackageManifestOperation : AsyncOperationBase
 {
     private bool _isDone = false;
-    private readonly LoadManifestOperation _operation;
+    private readonly LoadPackageManifestOperation _operation;
 
-    internal UpdatePackageManifestOperation(LoadManifestOperation op)
+    internal UpdatePackageManifestOperation(LoadPackageManifestOperation op)
     {
         _operation = op;
     }
@@ -247,10 +247,10 @@ public static class CompatibleResourcePackage
     /// <summary>
     /// 兼容Yoo2版本
     /// </summary>
-    public static RequestVersionOperation RequestPackageVersionAsync(this ResourcePackage package, bool appendTimeTicks = true, int timeout = 60)
+    public static RequestPackageVersionOperation RequestPackageVersionAsync(this ResourcePackage package, bool appendTimeTicks = true, int timeout = 60)
     {
-        var options = new RequestVersionOptions(appendTimeTicks, timeout);
-        return package.RequestVersionAsync(options);
+        var options = new RequestPackageVersionOptions(appendTimeTicks, timeout);
+        return package.RequestPackageVersionAsync(options);
     }
 
     /// <summary>
@@ -258,8 +258,8 @@ public static class CompatibleResourcePackage
     /// </summary>
     public static UpdatePackageManifestOperation UpdatePackageManifestAsync(this ResourcePackage package, string packageVersion, int timeout = 60)
     {
-        var options = new LoadManifestOptions(packageVersion, timeout);
-        var operation = package.LoadManifestAsync(options);
+        var options = new LoadPackageManifestOptions(packageVersion, timeout);
+        var operation = package.LoadPackageManifestAsync(options);
         var wrapper = new UpdatePackageManifestOperation(operation);
         AsyncOperationSystem.StartOperation(package.PackageName, wrapper);
         return wrapper;
@@ -268,10 +268,10 @@ public static class CompatibleResourcePackage
     /// <summary>
     /// 兼容Yoo2版本
     /// </summary>
-    public static PreDownloaderOperation PreDownloadContentAsync(this ResourcePackage package, string packageVersion, int timeout = 60)
+    public static PrefetchManifestOperation PreDownloadContentAsync(this ResourcePackage package, string packageVersion, int timeout = 60)
     {
-        var options = new PreDownloaderOptions(packageVersion, timeout);
-        return package.PreDownloaderAsync(options);
+        var options = new PrefetchManifestOptions(packageVersion, timeout);
+        return package.PrefetchManifestAsync(options);
     }
 
     /// <summary>

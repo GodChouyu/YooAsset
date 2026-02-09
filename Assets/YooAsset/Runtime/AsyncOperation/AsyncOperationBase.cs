@@ -358,7 +358,7 @@ namespace YooAsset
                 }
                 catch (Exception ex)
                 {
-                    YooLogger.Error($"Exception in inoke callback: {ex}");
+                    YooLogger.Error($"Exception in invoke callback: {ex}");
                 }
             }
         }

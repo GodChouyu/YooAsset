@@ -1,16 +1,19 @@
-﻿
+
 namespace YooAsset
 {
+    /// <summary>
+    /// 编辑器文件系统的初始化操作
+    /// </summary>
     internal class EFSInitializeOperation : FSInitializeOperation
     {
         private enum ESteps
         {
             None,
+            CheckPlatform,
             InitializeFileCache,
             CreateScheduler,
             Done,
         }
-
 
         private readonly EditorFileSystem _fileSystem;
         private FCInitializeOperation _initializeFileCacheOp;
@@ -22,10 +25,24 @@ namespace YooAsset
         }
         internal override void InternalStart()
         {
-            _steps = ESteps.InitializeFileCache;
+            _steps = ESteps.CheckPlatform;
         }
         internal override void InternalUpdate()
         {
+            if (_steps == ESteps.None || _steps == ESteps.Done)
+                return;
+
+            if (_steps == ESteps.CheckPlatform)
+            {
+#if !UNITY_EDITOR
+                _steps = ESteps.Done;
+                Status = EOperationStatus.Failed;
+                Error = $"{nameof(EditorFileSystem)} only support the Unity Editor.";
+#else
+                _steps = ESteps.InitializeFileCache;
+#endif
+            }
+
             if (_steps == ESteps.InitializeFileCache)
             {
                 if (_initializeFileCacheOp == null)

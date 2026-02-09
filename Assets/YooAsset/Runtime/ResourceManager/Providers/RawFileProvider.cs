@@ -9,7 +9,7 @@ namespace YooAsset
         public RawFileProvider(ResourceManager manager, string providerGUID, AssetInfo assetInfo) : base(manager, providerGUID, assetInfo)
         {
         }
-        protected override void ProcessBundleResult()
+        protected override void ProcessBundleHandle()
         {
             InvokeCompletion(string.Empty, EOperationStatus.Succeeded);
         }

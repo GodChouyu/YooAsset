@@ -149,7 +149,7 @@ namespace YooAsset
                 foreach (var downloader in _downloaders)
                 {
                     downloader.UpdateOperation();
-                    downloadBytes += downloader.DownloadedBytes;
+                    downloadBytes += downloader.Report.DownloadedBytes;
                     if (downloader.IsDone == false)
                         continue;
 
@@ -164,7 +164,7 @@ namespace YooAsset
                     // 下载成功
                     _removeList.Add(downloader);
                     _completedDownloadCount++;
-                    _completedDownloadBytes += downloader.DownloadedBytes;
+                    _completedDownloadBytes += downloader.Report.DownloadedBytes;
                 }
 
                 // 移除已经完成的下载器（无论成功或失败）
@@ -238,7 +238,7 @@ namespace YooAsset
                     string bundleName = failedDownloader.Bundle.BundleName;
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Failed to download file : {bundleName}";
+                    Error = $"Failed to download file: {bundleName}";
 
                     if (DownloadErrorHandler != null)
                     {
@@ -381,7 +381,7 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = "User cancel.";
+                Error = "Cancelled by user.";
 
                 foreach (var downloader in _downloaders)
                 {

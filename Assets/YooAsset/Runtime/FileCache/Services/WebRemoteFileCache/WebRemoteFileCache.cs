@@ -42,6 +42,16 @@ namespace YooAsset
             /// 下载后台接口
             /// </summary>
             public IDownloadBackend DownloadBackend { get; set; }
+
+            /// <summary>
+            /// 下载重试判定策略
+            /// </summary>
+            public IDownloadRetryPolicy RetryPolicy { get; set; }
+
+            /// <summary>
+            /// URL 选择策略
+            /// </summary>
+            public IDownloadURLPolicy URLPolicy { get; set; }
         }
 
         private readonly Dictionary<string, WebRemoteFileCacheEntry> _cacheEntries = new Dictionary<string, WebRemoteFileCacheEntry>(10000);
@@ -111,7 +121,7 @@ namespace YooAsset
             var operation = new FCWriteCacheCompleteOperation($"{nameof(WebRemoteFileCache)} is readonly.");
             return operation;
         }
-        public virtual FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options)
         {
             var operation = new FCClearCacheCompleteOperation($"{nameof(WebRemoteFileCache)} is readonly.");
             return operation;
@@ -130,7 +140,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(WebRemoteFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(WebRemoteFileCache)} does not support bundle type: {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -152,9 +162,8 @@ namespace YooAsset
             }
             else
             {
-                string mainURL = Config.RemoteServices.GetRemoteMainURL(bundle.FileName);
-                string fallbackURL = Config.RemoteServices.GetRemoteFallbackURL(bundle.FileName);
-                var newEntry = new WebRemoteFileCacheEntry(bundle.BundleGUID, mainURL, fallbackURL);
+                var urls = Config.RemoteServices.GetRemoteURLs(bundle.FileName);
+                var newEntry = new WebRemoteFileCacheEntry(bundle.BundleGUID, urls);
                 _cacheEntries.Add(bundle.BundleGUID, newEntry);
                 return newEntry;
             }

@@ -1,7 +1,10 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载缓存包裹哈希文件操作
+    /// </summary>
     internal class LoadCachePackageHashOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -18,7 +21,7 @@ namespace YooAsset
         /// <summary>
         /// 包裹哈希值
         /// </summary>
-        public string PackageHash { private set; get; }
+        public string PackageHash { get; private set; }
 
 
         internal LoadCachePackageHashOperation(SandboxFileSystem fileSystem, string packageVersion)
@@ -42,16 +45,16 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Can not found cache package hash file : {filePath}";
+                    Error = $"Cannot find cache package hash file: {filePath}";
                     return;
                 }
 
                 PackageHash = FileUtility.ReadAllText(filePath);
-                if (string.IsNullOrEmpty(PackageHash))
+                if (TextUtility.ValidateContent(PackageHash, out string validateError) == false)
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Cache package hash file content is empty.";
+                    Error = $"Cache package hash file validate failed: {validateError}";
                 }
                 else
                 {

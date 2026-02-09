@@ -1,6 +1,9 @@
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 请求Web服务端包裹哈希操作
+    /// </summary>
     internal class RequestWebServerPackageHashOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -13,13 +16,13 @@ namespace YooAsset
         private readonly WebServerFileSystem _fileSystem;
         private readonly string _packageVersion;
         private readonly int _timeout;
-        private IDownloadTextRequest _webTextRequestOp;
+        private IDownloadTextRequest _downloadTextRequest;
         private ESteps _steps = ESteps.None;
 
         /// <summary>
         /// 包裹哈希值
         /// </summary>
-        public string PackageHash { private set; get; }
+        public string PackageHash { get; private set; }
 
 
         public RequestWebServerPackageHashOperation(WebServerFileSystem fileSystem, string packageVersion, int timeout)
@@ -39,27 +42,27 @@ namespace YooAsset
 
             if (_steps == ESteps.RequestPackageHash)
             {
-                if (_webTextRequestOp == null)
+                if (_downloadTextRequest == null)
                 {
                     string filePath = _fileSystem.GetWebPackageHashFilePath(_packageVersion);
                     string url = DownloadSystemTools.ToLocalUrl(filePath);
                     var args = new DownloadDataRequestArgs(url, _timeout, 0);
-                    _webTextRequestOp = _fileSystem.DownloadBackend.CreateTextRequest(args);
-                    _webTextRequestOp.SendRequest();
+                    _downloadTextRequest = _fileSystem.DownloadBackend.CreateTextRequest(args);
+                    _downloadTextRequest.SendRequest();
                 }
 
-                Progress = _webTextRequestOp.DownloadProgress;
-                if (_webTextRequestOp.IsDone == false)
+                Progress = _downloadTextRequest.DownloadProgress;
+                if (_downloadTextRequest.IsDone == false)
                     return;
 
-                if (_webTextRequestOp.Status == EDownloadRequestStatus.Succeeded)
+                if (_downloadTextRequest.Status == EDownloadRequestStatus.Succeeded)
                 {
-                    PackageHash = _webTextRequestOp.Result;
-                    if (string.IsNullOrEmpty(PackageHash))
+                    PackageHash = _downloadTextRequest.Result;
+                    if (TextUtility.ValidateContent(PackageHash, out string validateError) == false)
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Failed;
-                        Error = $"Web server package hash file content is empty.";
+                        Error = $"Web server package hash file validate failed: {validateError}";
                     }
                     else
                     {
@@ -71,16 +74,16 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = _webTextRequestOp.Error;
+                    Error = _downloadTextRequest.Error;
                 }
             }
         }
         internal override void InternalDispose()
         {
-            if (_webTextRequestOp != null)
+            if (_downloadTextRequest != null)
             {
-                _webTextRequestOp.Dispose();
-                _webTextRequestOp = null;
+                _downloadTextRequest.Dispose();
+                _downloadTextRequest = null;
             }
         }
     }

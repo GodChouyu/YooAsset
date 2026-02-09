@@ -43,7 +43,7 @@ namespace YooAsset
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = "The file system parameters is empty.";
+                    Error = "The file system parameters are empty.";
                     return;
                 }
 

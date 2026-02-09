@@ -37,6 +37,16 @@ namespace YooAsset
             /// 下载后台
             /// </summary>
             public IDownloadBackend DownloadBackend { get; set; }
+
+            /// <summary>
+            /// 下载重试判定策略
+            /// </summary>
+            public IDownloadRetryPolicy RetryPolicy { get; set; }
+
+            /// <summary>
+            /// URL 选择策略
+            /// </summary>
+            public IDownloadURLPolicy URLPolicy { get; set; }
         }
 
         private readonly Dictionary<string, WebServerFileCacheEntry> _cacheEntries = new Dictionary<string, WebServerFileCacheEntry>(10000);
@@ -106,7 +116,7 @@ namespace YooAsset
             var operation = new FCWriteCacheCompleteOperation($"{nameof(WebServerFileCache)} is readonly.");
             return operation;
         }
-        public virtual FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options)
         {
             var operation = new FCClearCacheCompleteOperation($"{nameof(WebServerFileCache)} is readonly.");
             return operation;
@@ -125,7 +135,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(WebServerFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(WebServerFileCache)} does not support bundle type: {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -148,7 +158,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 添加指定缓存
+        /// 添加指定缓存条目
         /// </summary>
         internal void AddEntry(string bundleGUID, WebServerFileCacheEntry cacheEntry)
         {
@@ -163,7 +173,7 @@ namespace YooAsset
         /// </summary>
         internal string GetCatalogBinaryFileLoadPath()
         {
-            return PathUtility.Combine(RootPath, BuiltinCatalogDefine.BinaryFileName);
+            return PathUtility.Combine(RootPath, BuiltinCatalogConsts.BinaryFileName);
         }
         #endregion
     }

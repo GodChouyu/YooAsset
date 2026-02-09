@@ -56,7 +56,7 @@ namespace YooAsset
                 if (_maxConcurrentVerifyCount < 1)
                     _maxConcurrentVerifyCount = 1;
 
-                YooLogger.Log($"Verify max concurrency : {_maxConcurrentVerifyCount}");
+                YooLogger.Log($"Verify max concurrency: {_maxConcurrentVerifyCount}");
                 _activeVerifyList = new List<SearchFileInfo>(_maxConcurrentVerifyCount);
                 _verifyStartTime = TimeUtility.RealtimeSinceStartup;
                 _verifyTotalCount = _pendingVerifyList.Count;

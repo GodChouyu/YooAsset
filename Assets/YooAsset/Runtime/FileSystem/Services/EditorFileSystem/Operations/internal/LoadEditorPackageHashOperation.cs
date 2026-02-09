@@ -1,7 +1,10 @@
-﻿using System.IO;
+using System.IO;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 加载编辑器包裹哈希文件操作
+    /// </summary>
     internal class LoadEditorPackageHashOperation : AsyncOperationBase
     {
         private enum ESteps
@@ -18,7 +21,7 @@ namespace YooAsset
         /// <summary>
         /// 包裹哈希值
         /// </summary>
-        public string PackageHash { private set; get; }
+        public string PackageHash { get; private set; }
 
 
         internal LoadEditorPackageHashOperation(EditorFileSystem fileSystem, string packageVersion)
@@ -40,15 +43,24 @@ namespace YooAsset
                 string hashFilePath = _fileSystem.GetEditorPackageHashFilePath(_packageVersion);
                 if (File.Exists(hashFilePath))
                 {
-                    _steps = ESteps.Done;
                     PackageHash = FileUtility.ReadAllText(hashFilePath);
-                    Status = EOperationStatus.Succeeded;
+                    if (TextUtility.ValidateContent(PackageHash, out string validateError) == false)
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Failed;
+                        Error = $"Simulation package hash file validate failed: {validateError}";
+                    }
+                    else
+                    {
+                        _steps = ESteps.Done;
+                        Status = EOperationStatus.Succeeded;
+                    }
                 }
                 else
                 {
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Failed;
-                    Error = $"Can not found simulation package hash file : {hashFilePath}";
+                    Error = $"Cannot find simulation package hash file: {hashFilePath}";
                 }
             }
         }

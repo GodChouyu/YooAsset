@@ -16,7 +16,7 @@ namespace YooAsset
         {
             YooLogger.Log("Begin to create catalog file !");
 
-            string rootPath = YooAssetSettingsData.GetYooDefaultBuildinRoot();
+            string rootPath = YooAssetSettingsData.GetYooDefaultBuiltinRoot();
             DirectoryInfo rootDirectory = new DirectoryInfo(rootPath);
             if (rootDirectory.Exists == false)
             {

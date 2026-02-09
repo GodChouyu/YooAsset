@@ -10,6 +10,7 @@ namespace YooAsset
         {
             None,
             CheckCache,
+            CheckFilePath,
             LoadBundle,
             Done,
         }
@@ -17,6 +18,7 @@ namespace YooAsset
         private readonly EditorFileCache _fileCache;
         private readonly PackageBundle _bundle;
         private int _asyncSimulateFrame;
+        private string _editorFilePath;
         private ESteps _steps = ESteps.None;
 
         public EFCLoadBundleOperation(EditorFileCache fileCache, PackageBundle bundle)
@@ -44,7 +46,22 @@ namespace YooAsset
                     return;
                 }
 
-                _steps = ESteps.LoadBundle;
+                _steps = ESteps.CheckFilePath;
+            }
+
+            if (_steps == ESteps.CheckFilePath)
+            {
+                _editorFilePath = EditorFileSystemTools.GetEditorFilePath(_bundle);
+                if (string.IsNullOrEmpty(_editorFilePath))
+                {
+                    _steps = ESteps.Done;
+                    Status = EOperationStatus.Failed;
+                    Error = $"Editor file path is null. Bundle: {_bundle.BundleName}";
+                }
+                else
+                {
+                    _steps = ESteps.LoadBundle;
+                }
             }
 
             if (_steps == ESteps.LoadBundle)
@@ -61,9 +78,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Succeeded;
-
-                        string editorFilePath = EditorFileSystemTools.GetEditorFilePath(_bundle);
-                        BundleResult = new VirtualBundleResult(editorFilePath, _bundle);
+                        BundleHandle = new VirtualBundleHandle(_editorFilePath, _bundle);
                     }
                 }
                 else
@@ -73,9 +88,7 @@ namespace YooAsset
                     {
                         _steps = ESteps.Done;
                         Status = EOperationStatus.Succeeded;
-
-                        string editorFilePath = EditorFileSystemTools.GetEditorFilePath(_bundle);
-                        BundleResult = new VirtualBundleResult(editorFilePath, _bundle);
+                        BundleHandle = new VirtualBundleHandle(_editorFilePath, _bundle);
                     }
                 }
             }

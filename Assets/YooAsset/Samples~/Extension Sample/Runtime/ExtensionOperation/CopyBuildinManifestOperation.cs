@@ -22,8 +22,8 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
     private readonly string _packageName;
     private readonly string _packageVersion;
     private readonly IDownloadBackend _backend;
-    private IDownloadFileRequest _hashFileRequestOp;
-    private IDownloadFileRequest _manifestFileRequestOp;
+    private IDownloadFileRequest _hashFileRequest;
+    private IDownloadFileRequest _manifestFileRequest;
     private ESteps _steps = ESteps.None;
 
     public CopyBuildinManifestOperation(string packageName, string packageVersion)
@@ -55,20 +55,20 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
 
         if (_steps == ESteps.UnpackHashFile)
         {
-            if(_hashFileRequestOp == null)
+            if(_hashFileRequest == null)
             {
                 string sourcePath = GetBuildinHashFilePath();
                 string destPath = GetCacheHashFilePath();
                 string url = DownloadSystemTools.ToLocalUrl(sourcePath);
                 var args = new DownloadFileRequestArgs(url, destPath, 60, 0);
-                _hashFileRequestOp = _backend.CreateFileRequest(args);
-                _hashFileRequestOp.SendRequest();
+                _hashFileRequest = _backend.CreateFileRequest(args);
+                _hashFileRequest.SendRequest();
             }
 
-            if (_hashFileRequestOp.IsDone == false)
+            if (_hashFileRequest.IsDone == false)
                 return;
 
-            if (_hashFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
+            if (_hashFileRequest.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.CheckManifestFile;
             }
@@ -76,7 +76,7 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = _hashFileRequestOp.Error;
+                Error = _hashFileRequest.Error;
             }
         }
 
@@ -95,20 +95,20 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
 
         if (_steps == ESteps.UnpackManifestFile)
         {
-            if (_manifestFileRequestOp == null)
+            if (_manifestFileRequest == null)
             {
                 string sourcePath = GetBuildinManifestFilePath();
                 string destPath = GetCacheManifestFilePath();
                 string url = DownloadSystemTools.ToLocalUrl(sourcePath);
                 var args = new DownloadFileRequestArgs(url, destPath, 60, 0);
-                _manifestFileRequestOp = _backend.CreateFileRequest(args);
-                _manifestFileRequestOp.SendRequest();
+                _manifestFileRequest = _backend.CreateFileRequest(args);
+                _manifestFileRequest.SendRequest();
             }
 
-            if (_manifestFileRequestOp.IsDone == false)
+            if (_manifestFileRequest.IsDone == false)
                 return;
 
-            if (_manifestFileRequestOp.Status == EDownloadRequestStatus.Succeeded)
+            if (_manifestFileRequest.Status == EDownloadRequestStatus.Succeeded)
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Succeeded;
@@ -117,14 +117,14 @@ public class CopyBuildinManifestOperation : AsyncOperationBase
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = _manifestFileRequestOp.Error;
+                Error = _manifestFileRequest.Error;
             }
         }
     }
 
     private string GetBuildinYooRoot()
     {
-        return YooAssetSettingsData.GetYooDefaultBuildinRoot();
+        return YooAssetSettingsData.GetYooDefaultBuiltinRoot();
     }
     private string GetBuildinHashFilePath()
     {

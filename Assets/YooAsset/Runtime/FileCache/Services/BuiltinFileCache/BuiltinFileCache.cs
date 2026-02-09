@@ -96,7 +96,7 @@ namespace YooAsset
             var operation = new FCWriteCacheCompleteOperation($"{nameof(BuiltinFileCache)} is readonly.");
             return operation;
         }
-        public virtual FCClearCacheOperation ClearCacheAsync(ClearCacheOptions options)
+        public virtual FCClearCacheOperation ClearCacheAsync(FCClearCacheOptions options)
         {
             var operation = new FCClearCacheCompleteOperation($"{nameof(BuiltinFileCache)} is readonly.");
             return operation;
@@ -120,7 +120,7 @@ namespace YooAsset
             }
             else
             {
-                string error = $"{nameof(BuiltinFileCache)} not support load bundle type : {options.Bundle.BundleType}";
+                string error = $"{nameof(BuiltinFileCache)} does not support bundle type: {options.Bundle.BundleType}";
                 var operation = new FCLoadBundleErrorOperation(error);
                 return operation;
             }
@@ -132,7 +132,7 @@ namespace YooAsset
 
         #region 内部方法
         /// <summary>
-        /// 获取指定缓存
+        /// 获取指定缓存条目
         /// </summary>
         internal BuiltinFileCacheEntry GetEntry(string bundleGUID)
         {
@@ -143,7 +143,7 @@ namespace YooAsset
         }
 
         /// <summary>
-        /// 添加指定缓存
+        /// 添加指定缓存条目
         /// </summary>
         internal void AddEntry(string bundleGUID, BuiltinFileCacheEntry cacheEntry)
         {
@@ -158,7 +158,7 @@ namespace YooAsset
         /// </summary>
         internal string GetCatalogBinaryFileLoadPath()
         {
-            return PathUtility.Combine(RootPath, BuiltinCatalogDefine.BinaryFileName);
+            return PathUtility.Combine(RootPath, BuiltinCatalogConsts.BinaryFileName);
         }
         #endregion
     }

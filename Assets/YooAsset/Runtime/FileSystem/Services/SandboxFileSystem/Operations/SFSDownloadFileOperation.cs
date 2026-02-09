@@ -2,32 +2,32 @@ using UnityEngine;
 
 namespace YooAsset
 {
+    /// <summary>
+    /// 沙盒文件系统的下载文件操作
+    /// </summary>
     internal class SFSDownloadFileOperation : FSDownloadFileOperation
     {
         protected enum ESteps
         {
             None,
             CheckExists,
-            DownloadAndCache,
+            CreateDownload,
+            CheckDownload,
             TryAgain,
             Done,
         }
 
         private readonly SandboxFileSystem _fileSystem;
         private readonly FSDownloadFileOptions _options;
+        private readonly DownloadRetry _downloadRetry;
         private DownloadFileBaseOperation _downloadFileOp;
         private ESteps _steps = ESteps.None;
-
-        // 失败重试
-        private int _requestCount = 0;
-        private float _tryAgainTimer = 0;
-        private int _failedTryAgain;
 
         internal SFSDownloadFileOperation(SandboxFileSystem fileSystem, FSDownloadFileOptions options) : base(options.Bundle)
         {
             _fileSystem = fileSystem;
             _options = options;
-            _failedTryAgain = options.RetryCount;
+            _downloadRetry = new DownloadRetry(options.RetryCount, _fileSystem.DownloadRetryPolicy);
         }
         internal override void InternalStart()
         {
@@ -48,57 +48,62 @@ namespace YooAsset
                 }
                 else
                 {
-                    _steps = ESteps.DownloadAndCache;
+                    _steps = ESteps.CreateDownload;
                 }
             }
 
-            // 下载并缓存文件
-            if (_steps == ESteps.DownloadAndCache)
+            // 创建下载器
+            if (_steps == ESteps.CreateDownload)
             {
+                _downloadFileOp = _fileSystem.DownloadScheduler.TryGetDownloadFile(Bundle);
                 if (_downloadFileOp == null)
                 {
-                    _downloadFileOp = _fileSystem.DownloadScheduler.TryGetDownloadFile(Bundle);
-                    if (_downloadFileOp == null)
+                    if (string.IsNullOrEmpty(_options.ImportFilePath))
                     {
-                        if (string.IsNullOrEmpty(_options.ImportFilePath))
-                        {
-                            // 下载远端文件
-                            string mainURL = _fileSystem.RemoteServices.GetRemoteMainURL(Bundle.FileName);
-                            string fallbackURL = _fileSystem.RemoteServices.GetRemoteFallbackURL(Bundle.FileName);
-                            string url = GetRequestURL(mainURL, fallbackURL);
-                            _downloadFileOp = new DownloadAndCacheFileOperation(_fileSystem, Bundle, url);
-                            _fileSystem.DownloadScheduler.AddDownloadFile(_downloadFileOp);
-                        }
-                        else
-                        {
-                            // 导入本地文件
-                            _downloadFileOp = new ImportAndCacheFileOperation(_fileSystem, Bundle, _options.ImportFilePath);
-                            _fileSystem.DownloadScheduler.AddDownloadFile(_downloadFileOp);
-                        }
+                        // 下载远端文件
+                        string url = GetRequestURL(Bundle.FileName);
+                        _downloadFileOp = new DownloadAndCacheFileOperation(_fileSystem, Bundle, url);
+                        _fileSystem.DownloadScheduler.AddDownloadFile(_downloadFileOp);
+                    }
+                    else
+                    {
+                        // 导入本地文件
+                        _downloadFileOp = new ImportAndCacheFileOperation(_fileSystem, Bundle, _options.ImportFilePath);
+                        _fileSystem.DownloadScheduler.AddDownloadFile(_downloadFileOp);
                     }
                 }
 
+                _steps = ESteps.CheckDownload;
+            }
+
+            // 检测结果
+            if (_steps == ESteps.CheckDownload)
+            {
                 if (IsWaitForCompletion)
                     _downloadFileOp.WaitForCompletion();
 
                 _downloadFileOp.UpdateOperation();
                 Progress = _downloadFileOp.Progress;
-                DownloadedBytes = _downloadFileOp.DownloadedBytes;
-                DownloadProgress = _downloadFileOp.DownloadProgress;
+                Report = _downloadFileOp.Report;
                 if (_downloadFileOp.IsDone == false)
                     return;
 
                 if (_downloadFileOp.Status == EOperationStatus.Succeeded)
                 {
+                    _fileSystem.DownloadURLPolicy.OnSuccess(_downloadFileOp.Url);
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
                 }
                 else
                 {
-                    if (IsWaitForCompletion == false && _failedTryAgain > 0)
+                    string url = _downloadFileOp.Url;
+                    long httpCode = _downloadFileOp.Report.HttpCode;
+                    string httpError = _downloadFileOp.Report.HttpError;
+                    _fileSystem.DownloadURLPolicy.OnFailure(url, httpCode, httpError);
+                    if (IsWaitForCompletion == false && _downloadRetry.CanRetry(url, httpCode, httpError))
                     {
+                        _downloadRetry.BeginWait();
                         _steps = ESteps.TryAgain;
-                        YooLogger.Warning($"Failed download : {_downloadFileOp.Url} Try again.");
                     }
                     else
                     {
@@ -113,15 +118,11 @@ namespace YooAsset
             // 重新尝试下载
             if (_steps == ESteps.TryAgain)
             {
-                _tryAgainTimer += Time.unscaledDeltaTime;
-                if (_tryAgainTimer > 1f)
+                if (_downloadRetry.Tick())
                 {
-                    _tryAgainTimer = 0f;
-                    _failedTryAgain--;
                     Progress = 0f;
-                    DownloadProgress = 0f;
-                    DownloadedBytes = 0;
-                    _steps = ESteps.DownloadAndCache;
+                    Report = DownloadReport.Default;
+                    _steps = ESteps.CreateDownload;
                 }
             }
         }
@@ -144,14 +145,10 @@ namespace YooAsset
         /// <summary>
         /// 获取网络请求地址
         /// </summary>
-        private string GetRequestURL(string mainURL, string fallbackURL)
+        private string GetRequestURL(string fileName)
         {
-            // 轮流返回请求地址
-            _requestCount++;
-            if (_requestCount % 2 == 0)
-                return fallbackURL;
-            else
-                return mainURL;
+            var urls = _fileSystem.RemoteServices.GetRemoteURLs(fileName);
+            return _fileSystem.DownloadURLPolicy.SelectURL(urls);
         }
     }
 }

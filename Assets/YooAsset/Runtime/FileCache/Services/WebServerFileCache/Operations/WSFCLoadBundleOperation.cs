@@ -57,13 +57,14 @@ namespace YooAsset
                     var options = new LoadWebAssetBundleOptions();
                     options.CacheName = _fileCache.GetType().Name;
                     options.Bundle = _options.Bundle;
-                    options.MainURL = url;
-                    options.FallbackURL = url;
+                    options.CandidateURLs = new[] { url };
                     options.AssetBundleDecryptor = _fileCache.Config.AssetBundleDecryptor;
                     options.DownloadBackend = _fileCache.Config.DownloadBackend;
                     options.DownloadVerifyLevel = _fileCache.Config.DownloadVerifyLevel;
                     options.WatchdogTimeout = _fileCache.Config.WatchdogTimeout;
                     options.DisableUnityWebCache = _fileCache.Config.DisableUnityWebCache;
+                    options.RetryPolicy = _fileCache.Config.RetryPolicy;
+                    options.URLPolicy = _fileCache.Config.URLPolicy;
 
                     if (_options.Bundle.IsEncrypted)
                         _loadWebAssetBundleOp = new LoadWebEncryptedAssetBundleOperation(options);
@@ -80,12 +81,12 @@ namespace YooAsset
 
                 if (_loadWebAssetBundleOp.Status == EOperationStatus.Succeeded)
                 {
-                    if (_loadWebAssetBundleOp.BundleResult == null)
-                        throw new YooInternalException("Loaded bundle result is null.");
+                    if (_loadWebAssetBundleOp.BundleHandle == null)
+                        throw new YooInternalException("Loaded bundle handle is null.");
 
                     _steps = ESteps.Done;
                     Status = EOperationStatus.Succeeded;
-                    BundleResult = _loadWebAssetBundleOp.BundleResult;
+                    BundleHandle = _loadWebAssetBundleOp.BundleHandle;
                 }
                 else
                 {
@@ -101,7 +102,7 @@ namespace YooAsset
             {
                 _steps = ESteps.Done;
                 Status = EOperationStatus.Failed;
-                Error = $"{nameof(WebServerFileCache)} not support sync load asset bundle.";
+                Error = $"{nameof(WebServerFileCache)} does not support synchronous asset bundle loading.";
                 YooLogger.Error(Error);
             }
         }

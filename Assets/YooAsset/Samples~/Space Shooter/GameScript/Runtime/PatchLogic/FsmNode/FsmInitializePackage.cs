@@ -44,9 +44,9 @@ internal class FsmInitializePackage : IStateNode
             var packageRoot = buildResult.PackageRootDirectory;
             var createParameters = new EditorSimulateModeParameters();
             createParameters.EditorFileSystemParameters = FileSystemParameters.CreateDefaultEditorFileSystemParameters(packageRoot);
-            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_WEBGL_MODE, true);
-            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_DOWNLOAD_MODE, true);
-            createParameters.EditorFileSystemParameters.AddParameter(FileSystemParametersDefine.VIRTUAL_DOWNLOAD_SPEED, 1024 * 1000);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemConsts.VIRTUAL_WEBGL_MODE, true);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemConsts.VIRTUAL_DOWNLOAD_MODE, true);
+            createParameters.EditorFileSystemParameters.AddParameter(FileSystemConsts.VIRTUAL_DOWNLOAD_SPEED, 1024 * 1000);
             initializationOperation = package.InitializeAsync(createParameters);
         }
 
@@ -54,7 +54,7 @@ internal class FsmInitializePackage : IStateNode
         if (playMode == EPlayMode.OfflinePlayMode)
         {
             var createParameters = new OfflinePlayModeParameters();
-            createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters();
+            createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();
             initializationOperation = package.InitializeAsync(createParameters);
         }
 
@@ -65,12 +65,12 @@ internal class FsmInitializePackage : IStateNode
             string fallbackHostServer = GetHostServerURL();
             IRemoteServices remoteServices = new RemoteServices(defaultHostServer, fallbackHostServer);
             var createParameters = new HostPlayModeParameters();
-            createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuildinFileSystemParameters();
-            createParameters.BuildinFileSystemParameters.AddParameter(FileSystemParametersDefine.COPY_BUILDIN_PACKAGE_MANIFEST, true);
-            createParameters.CacheFileSystemParameters = FileSystemParameters.CreateDefaultCacheFileSystemParameters(remoteServices);
-            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_CONCURRENCY, 5);
-            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_MAX_REQUEST_PER_FRAME, 1);
-            createParameters.CacheFileSystemParameters.AddParameter(FileSystemParametersDefine.DOWNLOAD_WATCH_DOG_TIME, 10);
+            createParameters.BuildinFileSystemParameters = FileSystemParameters.CreateDefaultBuiltinFileSystemParameters();
+            createParameters.BuildinFileSystemParameters.AddParameter(FileSystemConsts.COPY_BUILTIN_PACKAGE_MANIFEST, true);
+            createParameters.CacheFileSystemParameters = FileSystemParameters.CreateDefaultSandboxFileSystemParameters(remoteServices);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemConsts.DOWNLOAD_MAX_CONCURRENCY, 5);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemConsts.DOWNLOAD_MAX_REQUEST_PER_FRAME, 1);
+            createParameters.CacheFileSystemParameters.AddParameter(FileSystemConsts.DOWNLOAD_WATCHDOG_TIMEOUT, 10);
             initializationOperation = package.InitializeAsync(createParameters);
         }
 
@@ -149,13 +149,12 @@ internal class FsmInitializePackage : IStateNode
             _defaultHostServer = defaultHostServer;
             _fallbackHostServer = fallbackHostServer;
         }
-        string IRemoteServices.GetRemoteMainURL(string fileName)
+        public IReadOnlyList<string> GetRemoteURLs(string fileName)
         {
-            return $"{_defaultHostServer}/{fileName}";
-        }
-        string IRemoteServices.GetRemoteFallbackURL(string fileName)
-        {
-            return $"{_fallbackHostServer}/{fileName}";
+            List<string> result = new List<string>();
+            result.Add($"{_defaultHostServer}/{fileName}");
+            result.Add($"{_fallbackHostServer}/{fileName}");
+            return result;
         }
     }
 }
